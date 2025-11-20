@@ -8,70 +8,119 @@
 
   <!-- Tesseract.js za OCR iz slike -->
   <script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <!-- jsPDF za PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Firebase (OPCIJSKI za cloud backup – po defaultu isključeno) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
   <style>
+    :root {
+      --bg: #050505;
+      --card: #121212;
+      --border: #333;
+      --accent: #ffffff;
+      --accent-soft: #888;
+    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: system-ui, sans-serif;
-      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #202020 0, #000 55%);
       color: #fff;
     }
     header {
-      background: #000;
-      border-bottom: 1px solid #444;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(90deg, rgba(0,0,0,0.95), rgba(0,0,0,0.9));
+      border-bottom: 1px solid rgba(255,255,255,0.1);
       padding: 8px 12px;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+    }
+    header .left {
+      display: flex;
+      align-items: center;
       gap: 10px;
     }
     header img.logo {
-      height: 40px;
+      height: 42px;
       width: auto;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
     }
     header .title-block {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
       line-height: 1.1;
     }
-    header .app-name { font-weight: bold; font-size: 18px; }
-    header .subtitle { font-size: 12px; color: #ccc; }
-
-    main { padding: 12px; }
-    .card {
-      border: 1px solid #444;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 12px;
-      background: #111;
+    header .app-name { font-weight: 700; font-size: 18px; letter-spacing: 0.06em; }
+    header .subtitle { font-size: 11px; color: #ccc; }
+    header .tag {
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 4px 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #ddd;
     }
-    h3 { margin-top: 0; font-size: 16px; }
+
+    main { padding: 12px; max-width: 900px; margin: 0 auto 32px; }
+    .card {
+      border-radius: 16px;
+      padding: 14px 12px;
+      margin-bottom: 12px;
+      background: radial-gradient(circle at top left, #1c1c1c, #101010);
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 14px 35px rgba(0,0,0,0.6);
+    }
+    h3 { margin-top: 0; font-size: 16px; display:flex; align-items:center; gap:6px;}
+    h3 span.emoji { font-size:18px; }
+
     label {
-      font-size: 14px;
+      font-size: 13px;
       display: block;
       margin-top: 8px;
+      color: #ddd;
     }
     input, textarea, select, button {
       width: 100%;
-      box-sizing: border-box;
       margin-top: 4px;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #444;
-      background: #000;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.8);
       color: #fff;
       font-size: 14px;
     }
-    input:focus, textarea:focus, select:focus { outline: 1px solid #888; }
-    button {
-      background: #fff;
-      color: #000;
-      font-weight: bold;
-      cursor: pointer;
+    input:focus, textarea:focus, select:focus {
+      outline: 1px solid var(--accent-soft);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.15);
     }
-    button.secondary { background: #111; color: #fff; }
-    button:disabled { opacity: 0.4; cursor: default; }
+    button {
+      background: var(--accent);
+      color: #000;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 999px;
+      border: none;
+    }
+    button.secondary {
+      background: #181818;
+      color: #fff;
+      border: 1px solid var(--border);
+    }
+    button.ghost {
+      background: transparent;
+      color: #fff;
+      border: 1px solid var(--border);
+    }
+    button:disabled { opacity: 0.35; cursor: default; }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -79,25 +128,31 @@
       font-size: 13px;
     }
     th, td {
-      border-bottom: 1px solid #333;
-      padding: 6px;
+      border-bottom: 1px solid #262626;
+      padding: 6px 4px;
       text-align: left;
       vertical-align: top;
     }
-    th { background: #111; }
-    .totals { margin-top: 12px; font-size: 14px; }
+    th {
+      background: #151515;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .totals { margin-top: 10px; font-size: 13px; }
     .image-preview { margin-top: 8px; text-align: center; }
     .image-preview img {
       max-width: 100%;
-      border-radius: 8px;
-      border: 1px solid #444;
+      border-radius: 12px;
+      border: 1px solid #333;
     }
     .actions-row {
       display: flex;
       gap: 8px;
       margin-top: 8px;
+      flex-wrap: wrap;
     }
-    .actions-row button { flex: 1; }
+    .actions-row button { flex: 1; min-width: 120px; }
     footer {
       text-align: center;
       font-size: 11px;
@@ -110,29 +165,61 @@
       color: #aaa;
       margin-top: 4px;
     }
-    /* pogledi/ekrani */
+
     .view { display: none; }
     .view.active { display: block; }
 
     #splashView {
       text-align: center;
-      padding-top: 40px;
+      padding-top: 32px;
     }
     #splashLogo {
       width: 160px;
       height: auto;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.85);
     }
-    #splashButtons button { margin-top: 10px; }
+    #splashButtons button { margin-top: 8px; }
+
+    .pill-nav {
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    .pill-nav button {
+      flex:1;
+      font-size:12px;
+      padding:6px 8px;
+    }
+    .pill-nav button.active {
+      background:#fff;
+      color:#000;
+    }
+
+    .badge {
+      display:inline-block;
+      border-radius:999px;
+      padding:2px 8px;
+      font-size:10px;
+      border:1px solid #444;
+      color:#ccc;
+      margin-left:4px;
+    }
   </style>
 </head>
 <body>
   <header>
-    <img src="logo.png" alt="KOB-Keramika logo" class="logo" id="headerLogo" />
-    <div class="title-block">
-      <span class="app-name">KOB-Keramika</span>
-      <span class="subtitle">Troškovi po radniku i gradilištu</span>
+    <div class="left">
+      <img src="logo.png" alt="KOB-Keramika logo" class="logo" id="headerLogo" />
+      <div class="title-block">
+        <span class="app-name">KOB-Keramika</span>
+        <span class="subtitle">Troškovi po radniku i gradilištu</span>
+      </div>
     </div>
+    <div class="tag">INTERNI ALAT</div>
   </header>
 
   <main>
@@ -140,21 +227,21 @@
     <section id="splashView" class="view active">
       <div class="card">
         <img src="logo.png" id="splashLogo" alt="KOB-Keramika logo" />
-        <h3>KOB-Keramika</h3>
-        <p>Interna aplikacija za skeniranje računa i praćenje troškova.</p>
+        <h3><span class="emoji">👋</span> Dobrodošli</h3>
+        <p>Interna aplikacija za skeniranje računa, praćenje troškova po radniku i gradilištu te izvoz izvještaja.</p>
         <div id="splashButtons">
           <button id="goEntry">➕ Unos troška</button>
           <button id="goOverview" class="secondary">📋 Pregled troškova</button>
           <button id="goWorkers" class="secondary">👷 Po radniku</button>
         </div>
-        <p class="hint">Dodaj na početni zaslon za iskustvo kao aplikacija.</p>
+        <p class="hint">Savjet: u Chromeu odaberi “Dodaj na početni zaslon” za iskustvo kao aplikacija.</p>
       </div>
     </section>
 
     <!-- GLAVNI EKRAN (unos + lista) -->
     <section id="entryView" class="view">
       <section class="card">
-        <h3>Unos troška</h3>
+        <h3><span class="emoji">➕</span> Unos troška</h3>
         <label>Radnik
           <input type="text" id="workerInput" placeholder="Ime radnika" />
         </label>
@@ -164,7 +251,7 @@
         <label>Iznos (€)
           <input type="number" step="0.01" id="amountInput" placeholder="0.00" />
         </label>
-        <div class="hint">Ako učitaš sliku računa, aplikacija će pokušati pročitati iznos (OCR).</div>
+        <div class="hint">Ako učitaš sliku računa, aplikacija će pokušati automatski pročitati iznos (OCR).</div>
         <label>Opis troška
           <textarea id="descInput" rows="2" placeholder="Opis"></textarea>
         </label>
@@ -178,11 +265,11 @@
           <img id="previewImg" src="" alt="Skenirani dokument" />
         </div>
 
-        <button id="addExpenseBtn">Dodaj trošak</button>
+        <button id="addExpenseBtn">Spremi trošak</button>
       </section>
 
       <section class="card">
-        <h3>Filtriranje i izvoz</h3>
+        <h3><span class="emoji">📂</span> Filtriranje, PDF i Excel</h3>
         <label>Filter po radniku
           <select id="workerFilter">
             <option value="">Svi radnici</option>
@@ -190,24 +277,44 @@
         </label>
 
         <div class="actions-row">
-          <button id="exportCsvBtn">Export CSV (Excel)</button>
-          <button class="secondary" id="printBtn">Print / PDF</button>
+          <button id="exportCsvBtn">CSV (Excel)</button>
+          <button id="exportPdfBtn" class="secondary">PDF (trenutni prikaz)</button>
+          <button class="ghost" id="printBtn">Print / PDF</button>
         </div>
 
         <div class="totals" id="selectedWorkerTotal"></div>
       </section>
 
       <section class="card">
-        <h3>Popis troškova</h3>
-        <div id="expensesContainer"></div>
+        <h3><span class="emoji">📋</span> Popis troškova</h3>
+        <div class="pill-nav">
+          <button id="btnShowAll" class="secondary active">Svi zapisi</button>
+          <button id="btnShowWorker" class="secondary">Samo odabran radnik</button>
+        </div>
+        <div id="expensesContainer" style="margin-top:8px;"></div>
         <div class="totals" id="totalsContainer"></div>
+      </section>
+
+      <section class="card">
+        <h3><span class="emoji">☁️</span> Cloud backup / sync <span class="badge">OPCIJSKI</span></h3>
+        <label>Sync kod (npr. naziv firme ili “kob-produkcija”)
+          <input type="text" id="syncCodeInput" placeholder="npr. kob-keramika-team" />
+        </label>
+        <div class="actions-row">
+          <button id="btnUploadBackup" class="secondary">Spremi u cloud</button>
+          <button id="btnDownloadBackup" class="ghost">Učitaj iz clouda</button>
+        </div>
+        <p class="hint">
+          Cloud sync koristi Firebase Firestore i <strong>nije aktivan</strong> dok ne upišeš svoje Firebase podatke u kod.
+          Trenutno sve radi lokalno i sigurno na ovom uređaju.
+        </p>
       </section>
     </section>
 
     <!-- EKRAN PO RADNIKU -->
     <section id="workersView" class="view">
       <section class="card">
-        <h3>Sažetak po radniku</h3>
+        <h3><span class="emoji">👷</span> Sažetak po radniku</h3>
         <div id="workersSummary"></div>
         <p class="hint">Dodirni “Prikaži” za filtrirani prikaz troškova tog radnika.</p>
       </section>
@@ -215,11 +322,11 @@
   </main>
 
   <footer>
-    KOB-Keramika — lokalna PWA aplikacija (podaci se čuvaju samo na ovom uređaju)
+    KOB-Keramika — lokalna PWA aplikacija (podaci se čuvaju samo na ovom uređaju; cloud sync je opcijski).
   </footer>
 
   <script>
-    const STORAGE_KEY = 'kob_keramika_expenses_v3';
+    const STORAGE_KEY = 'kob_keramika_expenses_v4';
 
     function loadExpenses() {
       try {
@@ -237,9 +344,11 @@
 
     let expenses = loadExpenses();
 
-    // pogledi
+    // -------------------------------------------------------
+    // POGLEDI
+    // -------------------------------------------------------
     const splashView = document.getElementById('splashView');
-    const entryView = document.getElementById('entryView');
+    const entryView  = document.getElementById('entryView');
     const workersView = document.getElementById('workersView');
     const goEntryBtn = document.getElementById('goEntry');
     const goOverviewBtn = document.getElementById('goOverview');
@@ -251,13 +360,14 @@
       [splashView, entryView, workersView].forEach(v => v.classList.remove('active'));
       document.getElementById(id).classList.add('active');
     }
-
     goEntryBtn.addEventListener('click', () => showView('entryView'));
     goOverviewBtn.addEventListener('click', () => showView('entryView'));
     goWorkersBtn.addEventListener('click', () => { renderWorkersSummary(); showView('workersView'); });
     headerLogo.addEventListener('click', () => showView('splashView'));
 
-    // elementi za unos
+    // -------------------------------------------------------
+    // ELEMENTI FORME
+    // -------------------------------------------------------
     const workerInput = document.getElementById('workerInput');
     const siteInput = document.getElementById('siteInput');
     const amountInput = document.getElementById('amountInput');
@@ -271,40 +381,76 @@
     const selectedWorkerTotal = document.getElementById('selectedWorkerTotal');
     const workerFilter = document.getElementById('workerFilter');
     const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const exportPdfBtn = document.getElementById('exportPdfBtn');
     const printBtn = document.getElementById('printBtn');
+    const btnShowAll = document.getElementById('btnShowAll');
+    const btnShowWorker = document.getElementById('btnShowWorker');
+    const syncCodeInput = document.getElementById('syncCodeInput');
+    const btnUploadBackup = document.getElementById('btnUploadBackup');
+    const btnDownloadBackup = document.getElementById('btnDownloadBackup');
 
     let latestImageDataUrl = null;
+    let listMode = 'all'; // 'all' ili 'worker'
 
-    // pametni OCR iznos: prvo traži broj uz EUR/€, pa najveći broj
+    btnShowAll.addEventListener('click', () => {
+      listMode = 'all';
+      btnShowAll.classList.add('active');
+      btnShowWorker.classList.remove('active');
+      renderAll();
+    });
+    btnShowWorker.addEventListener('click', () => {
+      listMode = 'worker';
+      btnShowWorker.classList.add('active');
+      btnShowAll.classList.remove('active');
+      renderAll();
+    });
+
+    // -------------------------------------------------------
+    // PAMETNI OCR ZA IZNOS
+    // -------------------------------------------------------
     function smartExtractAmount(text) {
       if (!text) return null;
       const lower = text.toLowerCase();
+      const lines = lower.split(/\r?\n/);
 
-      // broj uz eur/euro/€
+      function findAmountInLine(line) {
+        const numRegex = /([0-9]+(?:[.,][0-9]{1,2}))/g;
+        let m, max = null;
+        while ((m = numRegex.exec(line)) !== null) {
+          const v = parseFloat(m[1].replace(',', '.'));
+          if (!isNaN(v) && v > 0 && v <= 100000 && (max === null || v > max)) {
+            max = v;
+          }
+        }
+        return max;
+      }
+
+      const keywords = ['ukupno', 'za plaćanje', 'za platiti', 'total', 'gesamt', 'sveukupno'];
+      for (const line of lines) {
+        if (keywords.some(k => line.includes(k))) {
+          const found = findAmountInLine(line);
+          if (found !== null) return found.toString();
+        }
+      }
+
       const euroRegex = /(eur|euro|€)\s*([0-9]+(?:[.,][0-9]{1,2})?)/g;
-      let match;
-      let best = null;
+      let match, best = null;
       while ((match = euroRegex.exec(lower)) !== null) {
         const val = parseFloat(match[2].replace(',', '.'));
         if (!isNaN(val) && (best === null || val > best)) best = val;
       }
       if (best !== null) return best.toString();
 
-      // svi brojevi s decimalom do 100000
-      const numRegex = /([0-9]+(?:[.,][0-9]{1,2}))/g;
-      let maxVal = null;
-      while ((match = numRegex.exec(lower)) !== null) {
-        const v = parseFloat(match[1].replace(',', '.'));
-        if (!isNaN(v) && v > 0 && v <= 100000 && (maxVal === null || v > maxVal)) {
-          maxVal = v;
+      let globalMax = null;
+      for (const line of lines) {
+        const val = findAmountInLine(line);
+        if (val !== null && (globalMax === null || val > globalMax)) {
+          globalMax = val;
         }
       }
-      if (maxVal !== null) return maxVal.toString();
-
-      return null;
+      return globalMax !== null ? globalMax.toString() : null;
     }
 
-    // slika + OCR
     imageInput.addEventListener('change', () => {
       const file = imageInput.files[0];
       if (!file) return;
@@ -327,7 +473,9 @@
       reader.readAsDataURL(file);
     });
 
-    // dodavanje troška
+    // -------------------------------------------------------
+    // DODAVANJE TROŠKA
+    // -------------------------------------------------------
     addExpenseBtn.addEventListener('click', () => {
       const worker = workerInput.value.trim();
       const site = siteInput.value.trim();
@@ -358,8 +506,10 @@
       renderAll();
     });
 
+    // -------------------------------------------------------
+    // RENDER LISTI I SAŽETAKA
+    // -------------------------------------------------------
     function renderAll() {
-      // dropdown radnika
       const workers = [...new Set(expenses.map(e => e.worker))].sort();
       const current = workerFilter.value;
       workerFilter.innerHTML = '<option value="">Svi radnici</option>';
@@ -372,14 +522,20 @@
       });
 
       const filterVal = workerFilter.value;
-      const filtered = filterVal
-        ? expenses.filter(e => e.worker === filterVal)
-        : expenses.slice().sort((a, b) => b.date.localeCompare(a.date) * -1);
+      let filtered;
+      if (listMode === 'worker' && filterVal) {
+        filtered = expenses.filter(e => e.worker === filterVal);
+      } else if (filterVal) {
+        filtered = expenses.filter(e => e.worker === filterVal);
+      } else {
+        filtered = expenses.slice();
+      }
+      filtered.sort((a,b) => b.date.localeCompare(a.date));
 
       if (!filtered.length) {
         expensesContainer.innerHTML = '<p>Nema upisanih troškova.</p>';
       } else {
-        let html = '<table><thead><tr><th>Datum</th><th>Radnik</th><th>Gradilište</th><th>Iznos</th><th>Opis</th></tr></thead><tbody>';
+        let html = '<div style="max-height:320px;overflow:auto;"><table><thead><tr><th>Datum</th><th>Radnik</th><th>Gradilište</th><th>Iznos</th><th>Opis</th></tr></thead><tbody>';
         filtered.forEach(e => {
           const d = new Date(e.date);
           const ds = d.toLocaleDateString('hr-HR') + ' ' +
@@ -392,11 +548,10 @@
             '<td>' + (e.desc || '') + '</td>' +
             '</tr>';
         });
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         expensesContainer.innerHTML = html;
       }
 
-      // ukupno po svim radnicima
       const totals = {};
       expenses.forEach(e => {
         totals[e.worker] = (totals[e.worker] || 0) + e.amount;
@@ -411,23 +566,21 @@
         totalsContainer.innerHTML = tHtml;
       }
 
-      // ukupno za odabranog radnika (trenutni filter)
       if (filterVal && filtered.length) {
-        const sumSel = filtered.reduce((s, e) => s + e.amount, 0);
+        const sumSel = filtered.reduce((s,e) => s + e.amount, 0);
         selectedWorkerTotal.innerHTML =
-          '<strong>Ukupno za radnika ' + filterVal + ' (trenutni filter):</strong> ' +
+          '<strong>Ukupno za radnika ' + filterVal + ' (trenutni prikaz):</strong> ' +
           sumSel.toFixed(2) + ' €';
       } else {
         selectedWorkerTotal.innerHTML = '';
       }
 
-      // update ekrana po radniku
       renderWorkersSummary();
     }
 
     workerFilter.addEventListener('change', () => {
+      if (workerFilter.value) listMode = 'worker';
       renderAll();
-      showView('entryView');
     });
 
     function renderWorkersSummary() {
@@ -454,18 +607,22 @@
       html += '</tbody></table>';
       workersSummary.innerHTML = html;
 
-      const btns = workersSummary.querySelectorAll('.btnShowWorker');
-      btns.forEach(btn => {
+      workersSummary.querySelectorAll('.btnShowWorker').forEach(btn => {
         btn.addEventListener('click', () => {
           const w = btn.getAttribute('data-worker');
           workerFilter.value = w;
+          listMode = 'worker';
+          btnShowWorker.classList.add('active');
+          btnShowAll.classList.remove('active');
           renderAll();
           showView('entryView');
         });
       });
     }
 
-    // CSV export
+    // -------------------------------------------------------
+    // CSV & PDF EXPORT
+    // -------------------------------------------------------
     exportCsvBtn.addEventListener('click', () => {
       if (!expenses.length) {
         alert('Nema troškova za export.');
@@ -482,7 +639,7 @@
         ]);
       });
       const csvContent = rows
-        .map(row => row.map(val => '"' + String(val || '').replace(/"/g, '""') + '"').join(';'))
+        .map(row => row.map(val => '"' + String(val || '').replace(/"/g,'""') + '"').join(';'))
         .join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -495,16 +652,114 @@
       URL.revokeObjectURL(url);
     });
 
+    exportPdfBtn.addEventListener('click', () => {
+      const { jsPDF } = window.jspdf || {};
+      if (!jsPDF) {
+        alert('PDF modul nije učitan.');
+        return;
+      }
+      const filterVal = workerFilter.value;
+      let list = expenses.slice();
+      if (listMode === 'worker' && filterVal) list = list.filter(e => e.worker === filterVal);
+      if (!list.length) {
+        alert('Nema troškova za generiranje PDF-a.');
+        return;
+      }
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      const title = filterVal ? `Izvještaj za radnika ${filterVal}` : 'Izvještaj – svi troškovi';
+      doc.text(title, 10, 16);
+      doc.setFontSize(10);
+      let y = 24;
+      list.forEach(e => {
+        const d = new Date(e.date);
+        const ds = d.toLocaleDateString('hr-HR');
+        const line = `${ds} | ${e.worker} | ${e.site || ''} | ${e.amount.toFixed(2)} € | ${e.desc || ''}`;
+        const split = doc.splitTextToSize(line, 190);
+        if (y + split.length * 5 > 280) {
+          doc.addPage();
+          y = 20;
+        }
+        split.forEach(l => {
+          doc.text(l, 10, y);
+          y += 5;
+        });
+      });
+      doc.save('kob_keramika_izvjestaj.pdf');
+    });
+
     printBtn.addEventListener('click', () => window.print());
 
-    // ako želiš opet offline cache, ovdje može ići register('sw.js')
-    // zasad ga možemo preskočiti dok sve ne proradi 100%
-    // if ('serviceWorker' in navigator) {
-    //   window.addEventListener('load', () => {
-    //     navigator.serviceWorker.register('sw.js').catch(console.error);
-    //   });
-    // }
+    // -------------------------------------------------------
+    // CLOUD BACKUP (FIREBASE – OPCIJSKI)
+    // -------------------------------------------------------
+    const USE_FIREBASE = false; // postavi na true nakon što dodaš svoj firebaseConfig
+    let db = null;
 
+    if (USE_FIREBASE && window.firebase) {
+      const firebaseConfig = {
+        // TODO: ovdje zalijepiš svoj Firebase config iz konzole
+        // apiKey: "...",
+        // authDomain: "...",
+        // projectId: "...",
+        // storageBucket: "...",
+        // messagingSenderId: "...",
+        // appId: "..."
+      };
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+    }
+
+    btnUploadBackup.addEventListener('click', async () => {
+      const code = syncCodeInput.value.trim();
+      if (!code) {
+        alert('Upiši sync kod.');
+        return;
+      }
+      if (!USE_FIREBASE || !db) {
+        alert('Cloud sync nije konfiguriran. Sve radi lokalno. Kad budeš htio pravi cloud, javi pa ćemo proći Firebase konfiguraciju.');
+        return;
+      }
+      try {
+        await db.collection('kobKeramikaBackups').doc(code).set({
+          data: expenses,
+          ts: Date.now()
+        });
+        alert('Backup spremljen u cloud.');
+      } catch (e) {
+        console.error(e);
+        alert('Greška pri spremanju backupa.');
+      }
+    });
+
+    btnDownloadBackup.addEventListener('click', async () => {
+      const code = syncCodeInput.value.trim();
+      if (!code) {
+        alert('Upiši sync kod.');
+        return;
+      }
+      if (!USE_FIREBASE || !db) {
+        alert('Cloud sync nije konfiguriran. Sve radi lokalno. Kad budeš htio pravi cloud, javi pa ćemo proći Firebase konfiguraciju.');
+        return;
+      }
+      try {
+        const snap = await db.collection('kobKeramikaBackups').doc(code).get();
+        if (!snap.exists) {
+          alert('Nije pronađen backup za taj sync kod.');
+          return;
+        }
+        const data = snap.data();
+        expenses = data.data || [];
+        saveExpenses(expenses);
+        renderAll();
+        alert('Backup učitan.');
+      } catch (e) {
+        console.error(e);
+        alert('Greška pri učitavanju backupa.');
+      }
+    });
+
+    // inicijalni render
     renderAll();
   </script>
 </body>
