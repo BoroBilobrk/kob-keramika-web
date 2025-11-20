@@ -51,6 +51,7 @@
       width: auto;
       border-radius: 8px;
       border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer;
     }
     header .title-block {
       display: flex;
@@ -77,6 +78,11 @@
       background: radial-gradient(circle at top left, #1c1c1c, #101010);
       border: 1px solid rgba(255,255,255,0.06);
       box-shadow: 0 14px 35px rgba(0,0,0,0.6);
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity:0; transform: translateY(6px); }
+      to { opacity:1; transform: translateY(0); }
     }
     h3 { margin-top: 0; font-size: 16px; display:flex; align-items:center; gap:6px;}
     h3 span.emoji { font-size:18px; }
@@ -108,6 +114,11 @@
       cursor: pointer;
       border-radius: 999px;
       border: none;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.7);
     }
     button.secondary {
       background: #181818;
@@ -119,7 +130,7 @@
       color: #fff;
       border: 1px solid var(--border);
     }
-    button:disabled { opacity: 0.35; cursor: default; }
+    button:disabled { opacity: 0.35; cursor: default; box-shadow:none; transform:none; }
 
     table {
       width: 100%;
@@ -208,6 +219,13 @@
       color:#ccc;
       margin-left:4px;
     }
+
+    .measure-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+      gap:8px 10px;
+      margin-top:8px;
+    }
   </style>
 </head>
 <body>
@@ -216,7 +234,7 @@
       <img src="logo.png" alt="KOB-Keramika logo" class="logo" id="headerLogo" />
       <div class="title-block">
         <span class="app-name">KOB-Keramika</span>
-        <span class="subtitle">Troškovi po radniku i gradilištu</span>
+        <span class="subtitle">Troškovi i količine po radniku i gradilištu</span>
       </div>
     </div>
     <div class="tag">INTERNI ALAT</div>
@@ -228,17 +246,17 @@
       <div class="card">
         <img src="logo.png" id="splashLogo" alt="KOB-Keramika logo" />
         <h3><span class="emoji">👋</span> Dobrodošli</h3>
-        <p>Interna aplikacija za skeniranje računa, praćenje troškova po radniku i gradilištu te izvoz izvještaja.</p>
+        <p>Interna aplikacija za skeniranje računa, praćenje troškova po radniku i gradilištu, te mjerenje količina (m² / dužni metar / režija).</p>
         <div id="splashButtons">
           <button id="goEntry">➕ Unos troška</button>
           <button id="goOverview" class="secondary">📋 Pregled troškova</button>
           <button id="goWorkers" class="secondary">👷 Po radniku</button>
         </div>
-        <p class="hint">Savjet: u Chromeu odaberi “Dodaj na početni zaslon” za iskustvo kao aplikacija.</p>
+        <p class="hint">Savjet: u Chromeu odaberi “Dodaj na početni zaslon” za doživljaj kao aplikacija.</p>
       </div>
     </section>
 
-    <!-- GLAVNI EKRAN (unos + lista) -->
+    <!-- GLAVNI EKRAN (unos + lista + mjerenja) -->
     <section id="entryView" class="view">
       <section class="card">
         <h3><span class="emoji">➕</span> Unos troška</h3>
@@ -275,6 +293,11 @@
             <option value="">Svi radnici</option>
           </select>
         </label>
+        <label>Filter po gradilištu
+          <select id="siteFilter">
+            <option value="">Sva gradilišta</option>
+          </select>
+        </label>
 
         <div class="actions-row">
           <button id="exportCsvBtn">CSV (Excel)</button>
@@ -293,6 +316,72 @@
         </div>
         <div id="expensesContainer" style="margin-top:8px;"></div>
         <div class="totals" id="totalsContainer"></div>
+      </section>
+
+      <!-- MJERENJA PO GRADILIŠTU -->
+      <section class="card">
+        <h3><span class="emoji">📏</span> Mjerenja po gradilištu</h3>
+        <label>Gradilište
+          <input type="text" id="measureSiteInput" placeholder="Naziv gradilišta (isto kao gore)" />
+        </label>
+        <div class="measure-grid">
+          <div>
+            <label>Zid (m²)
+              <input type="number" step="0.01" id="mZidInput" />
+            </label>
+          </div>
+          <div>
+            <label>Pod (m²)
+              <input type="number" step="0.01" id="mPodInput" />
+            </label>
+          </div>
+          <div>
+            <label>Hidro (m²)
+              <input type="number" step="0.01" id="mHidroM2Input" />
+            </label>
+          </div>
+          <div>
+            <label>Hidro traka (m)
+              <input type="number" step="0.01" id="mHidroTrakaInput" />
+            </label>
+          </div>
+          <div>
+            <label>Silikon (m)
+              <input type="number" step="0.01" id="mSilikonInput" />
+            </label>
+          </div>
+          <div>
+            <label>Stepenice (m)
+              <input type="number" step="0.01" id="mStepeniceInput" />
+            </label>
+          </div>
+          <div>
+            <label>Gerung (m)
+              <input type="number" step="0.01" id="mGerungInput" />
+            </label>
+          </div>
+          <div>
+            <label>Lajsna (m)
+              <input type="number" step="0.01" id="mLajsnaInput" />
+            </label>
+          </div>
+          <div>
+            <label>Sokl (m)
+              <input type="number" step="0.01" id="mSoklInput" />
+            </label>
+          </div>
+          <div>
+            <label>Režijski sat
+              <input type="number" step="0.01" id="mRezijInput" />
+            </label>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button id="btnSaveMeasures">Spremi mjerenja</button>
+          <button id="btnClearMeasures" class="ghost">Očisti polja</button>
+        </div>
+        <div class="totals" id="measuresSummary" style="margin-top:10px;"></div>
+        <p class="hint">Mjerenja se spremaju po nazivu gradilišta i ostaju spremljena lokalno na ovom uređaju.</p>
       </section>
 
       <section class="card">
@@ -322,11 +411,12 @@
   </main>
 
   <footer>
-    KOB-Keramika — lokalna PWA aplikacija (podaci se čuvaju samo na ovom uređaju; cloud sync je opcijski).
+    KOB-Keramika — lokalna PWA aplikacija (troškovi + količine; cloud sync je opcijski).
   </footer>
 
   <script>
     const STORAGE_KEY = 'kob_keramika_expenses_v4';
+    const MEASURES_KEY = 'kob_keramika_measures_v1';
 
     function loadExpenses() {
       try {
@@ -342,7 +432,22 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     }
 
+    function loadMeasures() {
+      try {
+        const raw = localStorage.getItem(MEASURES_KEY);
+        if (!raw) return {};
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error('Measures load error', e);
+        return {};
+      }
+    }
+    function saveMeasures(m) {
+      localStorage.setItem(MEASURES_KEY, JSON.stringify(m));
+    }
+
     let expenses = loadExpenses();
+    let measures = loadMeasures();
 
     // -------------------------------------------------------
     // POGLEDI
@@ -380,6 +485,7 @@
     const totalsContainer = document.getElementById('totalsContainer');
     const selectedWorkerTotal = document.getElementById('selectedWorkerTotal');
     const workerFilter = document.getElementById('workerFilter');
+    const siteFilter = document.getElementById('siteFilter');
     const exportCsvBtn = document.getElementById('exportCsvBtn');
     const exportPdfBtn = document.getElementById('exportPdfBtn');
     const printBtn = document.getElementById('printBtn');
@@ -389,8 +495,24 @@
     const btnUploadBackup = document.getElementById('btnUploadBackup');
     const btnDownloadBackup = document.getElementById('btnDownloadBackup');
 
+    // mjerenja elementi
+    const measureSiteInput = document.getElementById('measureSiteInput');
+    const mZidInput = document.getElementById('mZidInput');
+    const mPodInput = document.getElementById('mPodInput');
+    const mHidroM2Input = document.getElementById('mHidroM2Input');
+    const mHidroTrakaInput = document.getElementById('mHidroTrakaInput');
+    const mSilikonInput = document.getElementById('mSilikonInput');
+    const mStepeniceInput = document.getElementById('mStepeniceInput');
+    const mGerungInput = document.getElementById('mGerungInput');
+    const mLajsnaInput = document.getElementById('mLajsnaInput');
+    const mSoklInput = document.getElementById('mSoklInput');
+    const mRezijInput = document.getElementById('mRezijInput');
+    const btnSaveMeasures = document.getElementById('btnSaveMeasures');
+    const btnClearMeasures = document.getElementById('btnClearMeasures');
+    const measuresSummary = document.getElementById('measuresSummary');
+
     let latestImageDataUrl = null;
-    let listMode = 'all'; // 'all' ili 'worker'
+    let listMode = 'all';
 
     btnShowAll.addEventListener('click', () => {
       listMode = 'all';
@@ -507,35 +629,119 @@
     });
 
     // -------------------------------------------------------
+    // MJERENJA — SPREMANJE I PRIKAZ
+    // -------------------------------------------------------
+    function fillMeasuresForSite(site) {
+      const m = measures[site] || {};
+      mZidInput.value = m.zid || '';
+      mPodInput.value = m.pod || '';
+      mHidroM2Input.value = m.hidroM2 || '';
+      mHidroTrakaInput.value = m.hidroTraka || '';
+      mSilikonInput.value = m.silikon || '';
+      mStepeniceInput.value = m.stepenice || '';
+      mGerungInput.value = m.gerung || '';
+      mLajsnaInput.value = m.lajsna || '';
+      mSoklInput.value = m.sokl || '';
+      mRezijInput.value = m.rezija || '';
+    }
+
+    function renderMeasuresSummary() {
+      const keys = Object.keys(measures);
+      if (!keys.length) {
+        measuresSummary.innerHTML = '<p>Nema spremljenih mjerenja.</p>';
+        return;
+      }
+      let html = '<strong>Mjerenja po gradilištu:</strong><br>';
+      keys.sort().forEach(site => {
+        const m = measures[site];
+        html += `<div style="margin-top:6px;"><u>${site}</u><br>` +
+          `Zid: ${m.zid || 0} m², Pod: ${m.pod || 0} m², Hidro: ${m.hidroM2 || 0} m²<br>` +
+          `Hidro traka: ${m.hidroTraka || 0} m, Silikon: ${m.silikon || 0} m<br>` +
+          `Stepenice: ${m.stepenice || 0} m, Gerung: ${m.gerung || 0} m<br>` +
+          `Lajsna: ${m.lajsna || 0} m, Sokl: ${m.sokl || 0} m<br>` +
+          `Režijski sati: ${m.rezija || 0}</div>`;
+      });
+      measuresSummary.innerHTML = html;
+    }
+
+    btnSaveMeasures.addEventListener('click', () => {
+      const site = measureSiteInput.value.trim();
+      if (!site) {
+        alert('Upiši naziv gradilišta.');
+        return;
+      }
+      measures[site] = {
+        zid: parseFloat(mZidInput.value || '0'),
+        pod: parseFloat(mPodInput.value || '0'),
+        hidroM2: parseFloat(mHidroM2Input.value || '0'),
+        hidroTraka: parseFloat(mHidroTrakaInput.value || '0'),
+        silikon: parseFloat(mSilikonInput.value || '0'),
+        stepenice: parseFloat(mStepeniceInput.value || '0'),
+        gerung: parseFloat(mGerungInput.value || '0'),
+        lajsna: parseFloat(mLajsnaInput.value || '0'),
+        sokl: parseFloat(mSoklInput.value || '0'),
+        rezija: parseFloat(mRezijInput.value || '0')
+      };
+      saveMeasures(measures);
+      renderMeasuresSummary();
+      alert('Mjerenja spremljena.');
+    });
+
+    btnClearMeasures.addEventListener('click', () => {
+      mZidInput.value = '';
+      mPodInput.value = '';
+      mHidroM2Input.value = '';
+      mHidroTrakaInput.value = '';
+      mSilikonInput.value = '';
+      mStepeniceInput.value = '';
+      mGerungInput.value = '';
+      mLajsnaInput.value = '';
+      mSoklInput.value = '';
+      mRezijInput.value = '';
+    });
+
+    // -------------------------------------------------------
     // RENDER LISTI I SAŽETAKA
     // -------------------------------------------------------
     function renderAll() {
       const workers = [...new Set(expenses.map(e => e.worker))].sort();
-      const current = workerFilter.value;
+      const currentWorker = workerFilter.value;
       workerFilter.innerHTML = '<option value="">Svi radnici</option>';
       workers.forEach(w => {
         const opt = document.createElement('option');
         opt.value = w;
         opt.textContent = w;
-        if (w === current) opt.selected = true;
+        if (w === currentWorker) opt.selected = true;
         workerFilter.appendChild(opt);
       });
 
-      const filterVal = workerFilter.value;
-      let filtered;
-      if (listMode === 'worker' && filterVal) {
-        filtered = expenses.filter(e => e.worker === filterVal);
-      } else if (filterVal) {
-        filtered = expenses.filter(e => e.worker === filterVal);
-      } else {
-        filtered = expenses.slice();
+      const sites = [...new Set(expenses.map(e => e.site).filter(s => s))].sort();
+      const currentSite = siteFilter.value;
+      siteFilter.innerHTML = '<option value="">Sva gradilišta</option>';
+      sites.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        if (s === currentSite) opt.selected = true;
+        siteFilter.appendChild(opt);
+      });
+
+      const filterWorker = workerFilter.value;
+      const filterSite = siteFilter.value;
+
+      let filtered = expenses.slice();
+      if (filterWorker) filtered = filtered.filter(e => e.worker === filterWorker);
+      if (filterSite) filtered = filtered.filter(e => e.site === filterSite);
+      if (listMode === 'worker' && filterWorker) {
+        filtered = filtered.filter(e => e.worker === filterWorker);
       }
       filtered.sort((a,b) => b.date.localeCompare(a.date));
 
       if (!filtered.length) {
         expensesContainer.innerHTML = '<p>Nema upisanih troškova.</p>';
       } else {
-        let html = '<div style="max-height:320px;overflow:auto;"><table><thead><tr><th>Datum</th><th>Radnik</th><th>Gradilište</th><th>Iznos</th><th>Opis</th></tr></thead><tbody>';
+        let html = '<div style="max-height:320px;overflow:auto;"><table><thead><tr>' +
+          '<th>Datum</th><th>Radnik</th><th>Gradilište</th><th>Iznos</th><th>Opis</th></tr></thead><tbody>';
         filtered.forEach(e => {
           const d = new Date(e.date);
           const ds = d.toLocaleDateString('hr-HR') + ' ' +
@@ -566,22 +772,26 @@
         totalsContainer.innerHTML = tHtml;
       }
 
-      if (filterVal && filtered.length) {
+      if (filterWorker && filtered.length) {
         const sumSel = filtered.reduce((s,e) => s + e.amount, 0);
         selectedWorkerTotal.innerHTML =
-          '<strong>Ukupno za radnika ' + filterVal + ' (trenutni prikaz):</strong> ' +
+          '<strong>Ukupno za radnika ' + filterWorker +
+          (filterSite ? ' na ' + filterSite : '') +
+          ' (trenutni prikaz):</strong> ' +
           sumSel.toFixed(2) + ' €';
       } else {
         selectedWorkerTotal.innerHTML = '';
       }
 
       renderWorkersSummary();
+      renderMeasuresSummary();
     }
 
     workerFilter.addEventListener('change', () => {
       if (workerFilter.value) listMode = 'worker';
       renderAll();
     });
+    siteFilter.addEventListener('change', renderAll);
 
     function renderWorkersSummary() {
       if (!expenses.length) {
@@ -658,16 +868,20 @@
         alert('PDF modul nije učitan.');
         return;
       }
-      const filterVal = workerFilter.value;
+      const filterWorker = workerFilter.value;
+      const filterSite = siteFilter.value;
       let list = expenses.slice();
-      if (listMode === 'worker' && filterVal) list = list.filter(e => e.worker === filterVal);
+      if (filterWorker) list = list.filter(e => e.worker === filterWorker);
+      if (filterSite) list = list.filter(e => e.site === filterSite);
       if (!list.length) {
         alert('Nema troškova za generiranje PDF-a.');
         return;
       }
       const doc = new jsPDF();
       doc.setFontSize(14);
-      const title = filterVal ? `Izvještaj za radnika ${filterVal}` : 'Izvještaj – svi troškovi';
+      let title = 'Izvještaj – troškovi';
+      if (filterWorker) title += ' za ' + filterWorker;
+      if (filterSite) title += ' (' + filterSite + ')';
       doc.text(title, 10, 16);
       doc.setFontSize(10);
       let y = 24;
@@ -717,12 +931,13 @@
         return;
       }
       if (!USE_FIREBASE || !db) {
-        alert('Cloud sync nije konfiguriran. Sve radi lokalno. Kad budeš htio pravi cloud, javi pa ćemo proći Firebase konfiguraciju.');
+        alert('Cloud sync nije konfiguriran. Trenutno sve radi lokalno. Kad budeš htio pravi cloud, javi pa prođemo Firebase konfiguraciju.');
         return;
       }
       try {
         await db.collection('kobKeramikaBackups').doc(code).set({
           data: expenses,
+          measures,
           ts: Date.now()
         });
         alert('Backup spremljen u cloud.');
@@ -739,7 +954,7 @@
         return;
       }
       if (!USE_FIREBASE || !db) {
-        alert('Cloud sync nije konfiguriran. Sve radi lokalno. Kad budeš htio pravi cloud, javi pa ćemo proći Firebase konfiguraciju.');
+        alert('Cloud sync nije konfiguriran. Trenutno sve radi lokalno. Kad budeš htio pravi cloud, javi pa prođemo Firebase konfiguraciju.');
         return;
       }
       try {
@@ -750,7 +965,9 @@
         }
         const data = snap.data();
         expenses = data.data || [];
+        measures = data.measures || {};
         saveExpenses(expenses);
+        saveMeasures(measures);
         renderAll();
         alert('Backup učitan.');
       } catch (e) {
