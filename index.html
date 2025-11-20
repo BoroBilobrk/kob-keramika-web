@@ -5,221 +5,418 @@
   <title>KOB-Keramika</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="manifest" href="manifest.webmanifest">
+
+  <!-- Tesseract.js za OCR -->
+  <script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+
   <style>
-    body { margin:0; font-family: system-ui, sans-serif; background:#000; color:#fff; }
-    header { background:#000; border-bottom:1px solid #444; padding:12px; text-align:center; font-weight:bold; }
-    main { padding:12px; }
-    .card { border:1px solid #444; border-radius:8px; padding:12px; margin-bottom:12px; background:#111; }
-    label { font-size:14px; display:block; margin-top:8px; }
-    input, textarea, select, button {
-      width:100%; box-sizing:border-box; margin-top:4px; padding:8px;
-      border-radius:6px; border:1px solid #444; background:#000; color:#fff; font-size:14px;
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #000;
+      color: #fff;
     }
-    button { background:#fff; color:#000; font-weight:bold; cursor:pointer; }
-    button.secondary { background:#111; color:#fff; }
-    button:disabled { opacity:0.4; cursor:default; }
-    table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px; }
-    th,td { border-bottom:1px solid #333; padding:6px; text-align:left; }
-    th { background:#111; }
-    .totals { margin-top:12px; font-size:14px; }
-    .image-preview { margin-top:8px; text-align:center; }
-    .image-preview img { max-width:100%; border-radius:8px; border:1px solid #444; }
-    .actions-row { display:flex; gap:8px; margin-top:8px; }
-    .actions-row button { flex:1; }
-    footer { text-align:center; font-size:11px; color:#777; padding:8px; border-top:1px solid #222; }
+    header {
+      background: #000;
+      border-bottom: 1px solid #444;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    header img.logo {
+      height: 40px;
+      width: auto;
+    }
+    header .title-block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.1;
+    }
+    header .title-block span.app-name {
+      font-weight: bold;
+      font-size: 18px;
+    }
+    header .title-block span.subtitle {
+      font-size: 12px;
+      color: #ccc;
+    }
+
+    main { padding: 12px; }
+    .card {
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #111;
+    }
+    h3 {
+      margin-top: 0;
+      font-size: 16px;
+    }
+    label {
+      font-size: 14px;
+      display: block;
+      margin-top: 8px;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 4px;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #000;
+      color: #fff;
+      font-size: 14px;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: 1px solid #888;
+    }
+    button {
+      background: #fff;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #111;
+      color: #fff;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid #333;
+      padding: 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #111;
+    }
+    .totals { margin-top: 12px; font-size: 14px; }
+    .image-preview {
+      margin-top: 8px;
+      text-align: center;
+    }
+    .image-preview img {
+      max-width: 100%;
+      border-radius: 8px;
+      border: 1px solid #444;
+    }
+    .actions-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .actions-row button {
+      flex: 1;
+    }
+    footer {
+      text-align: center;
+      font-size: 11px;
+      color: #777;
+      padding: 8px;
+      border-top: 1px solid #222;
+    }
+    .hint {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
-<header>KOB-Keramika — Troškovi</header>
-<main>
-  <section class="card">
-    <h3>Unos troška</h3>
-    <label>Radnik
-      <input type="text" id="workerInput" placeholder="Ime radnika" />
-    </label>
-    <label>Iznos (€)
-      <input type="number" step="0.01" id="amountInput" placeholder="0.00" />
-    </label>
-    <label>Opis troška
-      <textarea id="descInput" rows="2" placeholder="Opis"></textarea>
-    </label>
-    <label>Dokument (kamera ili galerija)
-      <input type="file" id="imageInput" accept="image/*" capture="environment" />
-    </label>
-    <div class="image-preview" id="imagePreview" style="display:none;">
-      <p>Zadnji učitani dokument:</p>
-      <img id="previewImg" src="" alt="Skenirani dokument" />
+  <header>
+    <img src="logo.png" alt="KOB-Keramika logo" class="logo" />
+    <div class="title-block">
+      <span class="app-name">KOB-Keramika</span>
+      <span class="subtitle">Praćenje troškova po radniku i gradilištu</span>
     </div>
-    <button id="addExpenseBtn">Dodaj trošak</button>
-  </section>
+  </header>
 
-  <section class="card">
-    <h3>Filtriranje i izvoz</h3>
-    <label>Filter po radniku
-      <select id="workerFilter">
-        <option value="">Svi radnici</option>
-      </select>
-    </label>
-    <div class="actions-row">
-      <button id="exportCsvBtn">Export CSV (Excel)</button>
-      <button class="secondary" id="printBtn">Print / PDF</button>
-    </div>
-  </section>
+  <main>
+    <!-- Unos troška -->
+    <section class="card">
+      <h3>Unos troška</h3>
+      <label>Radnik
+        <input type="text" id="workerInput" placeholder="Ime radnika" />
+      </label>
+      <label>Gradilište
+        <input type="text" id="siteInput" placeholder="Naziv gradilišta / projekta" />
+      </label>
+      <label>Iznos (€)
+        <input type="number" step="0.01" id="amountInput" placeholder="0.00" />
+      </label>
+      <div class="hint">Ako učitaš sliku računa, aplikacija će pokušati automatski pročitati iznos (OCR).</div>
+      <label>Opis troška
+        <textarea id="descInput" rows="2" placeholder="Opis"></textarea>
+      </label>
 
-  <section class="card">
-    <h3>Popis troškova</h3>
-    <div id="expensesContainer"></div>
-    <div class="totals" id="totalsContainer"></div>
-  </section>
-</main>
-<footer>
-  KOB-Keramika — lokalna web aplikacija (podaci se čuvaju samo na ovom uređaju)
-</footer>
+      <label>Dokument (kamera ili galerija)
+        <input type="file" id="imageInput" accept="image/*" capture="environment" />
+      </label>
 
-<script>
-  const STORAGE_KEY = 'kob_keramika_expenses_v1';
+      <div class="image-preview" id="imagePreview" style="display:none;">
+        <p>Zadnji učitani dokument:</p>
+        <img id="previewImg" src="" alt="Skenirani dokument" />
+      </div>
 
-  function loadExpenses() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      return JSON.parse(raw);
-    } catch(e){ console.error(e); return []; }
-  }
-  function saveExpenses(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+      <button id="addExpenseBtn">Dodaj trošak</button>
+    </section>
 
-  let expenses = loadExpenses();
+    <!-- Filtriranje i akcije -->
+    <section class="card">
+      <h3>Filtriranje i izvoz</h3>
+      <label>Filter po radniku
+        <select id="workerFilter">
+          <option value="">Svi radnici</option>
+        </select>
+      </label>
 
-  const workerInput = document.getElementById('workerInput');
-  const amountInput = document.getElementById('amountInput');
-  const descInput = document.getElementById('descInput');
-  const imageInput = document.getElementById('imageInput');
-  const imagePreview = document.getElementById('imagePreview');
-  const previewImg = document.getElementById('previewImg');
-  const addExpenseBtn = document.getElementById('addExpenseBtn');
-  const expensesContainer = document.getElementById('expensesContainer');
-  const totalsContainer = document.getElementById('totalsContainer');
-  const workerFilter = document.getElementById('workerFilter');
-  const exportCsvBtn = document.getElementById('exportCsvBtn');
-  const printBtn = document.getElementById('printBtn');
+      <div class="actions-row">
+        <button id="exportCsvBtn">Export CSV (Excel)</button>
+        <button class="secondary" id="printBtn">Print / PDF</button>
+      </div>
 
-  let latestImageDataUrl = null;
+      <div class="totals" id="selectedWorkerTotal"></div>
+    </section>
 
-  imageInput.addEventListener('change', () => {
-    const file = imageInput.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      latestImageDataUrl = evt.target.result;
-      previewImg.src = latestImageDataUrl;
-      imagePreview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  });
+    <!-- Lista troškova -->
+    <section class="card">
+      <h3>Popis troškova</h3>
+      <div id="expensesContainer"></div>
+      <div class="totals" id="totalsContainer"></div>
+    </section>
+  </main>
 
-  addExpenseBtn.addEventListener('click', () => {
-    const worker = workerInput.value.trim();
-    const amount = parseFloat((amountInput.value || '0').replace(',', '.'));
-    const desc = descInput.value.trim();
+  <footer>
+    KOB-Keramika — lokalna PWA aplikacija (podaci se čuvaju samo na ovom uređaju)
+  </footer>
 
-    if (!worker || isNaN(amount)) {
-      alert('Unesi ime radnika i ispravan iznos.');
-      return;
+  <script>
+    const STORAGE_KEY = 'kob_keramika_expenses_v2';
+
+    function loadExpenses() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error('Load error', e);
+        return [];
+      }
     }
 
-    const exp = {
-      id: Date.now(),
-      worker,
-      amount,
-      desc,
-      image: latestImageDataUrl || null,
-      date: new Date().toISOString()
-    };
-    expenses.push(exp);
-    saveExpenses(expenses);
+    function saveExpenses(list) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
 
-    workerInput.value = '';
-    amountInput.value = '';
-    descInput.value = '';
+    let expenses = loadExpenses();
+
+    const workerInput = document.getElementById('workerInput');
+    const siteInput = document.getElementById('siteInput');
+    const amountInput = document.getElementById('amountInput');
+    const descInput = document.getElementById('descInput');
+    const imageInput = document.getElementById('imageInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const addExpenseBtn = document.getElementById('addExpenseBtn');
+    const expensesContainer = document.getElementById('expensesContainer');
+    const totalsContainer = document.getElementById('totalsContainer');
+    const selectedWorkerTotal = document.getElementById('selectedWorkerTotal');
+    const workerFilter = document.getElementById('workerFilter');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const printBtn = document.getElementById('printBtn');
+
+    let latestImageDataUrl = null;
+
+    // ---- Pomocna funkcija za OCR iznosa ----
+    function tryExtractAmountFromText(text) {
+      if (!text) return null;
+      const cleaned = text.replace(/\s+/g, ' ').replace(',', '.');
+      const match = cleaned.match(/(\d+[.,]\d{2})|\d+/);
+      if (!match) return null;
+      return match[0].replace(',', '.');
+    }
+
+    // ---- Učitavanje slike + OCR ----
+    imageInput.addEventListener('change', async () => {
+      const file = imageInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        latestImageDataUrl = evt.target.result;
+        previewImg.src = latestImageDataUrl;
+        imagePreview.style.display = 'block';
+
+        // OCR pokušaj
+        if (window.Tesseract) {
+          try {
+            const result = await Tesseract.recognize(
+              latestImageDataUrl,
+              'eng',
+              { logger: m => console.log(m) }
+            );
+            const amountStr = tryExtractAmountFromText(result.data.text);
+            if (amountStr) {
+              amountInput.value = amountStr;
+            }
+          } catch (e) {
+            console.warn('OCR error', e);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ---- Dodavanje troška ----
+    addExpenseBtn.addEventListener('click', () => {
+      const worker = workerInput.value.trim();
+      const site = siteInput.value.trim();
+      const amount = parseFloat((amountInput.value || '0').replace(',', '.'));
+      const desc = descInput.value.trim();
+
+      if (!worker || isNaN(amount)) {
+        alert('Unesi ime radnika i ispravan iznos.');
+        return;
+      }
+
+      const exp = {
+        id: Date.now(),
+        worker,
+        site,
+        amount,
+        desc,
+        image: latestImageDataUrl || null,
+        date: new Date().toISOString()
+      };
+      expenses.push(exp);
+      saveExpenses(expenses);
+
+      workerInput.value = '';
+      siteInput.value = '';
+      amountInput.value = '';
+      descInput.value = '';
+      renderAll();
+    });
+
+    // ---- Render svega ----
+    function renderAll() {
+      const workers = [...new Set(expenses.map(e => e.worker))].sort();
+      const current = workerFilter.value;
+      workerFilter.innerHTML = '<option value=\"\">Svi radnici</option>';
+      workers.forEach(w => {
+        const opt = document.createElement('option');
+        opt.value = w;
+        opt.textContent = w;
+        if (w === current) opt.selected = true;
+        workerFilter.appendChild(opt);
+      });
+
+      const filterVal = workerFilter.value;
+      const filtered = filterVal
+        ? expenses.filter(e => e.worker === filterVal)
+        : expenses.slice().sort((a, b) => b.date.localeCompare(a.date));
+
+      if (!filtered.length) {
+        expensesContainer.innerHTML = '<p>Nema upisanih troškova.</p>';
+      } else {
+        let html = '<table><thead><tr><th>Datum</th><th>Radnik</th><th>Gradilište</th><th>Iznos</th><th>Opis</th></tr></thead><tbody>';
+        filtered.forEach(e => {
+          const d = new Date(e.date);
+          const ds = d.toLocaleDateString('hr-HR') + ' ' +
+            d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+          html += `<tr>
+            <td>${ds}</td>
+            <td>${e.worker}</td>
+            <td>${e.site || ''}</td>
+            <td>${e.amount.toFixed(2)}</td>
+            <td>${e.desc || ''}</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        expensesContainer.innerHTML = html;
+      }
+
+      // ukupno po svim radnicima
+      const totals = {};
+      expenses.forEach(e => {
+        totals[e.worker] = (totals[e.worker] || 0) + e.amount;
+      });
+      if (!Object.keys(totals).length) {
+        totalsContainer.innerHTML = '';
+      } else {
+        let tHtml = '<strong>Ukupno po radniku (svi troškovi):</strong><br>';
+        Object.entries(totals).forEach(([w, sum]) => {
+          tHtml += `${w}: ${sum.toFixed(2)} €<br>`;
+        });
+        totalsContainer.innerHTML = tHtml;
+      }
+
+      // ukupno za odabranog radnika (filtrirano)
+      if (filterVal && filtered.length) {
+        const sumSel = filtered.reduce((s, e) => s + e.amount, 0);
+        selectedWorkerTotal.innerHTML =
+          `<strong>Ukupno za radnika ${filterVal} (trenutni filter):</strong> ${sumSel.toFixed(2)} €`;
+      } else {
+        selectedWorkerTotal.innerHTML = '';
+      }
+    }
+
+    workerFilter.addEventListener('change', renderAll);
+
+    // ---- CSV export (s gradilištem) ----
+    exportCsvBtn.addEventListener('click', () => {
+      if (!expenses.length) {
+        alert('Nema troškova za export.');
+        return;
+      }
+      const rows = [['datum', 'radnik', 'gradiliste', 'iznos', 'opis']];
+      expenses.forEach(e => {
+        rows.push([
+          e.date,
+          e.worker,
+          e.site || '',
+          e.amount.toString().replace('.', ','),
+          e.desc || ''
+        ]);
+      });
+      const csvContent = rows
+        .map(r => r.map(val => `"${(val ?? '').toString().replace(/\"/g, '\"\"')}"`).join(';'))
+        .join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'kob_keramika_troskovi.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // ---- Print / PDF ----
+    printBtn.addEventListener('click', () => window.print());
+
+    // ---- Service worker za offline ----
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(console.error);
+      });
+    }
+
     renderAll();
-  });
-
-  function renderAll() {
-    const workers = [...new Set(expenses.map(e => e.worker))].sort();
-    const current = workerFilter.value;
-    workerFilter.innerHTML = '<option value=\"\">Svi radnici</option>';
-    workers.forEach(w => {
-      const opt = document.createElement('option');
-      opt.value = w; opt.textContent = w;
-      if (w === current) opt.selected = true;
-      workerFilter.appendChild(opt);
-    });
-
-    const filterVal = workerFilter.value;
-    const filtered = filterVal
-      ? expenses.filter(e => e.worker === filterVal)
-      : expenses.slice().sort((a,b) => b.date.localeCompare(a.date));
-
-    if (!filtered.length) {
-      expensesContainer.innerHTML = '<p>Nema upisanih troškova.</p>';
-    } else {
-      let html = '<table><thead><tr><th>Datum</th><th>Radnik</th><th>Iznos</th><th>Opis</th></tr></thead><tbody>';
-      filtered.forEach(e => {
-        const d = new Date(e.date);
-        const ds = d.toLocaleDateString('hr-HR') + ' ' +
-                   d.toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'});
-        html += `<tr>
-          <td>${ds}</td>
-          <td>${e.worker}</td>
-          <td>${e.amount.toFixed(2)}</td>
-          <td>${e.desc || ''}</td>
-        </tr>`;
-      });
-      html += '</tbody></table>';
-      expensesContainer.innerHTML = html;
-    }
-
-    const totals = {};
-    expenses.forEach(e => {
-      totals[e.worker] = (totals[e.worker] || 0) + e.amount;
-    });
-    if (!Object.keys(totals).length) {
-      totalsContainer.innerHTML = '';
-    } else {
-      let tHtml = '<strong>Ukupno po radniku:</strong><br>';
-      Object.entries(totals).forEach(([w,sum])=>{
-        tHtml += `${w}: ${sum.toFixed(2)} €<br>`;
-      });
-      totalsContainer.innerHTML = tHtml;
-    }
-  }
-
-  workerFilter.addEventListener('change', renderAll);
-
-  exportCsvBtn.addEventListener('click', () => {
-    if (!expenses.length) { alert('Nema troškova za export.'); return; }
-    const rows = [['datum','radnik','iznos','opis']];
-    expenses.forEach(e => {
-      rows.push([e.date, e.worker, e.amount.toString().replace('.', ','), e.desc || '']);
-    });
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/\"/g,'\"\"')}"`).join(';')).join('\\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'kob_keramika_troskovi.csv';
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
-  });
-
-  printBtn.addEventListener('click', ()=> window.print());
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(console.error);
-    });
-  }
-
-  renderAll();
-</script>
+  </script>
 </body>
 </html>
