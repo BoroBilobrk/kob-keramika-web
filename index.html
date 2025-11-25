@@ -5,7 +5,6 @@
   <meta charset="UTF-8" />
   <title>KOB-Keramika</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="manifest" href="manifest.webmanifest">
 
   <!-- Tesseract.js za OCR iz slike -->
   <script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
@@ -1710,7 +1709,7 @@
 
   if ("serviceWorker" in navigator) {
   navigator.serviceWorker
-    .register("/kob-keramika-web./service-worker.js")
+    .register("service-worker.js")
     .then(() => console.log("SW registered"))
     .catch((err) => console.warn("SW failed", err));
 }  // inicijalni render
