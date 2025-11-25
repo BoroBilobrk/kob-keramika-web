@@ -1,1 +1,14 @@
-
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kobkeramika.app",
+      "sha256_cert_fingerprints": [
+        "97:25:3E:BE:40:F0:40:88:65:D1:5B:9D:C1:7A:DD:2B:9B:66:88:A5:F0:AE:58:06:58:09:D8:FA:0E:E6:98:20"
+      ]
+    }
+  }
+]
