@@ -398,11 +398,51 @@
         </p>
       </section>
 
+      <!-- CJENIK RADOVA (GLOBAL + PO GRADILIŠTU) -->
+      <section class="card">
+        <h3><span class="emoji">💶</span> Cjenik radova</h3>
+        <p class="hint">Globalne cijene (vrijede za sva gradilišta, osim ako za neko gradilište ne upišeš posebne cijene).</p>
+        <div class="measure-grid">
+          <div><label>Zid (€/m²) <input type="number" step="0.01" id="priceGlobal_zid_m2" /></label></div>
+          <div><label>Pod (€/m²) <input type="number" step="0.01" id="priceGlobal_pod_m2" /></label></div>
+          <div><label>Sokl (€/m) <input type="number" step="0.01" id="priceGlobal_sokl_m" /></label></div>
+          <div><label>Hidro (€/m²) <input type="number" step="0.01" id="priceGlobal_hidro_m2" /></label></div>
+          <div><label>Hidro traka (€/m) <input type="number" step="0.01" id="priceGlobal_hidro_traka_m" /></label></div>
+          <div><label>Gerung (€/m) <input type="number" step="0.01" id="priceGlobal_gerung_m" /></label></div>
+          <div><label>Lajsne (€/m) <input type="number" step="0.01" id="priceGlobal_lajsne_m" /></label></div>
+          <div><label>Stepenice (€/m) <input type="number" step="0.01" id="priceGlobal_stepenice_m" /></label></div>
+        </div>
+        <div class="actions-row">
+          <button id="btnSavePriceGlobal">Spremi globalni cjenik</button>
+        </div>
+
+        <hr style="margin:12px 0;border-color:#333;" />
+
+        <p class="hint">Posebne cijene za pojedino gradilište (ako treba drugačiji obračun).</p>
+        <label>Gradilište (za posebni cjenik)
+          <input type="text" id="priceSiteSiteInput" placeholder="npr. Stan Perković" />
+        </label>
+        <div class="measure-grid">
+          <div><label>Zid (€/m²) <input type="number" step="0.01" id="priceSite_zid_m2" /></label></div>
+          <div><label>Pod (€/m²) <input type="number" step="0.01" id="priceSite_pod_m2" /></label></div>
+          <div><label>Sokl (€/m) <input type="number" step="0.01" id="priceSite_sokl_m" /></label></div>
+          <div><label>Hidro (€/m²) <input type="number" step="0.01" id="priceSite_hidro_m2" /></label></div>
+          <div><label>Hidro traka (€/m) <input type="number" step="0.01" id="priceSite_hidro_traka_m" /></label></div>
+          <div><label>Gerung (€/m) <input type="number" step="0.01" id="priceSite_gerung_m" /></label></div>
+          <div><label>Lajsne (€/m) <input type="number" step="0.01" id="priceSite_lajsne_m" /></label></div>
+          <div><label>Stepenice (€/m) <input type="number" step="0.01" id="priceSite_stepenice_m" /></label></div>
+        </div>
+        <div class="actions-row">
+          <button id="btnSavePriceSite" class="secondary">Spremi cjenik za gradilište</button>
+          <button id="btnClearPriceSite" class="ghost">Obriši posebni cjenik za gradilište</button>
+        </div>
+      </section>
+
       <!-- GRAĐEVINSKA KNJIGA -->
       <section class="card">
         <h3><span class="emoji">📘</span> Građevinska knjiga (PDF)</h3>
         <label>Gradilište (za građevinsku knjigu)
-          <input type="text" id="gbSiteInput" placeholder="Ako je prazno, uzet će se isto kao gore u mjerenjima" />
+          <input type="text" id="gbSiteInput" placeholder="Ako je prazno, uzet će se isto kao u mjerenjima" />
         </label>
         <label>Izvođač radova
           <input type="text" id="gbContractorInput" placeholder="npr. KOB-Keramika d.o.o." />
@@ -427,8 +467,8 @@
         </div>
         <p class="hint">
           Građevinska knjiga se automatski generira za odabrano gradilište:<br>
-          – koristi <strongs>mjere</strong> (po prostoriji i vrsti) i <strong>troškove</strong> za to gradilište.<br>
-          Ako uneseš period, u troškovima će biti samo zapisi u tom rasponu datuma.
+          – koristi <strong>mjere</strong> (po prostoriji i vrsti) i <strong>cijene iz cjenika</strong>.<br>
+          Troškovi (računi) su odvojeni i ne ulaze u građevinsku knjigu.
         </p>
       </section>
 
@@ -460,13 +500,14 @@
   </main>
 
   <footer>
-    KOB-Keramika — lokalna PWA aplikacija (troškovi + mjere; cloud sync je opcijski).
+    KOB-Keramika — lokalna PWA aplikacija (troškovi + mjere + građevinska knjiga; cloud sync je opcijski).
   </footer>
 
   <script>
     // Ključevi za lokalnu pohranu
     const STORAGE_KEY = 'kob_keramika_expenses_v5';
     const MEASURES_KEY = 'kob_keramika_measures_v2';
+    const PRICELIST_KEY = 'kob_keramika_pricelist_v1';
 
     // Tipovi mjera
     const MEASURE_TYPES = {
@@ -508,8 +549,55 @@
       localStorage.setItem(MEASURES_KEY, JSON.stringify(m));
     }
 
+    function loadPricelist() {
+      try {
+        const raw = localStorage.getItem(PRICELIST_KEY);
+        if (!raw) return { global:{}, perSite:{} };
+        const obj = JSON.parse(raw);
+        if (!obj.global) obj.global = {};
+        if (!obj.perSite) obj.perSite = {};
+        return obj;
+      } catch (e) {
+        console.error('Pricelist load error', e);
+        return { global:{}, perSite:{} };
+      }
+    }
+    function savePricelist(p) {
+      localStorage.setItem(PRICELIST_KEY, JSON.stringify(p));
+    }
+
     let expenses = loadExpenses();
-    let measures = loadMeasures(); // struktura: { [site]: { [room]: [ {id, type, qty, width, height, length, note, ts} ] } }
+    let measures = loadMeasures(); // { [site]: { [room]: [ {...} ] } }
+    let pricelist = loadPricelist();
+
+    // logo za PDF (dataURL)
+    let logoDataUrl = null;
+    (function loadLogoForPdf() {
+      const img = new Image();
+      img.src = 'logo.png';
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const scale = 0.4;
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          logoDataUrl = canvas.toDataURL('image/png');
+        } catch (e) {
+          console.warn('Logo toDataURL error', e);
+        }
+      };
+    })();
+
+    function getPriceForType(site, type) {
+      const g = pricelist.global || {};
+      const ps = (pricelist.perSite && pricelist.perSite[site]) || {};
+      if (ps[type] != null && !isNaN(ps[type])) return ps[type];
+      if (g[type] != null && !isNaN(g[type])) return g[type];
+      return null; // nije zadano
+    }
 
     // -------------------------------------------------------
     // POGLEDI
@@ -592,6 +680,34 @@
     const measuresSummary = document.getElementById('measuresSummary');
 
     // -------------------------------------------------------
+    // ELEMENTI CJENIKA
+    // -------------------------------------------------------
+    const priceGlobalInputs = {
+      zid_m2: document.getElementById('priceGlobal_zid_m2'),
+      pod_m2: document.getElementById('priceGlobal_pod_m2'),
+      sokl_m: document.getElementById('priceGlobal_sokl_m'),
+      hidro_m2: document.getElementById('priceGlobal_hidro_m2'),
+      hidro_traka_m: document.getElementById('priceGlobal_hidro_traka_m'),
+      gerung_m: document.getElementById('priceGlobal_gerung_m'),
+      lajsne_m: document.getElementById('priceGlobal_lajsne_m'),
+      stepenice_m: document.getElementById('priceGlobal_stepenice_m')
+    };
+    const priceSiteSiteInput = document.getElementById('priceSiteSiteInput');
+    const priceSiteInputs = {
+      zid_m2: document.getElementById('priceSite_zid_m2'),
+      pod_m2: document.getElementById('priceSite_pod_m2'),
+      sokl_m: document.getElementById('priceSite_sokl_m'),
+      hidro_m2: document.getElementById('priceSite_hidro_m2'),
+      hidro_traka_m: document.getElementById('priceSite_hidro_traka_m'),
+      gerung_m: document.getElementById('priceSite_gerung_m'),
+      lajsne_m: document.getElementById('priceSite_lajsne_m'),
+      stepenice_m: document.getElementById('priceSite_stepenice_m')
+    };
+    const btnSavePriceGlobal = document.getElementById('btnSavePriceGlobal');
+    const btnSavePriceSite = document.getElementById('btnSavePriceSite');
+    const btnClearPriceSite = document.getElementById('btnClearPriceSite');
+
+    // -------------------------------------------------------
     // ELEMENTI GRAĐEVINSKE KNJIGE
     // -------------------------------------------------------
     const gbSiteInput = document.getElementById('gbSiteInput');
@@ -601,12 +717,15 @@
     const gbToDateInput = document.getElementById('gbToDateInput');
     const btnExportGbPdf = document.getElementById('btnExportGbPdf');
 
-    // malo komfora: kad upišeš gradilište u mjerenjima, auto-popuni za građevinsku knjigu ako je prazno
+    // veza mjerenja -> gbSite
     measureSiteInput.addEventListener('input', () => {
-      if (!gbSiteInput.value.trim()) {
-        gbSiteInput.value = measureSiteInput.value;
-      }
+      if (!gbSiteInput.value.trim()) gbSiteInput.value = measureSiteInput.value;
+      if (!priceSiteSiteInput.value.trim()) priceSiteSiteInput.value = measureSiteInput.value;
+      renderPriceSiteFields();
     });
+
+    priceSiteSiteInput.addEventListener('change', renderPriceSiteFields);
+    priceSiteSiteInput.addEventListener('input', renderPriceSiteFields);
 
     // -------------------------------------------------------
     // OCR ZA IZNOS
@@ -737,13 +856,9 @@
       if (!isNaN(direct) && direct > 0) {
         qty = direct;
       } else if (meta.kind === 'area') {
-        if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
-          qty = w * h;
-        }
+        if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) qty = w * h;
       } else if (meta.kind === 'length') {
-        if (!isNaN(L) && L > 0) {
-          qty = L;
-        }
+        if (!isNaN(L) && L > 0) qty = L;
       }
 
       if (qty === null) {
@@ -775,6 +890,68 @@
       measureLengthInput.value = '';
       measureQtyInput.value = '';
       measureNoteInput.value = '';
+    });
+
+    // -------------------------------------------------------
+    // CJENIK – RENDER I SPREMANJE
+    // -------------------------------------------------------
+    function renderPriceGlobalFields() {
+      Object.keys(priceGlobalInputs).forEach(t => {
+        const val = pricelist.global[t];
+        priceGlobalInputs[t].value = (val != null && !isNaN(val)) ? val : '';
+      });
+    }
+
+    function renderPriceSiteFields() {
+      const site = priceSiteSiteInput.value.trim();
+      const sitePrices = (pricelist.perSite && pricelist.perSite[site]) || {};
+      Object.keys(priceSiteInputs).forEach(t => {
+        const val = sitePrices[t];
+        priceSiteInputs[t].value = (val != null && !isNaN(val)) ? val : '';
+      });
+    }
+
+    btnSavePriceGlobal.addEventListener('click', () => {
+      if (!pricelist.global) pricelist.global = {};
+      Object.keys(priceGlobalInputs).forEach(t => {
+        const v = parseFloat(priceGlobalInputs[t].value || 'NaN');
+        pricelist.global[t] = isNaN(v) ? null : v;
+      });
+      savePricelist(pricelist);
+      alert('Globalni cjenik spremljen.');
+    });
+
+    btnSavePriceSite.addEventListener('click', () => {
+      const site = priceSiteSiteInput.value.trim();
+      if (!site) {
+        alert('Upiši naziv gradilišta za posebni cjenik.');
+        return;
+      }
+      if (!pricelist.perSite) pricelist.perSite = {};
+      const obj = {};
+      Object.keys(priceSiteInputs).forEach(t => {
+        const v = parseFloat(priceSiteInputs[t].value || 'NaN');
+        obj[t] = isNaN(v) ? null : v;
+      });
+      pricelist.perSite[site] = obj;
+      savePricelist(pricelist);
+      alert('Cjenik za gradilište spremljen.');
+    });
+
+    btnClearPriceSite.addEventListener('click', () => {
+      const site = priceSiteSiteInput.value.trim();
+      if (!site) {
+        alert('Upiši naziv gradilišta.');
+        return;
+      }
+      if (pricelist.perSite && pricelist.perSite[site]) {
+        delete pricelist.perSite[site];
+        savePricelist(pricelist);
+        renderPriceSiteFields();
+        alert('Posebni cjenik za gradilište obrisan (koristit će se globalni).');
+      } else {
+        alert('Za to gradilište nema posebnog cjenika.');
+      }
     });
 
     // -------------------------------------------------------
@@ -886,6 +1063,7 @@
         opt.value = s;
         opt.textContent = s;
         if (s === currentSite) opt.selected = true;
+        workerFilter.appendChild;
         siteFilter.appendChild(opt);
       });
 
@@ -949,6 +1127,8 @@
       renderWorkersSummary();
       renderMeasuresSummary();
       renderMeasuresCurrent();
+      renderPriceGlobalFields();
+      renderPriceSiteFields();
     }
 
     workerFilter.addEventListener('change', () => {
@@ -1165,11 +1345,20 @@
         y += 2;
       });
 
+      // dodaj logo & footer s brojem stranica
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 10, 4, 20, 10);
+        doc.setFontSize(8);
+        doc.text('Stranica ' + i + '/' + pageCount, 105, 290, { align:'center' });
+      }
+
       doc.save('kob_keramika_mjerne_dokaznice_' + site.replace(/\s+/g,'_') + '.pdf');
     });
 
     // -------------------------------------------------------
-    // GRAĐEVINSKA KNJIGA – PDF
+    // GRAĐEVINSKA KNJIGA – PDF (SAMO MJERE + CIJENE)
     // -------------------------------------------------------
     btnExportGbPdf.addEventListener('click', () => {
       const { jsPDF } = window.jspdf || {};
@@ -1178,11 +1367,13 @@
         return;
       }
       let site = gbSiteInput.value.trim();
-      if (!site) {
-        site = measureSiteInput.value.trim();
-      }
+      if (!site) site = measureSiteInput.value.trim();
       if (!site) {
         alert('Za građevinsku knjigu upiši gradilište (ili u mjerenjima ili ovdje).');
+        return;
+      }
+      if (!measures[site]) {
+        alert('Nema mjera za ovo gradilište.');
         return;
       }
 
@@ -1226,100 +1417,127 @@
       }
 
       doc.setFontSize(11);
-      doc.text('Dokument generiran iz interne aplikacije KOB-Keramika.', 10, y);
+      doc.text('Dokument generiran iz interne aplikacije KOB-Keramika (mjere + obračun).', 10, y);
 
-      // Stranica 2 – Sažetak mjera
+      // Stranica 2 – Mjerne situacije s cijenama
       doc.addPage();
       y = 20;
       doc.setFontSize(14);
-      doc.text('1. Sažetak mjera (mjerne situacije)', 10, y);
-      y += 8;
-      doc.setFontSize(10);
-
-      if (!measures[site]) {
-        doc.text('Nema evidentiranih mjera za ovo gradilište.', 10, y);
-      } else {
-        const rooms = measures[site];
-        const totalByType = {};
-        Object.keys(rooms).sort().forEach(room => {
-          if (y > 270) { doc.addPage(); y = 20; }
-          doc.setFontSize(11);
-          doc.text('Prostorija: ' + room, 10, y);
-          y += 5;
-          doc.setFontSize(9);
-          const localByType = {};
-          rooms[room].forEach(m => {
-            if (!localByType[m.type]) localByType[m.type] = 0;
-            localByType[m.type] += m.qty;
-            if (!totalByType[m.type]) totalByType[m.type] = 0;
-            totalByType[m.type] += m.qty;
-          });
-          Object.keys(localByType).forEach(t => {
-            if (y > 270) { doc.addPage(); y = 20; }
-            const meta = MEASURE_TYPES[t] || { label: t, unit: '' };
-            doc.text('- ' + meta.label + ': ' + localByType[t].toFixed(3) + ' ' + meta.unit, 12, y);
-            y += 4;
-          });
-          y += 2;
-        });
-
-        if (Object.keys(totalByType).length) {
-          if (y > 260) { doc.addPage(); y = 20; }
-          doc.setFontSize(11);
-          doc.text('Ukupno po vrsti radova:', 10, y);
-          y += 5;
-          doc.setFontSize(9);
-          Object.keys(totalByType).forEach(t => {
-            if (y > 270) { doc.addPage(); y = 20; }
-            const meta = MEASURE_TYPES[t] || { label: t, unit: '' };
-            doc.text('- ' + meta.label + ': ' + totalByType[t].toFixed(3) + ' ' + meta.unit, 12, y);
-            y += 4;
-          });
-        }
-      }
-
-      // Stranica 3 – Troškovi
-      doc.addPage();
-      y = 20;
-      doc.setFontSize(14);
-      doc.text('2. Troškovi vezani uz gradilište', 10, y);
+      doc.text('1. Mjerne situacije (mjere i cijene)', 10, y);
       y += 8;
       doc.setFontSize(9);
 
-      let list = expenses.filter(e => e.site === site);
-      if (fromTs || toTs) {
-        list = list.filter(e => {
-          const t = new Date(e.date).getTime();
-          if (isNaN(t)) return false;
-          if (fromTs && t < fromTs) return false;
-          if (toTs && t > toTs) return false;
-          return true;
-        });
-      }
-      if (!list.length) {
-        doc.text('Nema evidentiranih troškova za zadani kriterij.', 10, y);
-      } else {
-        list.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        let totalCost = 0;
-        list.forEach(e => {
-          const d = new Date(e.date);
-          const ds = d.toLocaleDateString('hr-HR');
-          const line = `${ds} | ${e.worker} | ${e.desc || ''} | ${e.amount.toFixed(2)} €`;
-          const splitted = doc.splitTextToSize(line, 180);
-          if (y + splitted.length * 5 > 270) {
-            doc.addPage();
-            y = 20;
-          }
-          splitted.forEach(l => {
-            doc.text(l, 10, y);
-            y += 4;
-          });
-          totalCost += e.amount;
-        });
+      const rooms = measures[site];
+      const totalByType = {};
+      const totalValueByType = {};
 
+      Object.keys(rooms).sort().forEach(room => {
         if (y > 260) { doc.addPage(); y = 20; }
         doc.setFontSize(11);
-        doc.text('Ukupno troškovi za gradilište: ' + totalCost.toFixed(2) + ' €', 10, y + 4);
+        doc.text('Prostorija: ' + room, 10, y);
+        y += 5;
+        doc.setFontSize(8);
+
+        // tablični header
+        doc.text('Vrsta', 10, y);
+        doc.text('Količina', 55, y);
+        doc.text('Jed.', 80, y);
+        doc.text('Jed. cijena', 100, y);
+        doc.text('Ukupno', 140, y);
+        y += 4;
+
+        const localByType = {};
+        const localValueByType = {};
+
+        rooms[room].forEach(m => {
+          if (!localByType[m.type]) localByType[m.type] = 0;
+          localByType[m.type] += m.qty;
+
+          const price = getPriceForType(site, m.type);
+          const value = price != null ? price * m.qty : 0;
+
+          if (!localValueByType[m.type]) localValueByType[m.type] = 0;
+          localValueByType[m.type] += value;
+
+          if (!totalByType[m.type]) totalByType[m.type] = 0;
+          totalByType[m.type] += m.qty;
+          if (!totalValueByType[m.type]) totalValueByType[m.type] = 0;
+          totalValueByType[m.type] += value;
+        });
+
+        Object.keys(localByType).forEach(t => {
+          if (y > 270) { doc.addPage(); y = 20; }
+          const meta = MEASURE_TYPES[t] || { label: t, unit: '' };
+          const qty = localByType[t];
+          const price = getPriceForType(site, t);
+          const val = localValueByType[t] || 0;
+
+          doc.text(meta.label, 10, y);
+          doc.text(qty.toFixed(3), 55, y);
+          doc.text(meta.unit, 80, y);
+          doc.text(price != null ? price.toFixed(2) + ' €' : '-', 100, y);
+          doc.text(val ? val.toFixed(2) + ' €' : '-', 140, y);
+          y += 4;
+        });
+
+        y += 3;
+      });
+
+      // Ukupno po vrsti radova za gradilište
+      if (Object.keys(totalByType).length) {
+        if (y > 260) { doc.addPage(); y = 20; }
+        doc.setFontSize(11);
+        doc.text('Ukupno po vrsti radova za gradilište:', 10, y);
+        y += 5;
+        doc.setFontSize(8);
+        doc.text('Vrsta', 10, y);
+        doc.text('Količina', 55, y);
+        doc.text('Jed.', 80, y);
+        doc.text('Jed. cijena', 100, y);
+        doc.text('Ukupno', 140, y);
+        y += 4;
+
+        let grandTotal = 0;
+        Object.keys(totalByType).forEach(t => {
+          if (y > 270) { doc.addPage(); y = 20; }
+          const meta = MEASURE_TYPES[t] || { label: t, unit: '' };
+          const qty = totalByType[t];
+          const price = getPriceForType(site, t);
+          const val = totalValueByType[t] || 0;
+          grandTotal += val;
+
+          doc.text(meta.label, 10, y);
+          doc.text(qty.toFixed(3), 55, y);
+          doc.text(meta.unit, 80, y);
+          doc.text(price != null ? price.toFixed(2) + ' €' : '-', 100, y);
+          doc.text(val ? val.toFixed(2) + ' €' : '-', 140, y);
+          y += 4;
+        });
+
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setFontSize(11);
+        doc.text('Ukupna vrijednost radova: ' + grandTotal.toFixed(2) + ' €', 10, y + 6);
+      }
+
+      // Potpisne linije
+      doc.addPage();
+      y = 40;
+      doc.setFontSize(12);
+      doc.text('2. Potpisi', 10, 20);
+      doc.setFontSize(11);
+      doc.text('Izvođač radova: _______________________________', 10, y);
+      y += 20;
+      doc.text('Investitor:       _______________________________', 10, y);
+      y += 20;
+      doc.text('Stručni nadzor:  _______________________________', 10, y);
+
+      // Header logo i numeracija na svim stranicama
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 10, 4, 20, 10);
+        doc.setFontSize(8);
+        doc.text('Stranica ' + i + '/' + pageCount, 105, 290, { align:'center' });
       }
 
       doc.save('kob_keramika_gradevinska_knjiga_' + site.replace(/\s+/g,'_') + '.pdf');
@@ -1328,20 +1546,18 @@
     // -------------------------------------------------------
     // CLOUD BACKUP (FIREBASE – OPCIJSKI)
     // -------------------------------------------------------
-    const USE_FIREBASE = true; // postavi na true nakon što dodaš svoj firebaseConfig
+    const USE_FIREBASE = false; // postavi na true nakon što dodaš svoj firebaseConfig
     let db = null;
 
     if (USE_FIREBASE && window.firebase) {
       const firebaseConfig = {
-        // TODO: const firebaseConfig = {
-  apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
-  authDomain: "kob-keramika.firebaseapp.com",
-  projectId: "kob-keramika",
-  storageBucket: "kob-keramika.firebasestorage.app",
-  messagingSenderId: "604488601212",
-  appId: "1:604488601212:web:70552af260d9e5a283c3f9",
-  measurementId: "G-KDTBSP3H39"
-};
+        // apiKey: "...",
+        // authDomain: "...",
+        // projectId: "...",
+        // storageBucket: "...",
+        // messagingSenderId: "...",
+        // appId: "..."
+      };
       firebase.initializeApp(firebaseConfig);
       db = firebase.firestore();
     }
@@ -1360,6 +1576,7 @@
         await db.collection('kobKeramikaBackups').doc(code).set({
           data: expenses,
           measures: measures,
+          pricelist: pricelist,
           ts: Date.now()
         });
         alert('Backup spremljen u cloud.');
@@ -1388,8 +1605,10 @@
         const data = snap.data();
         expenses = data.data || [];
         measures = data.measures || {};
+        pricelist = data.pricelist || {global:{},perSite:{}};
         saveExpenses(expenses);
         saveMeasures(measures);
+        savePricelist(pricelist);
         renderAll();
         alert('Backup učitan.');
       } catch (e) {
