@@ -398,6 +398,40 @@
         </p>
       </section>
 
+      <!-- GRAĐEVINSKA KNJIGA -->
+      <section class="card">
+        <h3><span class="emoji">📘</span> Građevinska knjiga (PDF)</h3>
+        <label>Gradilište (za građevinsku knjigu)
+          <input type="text" id="gbSiteInput" placeholder="Ako je prazno, uzet će se isto kao gore u mjerenjima" />
+        </label>
+        <label>Izvođač radova
+          <input type="text" id="gbContractorInput" placeholder="npr. KOB-Keramika d.o.o." />
+        </label>
+        <label>Investitor
+          <input type="text" id="gbInvestorInput" placeholder="npr. Ime investitora (opcijski)" />
+        </label>
+        <div class="measure-grid">
+          <div>
+            <label>Period od (datum)
+              <input type="date" id="gbFromDateInput" />
+            </label>
+          </div>
+          <div>
+            <label>Period do (datum)
+              <input type="date" id="gbToDateInput" />
+            </label>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button id="btnExportGbPdf">Generiraj Građevinsku knjigu (PDF)</button>
+        </div>
+        <p class="hint">
+          Građevinska knjiga se automatski generira za odabrano gradilište:<br>
+          – koristi <strongs>mjere</strong> (po prostoriji i vrsti) i <strong>troškove</strong> za to gradilište.<br>
+          Ako uneseš period, u troškovima će biti samo zapisi u tom rasponu datuma.
+        </p>
+      </section>
+
       <!-- CLOUD BACKUP -->
       <section class="card">
         <h3><span class="emoji">☁️</span> Cloud backup / sync <span class="badge">OPCIJSKI</span></h3>
@@ -556,6 +590,23 @@
     const btnExportMeasuresPdf = document.getElementById('btnExportMeasuresPdf');
     const measureCurrentTable = document.getElementById('measureCurrentTable');
     const measuresSummary = document.getElementById('measuresSummary');
+
+    // -------------------------------------------------------
+    // ELEMENTI GRAĐEVINSKE KNJIGE
+    // -------------------------------------------------------
+    const gbSiteInput = document.getElementById('gbSiteInput');
+    const gbContractorInput = document.getElementById('gbContractorInput');
+    const gbInvestorInput = document.getElementById('gbInvestorInput');
+    const gbFromDateInput = document.getElementById('gbFromDateInput');
+    const gbToDateInput = document.getElementById('gbToDateInput');
+    const btnExportGbPdf = document.getElementById('btnExportGbPdf');
+
+    // malo komfora: kad upišeš gradilište u mjerenjima, auto-popuni za građevinsku knjigu ako je prazno
+    measureSiteInput.addEventListener('input', () => {
+      if (!gbSiteInput.value.trim()) {
+        gbSiteInput.value = measureSiteInput.value;
+      }
+    });
 
     // -------------------------------------------------------
     // OCR ZA IZNOS
@@ -1115,6 +1166,163 @@
       });
 
       doc.save('kob_keramika_mjerne_dokaznice_' + site.replace(/\s+/g,'_') + '.pdf');
+    });
+
+    // -------------------------------------------------------
+    // GRAĐEVINSKA KNJIGA – PDF
+    // -------------------------------------------------------
+    btnExportGbPdf.addEventListener('click', () => {
+      const { jsPDF } = window.jspdf || {};
+      if (!jsPDF) {
+        alert('PDF modul nije učitan.');
+        return;
+      }
+      let site = gbSiteInput.value.trim();
+      if (!site) {
+        site = measureSiteInput.value.trim();
+      }
+      if (!site) {
+        alert('Za građevinsku knjigu upiši gradilište (ili u mjerenjima ili ovdje).');
+        return;
+      }
+
+      const contractor = gbContractorInput.value.trim();
+      const investor = gbInvestorInput.value.trim();
+      const fromDateStr = gbFromDateInput.value;
+      const toDateStr = gbToDateInput.value;
+
+      let fromTs = null;
+      let toTs = null;
+      if (fromDateStr) {
+        const d = new Date(fromDateStr + 'T00:00:00');
+        if (!isNaN(d.getTime())) fromTs = d.getTime();
+      }
+      if (toDateStr) {
+        const d = new Date(toDateStr + 'T23:59:59');
+        if (!isNaN(d.getTime())) toTs = d.getTime();
+      }
+
+      const doc = new jsPDF();
+
+      // Naslovna
+      doc.setFontSize(16);
+      doc.text('KOB-Keramika – Građevinska knjiga', 10, 20);
+      doc.setFontSize(12);
+      doc.text('Gradilište: ' + site, 10, 30);
+      let y = 38;
+      if (contractor) {
+        doc.text('Izvođač: ' + contractor, 10, y);
+        y += 8;
+      }
+      if (investor) {
+        doc.text('Investitor: ' + investor, 10, y);
+        y += 8;
+      }
+      if (fromTs || toTs) {
+        const fromText = fromTs ? new Date(fromTs).toLocaleDateString('hr-HR') : '';
+        const toText = toTs ? new Date(toTs).toLocaleDateString('hr-HR') : '';
+        doc.text('Period: ' + (fromText || '...') + ' - ' + (toText || '...'), 10, y);
+        y += 8;
+      }
+
+      doc.setFontSize(11);
+      doc.text('Dokument generiran iz interne aplikacije KOB-Keramika.', 10, y);
+
+      // Stranica 2 – Sažetak mjera
+      doc.addPage();
+      y = 20;
+      doc.setFontSize(14);
+      doc.text('1. Sažetak mjera (mjerne situacije)', 10, y);
+      y += 8;
+      doc.setFontSize(10);
+
+      if (!measures[site]) {
+        doc.text('Nema evidentiranih mjera za ovo gradilište.', 10, y);
+      } else {
+        const rooms = measures[site];
+        const totalByType = {};
+        Object.keys(rooms).sort().forEach(room => {
+          if (y > 270) { doc.addPage(); y = 20; }
+          doc.setFontSize(11);
+          doc.text('Prostorija: ' + room, 10, y);
+          y += 5;
+          doc.setFontSize(9);
+          const localByType = {};
+          rooms[room].forEach(m => {
+            if (!localByType[m.type]) localByType[m.type] = 0;
+            localByType[m.type] += m.qty;
+            if (!totalByType[m.type]) totalByType[m.type] = 0;
+            totalByType[m.type] += m.qty;
+          });
+          Object.keys(localByType).forEach(t => {
+            if (y > 270) { doc.addPage(); y = 20; }
+            const meta = MEASURE_TYPES[t] || { label: t, unit: '' };
+            doc.text('- ' + meta.label + ': ' + localByType[t].toFixed(3) + ' ' + meta.unit, 12, y);
+            y += 4;
+          });
+          y += 2;
+        });
+
+        if (Object.keys(totalByType).length) {
+          if (y > 260) { doc.addPage(); y = 20; }
+          doc.setFontSize(11);
+          doc.text('Ukupno po vrsti radova:', 10, y);
+          y += 5;
+          doc.setFontSize(9);
+          Object.keys(totalByType).forEach(t => {
+            if (y > 270) { doc.addPage(); y = 20; }
+            const meta = MEASURE_TYPES[t] || { label: t, unit: '' };
+            doc.text('- ' + meta.label + ': ' + totalByType[t].toFixed(3) + ' ' + meta.unit, 12, y);
+            y += 4;
+          });
+        }
+      }
+
+      // Stranica 3 – Troškovi
+      doc.addPage();
+      y = 20;
+      doc.setFontSize(14);
+      doc.text('2. Troškovi vezani uz gradilište', 10, y);
+      y += 8;
+      doc.setFontSize(9);
+
+      let list = expenses.filter(e => e.site === site);
+      if (fromTs || toTs) {
+        list = list.filter(e => {
+          const t = new Date(e.date).getTime();
+          if (isNaN(t)) return false;
+          if (fromTs && t < fromTs) return false;
+          if (toTs && t > toTs) return false;
+          return true;
+        });
+      }
+      if (!list.length) {
+        doc.text('Nema evidentiranih troškova za zadani kriterij.', 10, y);
+      } else {
+        list.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        let totalCost = 0;
+        list.forEach(e => {
+          const d = new Date(e.date);
+          const ds = d.toLocaleDateString('hr-HR');
+          const line = `${ds} | ${e.worker} | ${e.desc || ''} | ${e.amount.toFixed(2)} €`;
+          const splitted = doc.splitTextToSize(line, 180);
+          if (y + splitted.length * 5 > 270) {
+            doc.addPage();
+            y = 20;
+          }
+          splitted.forEach(l => {
+            doc.text(l, 10, y);
+            y += 4;
+          });
+          totalCost += e.amount;
+        });
+
+        if (y > 260) { doc.addPage(); y = 20; }
+        doc.setFontSize(11);
+        doc.text('Ukupno troškovi za gradilište: ' + totalCost.toFixed(2) + ' €', 10, y + 4);
+      }
+
+      doc.save('kob_keramika_gradevinska_knjiga_' + site.replace(/\s+/g,'_') + '.pdf');
     });
 
     // -------------------------------------------------------
