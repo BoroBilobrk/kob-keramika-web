@@ -1648,7 +1648,9 @@
   messagingSenderId: "604488601212",
   appId: "1:604488601212:web:70552af260d9e5a283c3f9",
   measurementId: "G-KDTBSP3H39"
-};// apiKey: "...",
+};
+      const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
       firebase.initializeApp(firebaseConfig);
       db = firebase.firestore();
     }
