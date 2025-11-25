@@ -78,7 +78,7 @@
       background: radial-gradient(circle at top left, #1c1c1c, #101010);
       border: 1px solid rgba(255,255,255,0.06);
       box-shadow: 0 14px 35px rgba(0,0,0,0.6);
-      animation: fadeIn 0.4s ease-out;
+      animation: fadeIn 0.3s ease-out;
     }
     @keyframes fadeIn {
       from { opacity:0; transform: translateY(6px); }
@@ -114,7 +114,7 @@
       cursor: pointer;
       border-radius: 999px;
       border: none;
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.12s;
     }
     button:hover {
       transform: translateY(-1px);
@@ -180,19 +180,63 @@
     .view { display: none; }
     .view.active { display: block; }
 
-    #splashView {
+    /* HOME big buttons */
+    #homeView {
       text-align: center;
-      padding-top: 32px;
+      padding-top: 24px;
     }
-    #splashLogo {
-      width: 160px;
+    #homeLogo {
+      width: 180px;
       height: auto;
-      margin-bottom: 14px;
+      margin-bottom: 20px;
       border-radius: 16px;
       border: 1px solid rgba(255,255,255,0.2);
       box-shadow: 0 18px 40px rgba(0,0,0,0.85);
     }
-    #splashButtons button { margin-top: 8px; }
+    .home-buttons {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-top:12px;
+    }
+    .home-btn {
+      border-radius:18px;
+      padding:14px 12px;
+      font-size:16px;
+      background:#050505;
+      border:1px solid rgba(255,255,255,0.2);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .home-btn span.label {
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .home-btn span.icon {
+      font-size:20px;
+    }
+    .home-btn small {
+      display:block;
+      font-size:11px;
+      color:#aaa;
+    }
+
+    .back-row {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:8px;
+    }
+    .back-row h2 {
+      margin:0;
+      font-size:15px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
 
     .pill-nav {
       display:flex;
@@ -244,31 +288,48 @@
       <img src="logo.png" alt="KOB-Keramika logo" class="logo" id="headerLogo" />
       <div class="title-block">
         <span class="app-name">KOB-Keramika</span>
-        <span class="subtitle">Troškovi i mjerenja po radniku i gradilištu</span>
+        <span class="subtitle">Interni alat za troškove i mjere</span>
       </div>
     </div>
     <div class="tag">INTERNI ALAT</div>
   </header>
 
   <main>
-    <!-- POČETNI EKRAN -->
-    <section id="splashView" class="view active">
+    <!-- HOME VIEW -->
+    <section id="homeView" class="view active">
       <div class="card">
-        <img src="logo.png" id="splashLogo" alt="KOB-Keramika logo" />
-        <h3><span class="emoji">👋</span> Dobrodošli</h3>
-        <p>Interna aplikacija za skeniranje računa, praćenje troškova po radniku i gradilištu te mjerenje ploha (m² / dužni metri / režija).</p>
-        <div id="splashButtons">
-          <button id="goEntry">➕ Unos troška</button>
-          <button id="goOverview" class="secondary">📋 Pregled troškova</button>
-          <button id="goWorkers" class="secondary">👷 Po radniku</button>
+        <img src="logo.png" id="homeLogo" alt="KOB-Keramika logo" />
+        <h3><span class="emoji">👋</span> Odaberi što želiš raditi</h3>
+        <div class="home-buttons">
+          <button class="home-btn" id="btnHomeCosts">
+            <span class="label"><span class="icon">💰</span> TROŠKOVI</span>
+            <small>Unos računa, troškova po radniku i gradilištu</small>
+          </button>
+          <button class="home-btn" id="btnHomeMeasures">
+            <span class="label"><span class="icon">📐</span> MJERE &amp; GRAĐEVINSKA KNJIGA</span>
+            <small>Mjerenje zidova, podova, sokla... + Građevinska knjiga (PDF)</small>
+          </button>
+          <button class="home-btn" id="btnHomePrices">
+            <span class="label"><span class="icon">💶</span> CJENIK RADOVA</span>
+            <small>Jedinične cijene (globalno i po gradilištu)</small>
+          </button>
         </div>
-        <p class="hint">Savjet: u Chromeu odaberi “Dodaj na početni zaslon” za doživljaj kao aplikacija.</p>
+        <p class="hint" style="margin-top:12px;">
+          Savjet: u mobilnom Chromeu odaberi “Dodaj na početni zaslon” za doživljaj kao prava aplikacija.
+        </p>
       </div>
     </section>
 
-    <!-- GLAVNI EKRAN (troškovi + mjerenja) -->
-    <section id="entryView" class="view">
-      <!-- TROŠKOVI -->
+    <!-- TROŠKOVI VIEW -->
+    <section id="costsView" class="view">
+      <div class="card">
+        <div class="back-row">
+          <h2><span>💰</span> Troškovi</h2>
+          <button class="ghost" id="btnBackFromCosts">← Početna</button>
+        </div>
+        <p class="hint">Unos i praćenje troškova po radniku i gradilištu. Ovo je odvojeno od građevinske knjige.</p>
+      </div>
+
       <section class="card">
         <h3><span class="emoji">➕</span> Unos troška</h3>
         <label>Radnik
@@ -328,6 +389,23 @@
         <div id="expensesContainer" style="margin-top:8px;"></div>
         <div class="totals" id="totalsContainer"></div>
       </section>
+
+      <section class="card">
+        <h3><span class="emoji">👷</span> Sažetak po radniku</h3>
+        <div id="workersSummary"></div>
+        <p class="hint">Dodirni “Prikaži” za filtrirani prikaz troškova tog radnika.</p>
+      </section>
+    </section>
+
+    <!-- MJERE VIEW -->
+    <section id="measuresView" class="view">
+      <div class="card">
+        <div class="back-row">
+          <h2><span>📐</span> Mjere &amp; Građevinska knjiga</h2>
+          <button class="ghost" id="btnBackFromMeasures">← Početna</button>
+        </div>
+        <p class="hint">Sve vezano za mjerenje ploha, mjerne situacije i generiranje građevinske knjige (bez troškova).</p>
+      </div>
 
       <!-- MJERENJE PRO -->
       <section class="card">
@@ -398,46 +476,6 @@
         </p>
       </section>
 
-      <!-- CJENIK RADOVA (GLOBAL + PO GRADILIŠTU) -->
-      <section class="card">
-        <h3><span class="emoji">💶</span> Cjenik radova</h3>
-        <p class="hint">Globalne cijene (vrijede za sva gradilišta, osim ako za neko gradilište ne upišeš posebne cijene).</p>
-        <div class="measure-grid">
-          <div><label>Zid (€/m²) <input type="number" step="0.01" id="priceGlobal_zid_m2" /></label></div>
-          <div><label>Pod (€/m²) <input type="number" step="0.01" id="priceGlobal_pod_m2" /></label></div>
-          <div><label>Sokl (€/m) <input type="number" step="0.01" id="priceGlobal_sokl_m" /></label></div>
-          <div><label>Hidro (€/m²) <input type="number" step="0.01" id="priceGlobal_hidro_m2" /></label></div>
-          <div><label>Hidro traka (€/m) <input type="number" step="0.01" id="priceGlobal_hidro_traka_m" /></label></div>
-          <div><label>Gerung (€/m) <input type="number" step="0.01" id="priceGlobal_gerung_m" /></label></div>
-          <div><label>Lajsne (€/m) <input type="number" step="0.01" id="priceGlobal_lajsne_m" /></label></div>
-          <div><label>Stepenice (€/m) <input type="number" step="0.01" id="priceGlobal_stepenice_m" /></label></div>
-        </div>
-        <div class="actions-row">
-          <button id="btnSavePriceGlobal">Spremi globalni cjenik</button>
-        </div>
-
-        <hr style="margin:12px 0;border-color:#333;" />
-
-        <p class="hint">Posebne cijene za pojedino gradilište (ako treba drugačiji obračun).</p>
-        <label>Gradilište (za posebni cjenik)
-          <input type="text" id="priceSiteSiteInput" placeholder="npr. Stan Perković" />
-        </label>
-        <div class="measure-grid">
-          <div><label>Zid (€/m²) <input type="number" step="0.01" id="priceSite_zid_m2" /></label></div>
-          <div><label>Pod (€/m²) <input type="number" step="0.01" id="priceSite_pod_m2" /></label></div>
-          <div><label>Sokl (€/m) <input type="number" step="0.01" id="priceSite_sokl_m" /></label></div>
-          <div><label>Hidro (€/m²) <input type="number" step="0.01" id="priceSite_hidro_m2" /></label></div>
-          <div><label>Hidro traka (€/m) <input type="number" step="0.01" id="priceSite_hidro_traka_m" /></label></div>
-          <div><label>Gerung (€/m) <input type="number" step="0.01" id="priceSite_gerung_m" /></label></div>
-          <div><label>Lajsne (€/m) <input type="number" step="0.01" id="priceSite_lajsne_m" /></label></div>
-          <div><label>Stepenice (€/m) <input type="number" step="0.01" id="priceSite_stepenice_m" /></label></div>
-        </div>
-        <div class="actions-row">
-          <button id="btnSavePriceSite" class="secondary">Spremi cjenik za gradilište</button>
-          <button id="btnClearPriceSite" class="ghost">Obriši posebni cjenik za gradilište</button>
-        </div>
-      </section>
-
       <!-- GRAĐEVINSKA KNJIGA -->
       <section class="card">
         <h3><span class="emoji">📘</span> Građevinska knjiga (PDF)</h3>
@@ -471,8 +509,58 @@
           Troškovi (računi) su odvojeni i ne ulaze u građevinsku knjigu.
         </p>
       </section>
+    </section>
 
-      <!-- CLOUD BACKUP -->
+    <!-- CJENIK VIEW -->
+    <section id="pricesView" class="view">
+      <div class="card">
+        <div class="back-row">
+          <h2><span>💶</span> Cjenik radova</h2>
+          <button class="ghost" id="btnBackFromPrices">← Početna</button>
+        </div>
+        <p class="hint">Globalne i posebne cijene po gradilištu. Koriste se u Građevinskoj knjizi.</p>
+      </div>
+
+      <section class="card">
+        <h3><span class="emoji">💶</span> Globalni cjenik</h3>
+        <p class="hint">Vrijedi za sva gradilišta, osim ako za neko ne upišeš posebne cijene.</p>
+        <div class="measure-grid">
+          <div><label>Zid (€/m²) <input type="number" step="0.01" id="priceGlobal_zid_m2" /></label></div>
+          <div><label>Pod (€/m²) <input type="number" step="0.01" id="priceGlobal_pod_m2" /></label></div>
+          <div><label>Sokl (€/m) <input type="number" step="0.01" id="priceGlobal_sokl_m" /></label></div>
+          <div><label>Hidro (€/m²) <input type="number" step="0.01" id="priceGlobal_hidro_m2" /></label></div>
+          <div><label>Hidro traka (€/m) <input type="number" step="0.01" id="priceGlobal_hidro_traka_m" /></label></div>
+          <div><label>Gerung (€/m) <input type="number" step="0.01" id="priceGlobal_gerung_m" /></label></div>
+          <div><label>Lajsne (€/m) <input type="number" step="0.01" id="priceGlobal_lajsne_m" /></label></div>
+          <div><label>Stepenice (€/m) <input type="number" step="0.01" id="priceGlobal_stepenice_m" /></label></div>
+        </div>
+        <div class="actions-row">
+          <button id="btnSavePriceGlobal">Spremi globalni cjenik</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3><span class="emoji">📍</span> Cjenik po gradilištu</h3>
+        <p class="hint">Ako treba drugačiji obračun za određeno gradilište.</p>
+        <label>Gradilište
+          <input type="text" id="priceSiteSiteInput" placeholder="npr. Stan Perković" />
+        </label>
+        <div class="measure-grid">
+          <div><label>Zid (€/m²) <input type="number" step="0.01" id="priceSite_zid_m2" /></label></div>
+          <div><label>Pod (€/m²) <input type="number" step="0.01" id="priceSite_pod_m2" /></label></div>
+          <div><label>Sokl (€/m) <input type="number" step="0.01" id="priceSite_sokl_m" /></label></div>
+          <div><label>Hidro (€/m²) <input type="number" step="0.01" id="priceSite_hidro_m2" /></label></div>
+          <div><label>Hidro traka (€/m) <input type="number" step="0.01" id="priceSite_hidro_traka_m" /></label></div>
+          <div><label>Gerung (€/m) <input type="number" step="0.01" id="priceSite_gerung_m" /></label></div>
+          <div><label>Lajsne (€/m) <input type="number" step="0.01" id="priceSite_lajsne_m" /></label></div>
+          <div><label>Stepenice (€/m) <input type="number" step="0.01" id="priceSite_stepenice_m" /></label></div>
+        </div>
+        <div class="actions-row">
+          <button id="btnSavePriceSite" class="secondary">Spremi cjenik za gradilište</button>
+          <button id="btnClearPriceSite" class="ghost">Obriši posebni cjenik za gradilište</button>
+        </div>
+      </section>
+
       <section class="card">
         <h3><span class="emoji">☁️</span> Cloud backup / sync <span class="badge">OPCIJSKI</span></h3>
         <label>Sync kod (npr. naziv firme ili “kob-produkcija”)
@@ -489,18 +577,11 @@
       </section>
     </section>
 
-    <!-- EKRAN PO RADNIKU -->
-    <section id="workersView" class="view">
-      <section class="card">
-        <h3><span class="emoji">👷</span> Sažetak po radniku</h3>
-        <div id="workersSummary"></div>
-        <p class="hint">Dodirni “Prikaži” za filtrirani prikaz troškova tog radnika.</p>
-      </section>
-    </section>
+    <!-- (radnički view više nije poseban ekran, samo kartica gore) -->
   </main>
 
   <footer>
-    KOB-Keramika — lokalna PWA aplikacija (troškovi + mjere + građevinska knjiga; cloud sync je opcijski).
+    KOB-Keramika — lokalna PWA aplikacija (troškovi, mjere, građevinska knjiga, cjenik).
   </footer>
 
   <script>
@@ -596,29 +677,41 @@
       const ps = (pricelist.perSite && pricelist.perSite[site]) || {};
       if (ps[type] != null && !isNaN(ps[type])) return ps[type];
       if (g[type] != null && !isNaN(g[type])) return g[type];
-      return null; // nije zadano
+      return null;
     }
 
     // -------------------------------------------------------
-    // POGLEDI
+    // POGLEDI & NAVIGACIJA
     // -------------------------------------------------------
-    const splashView = document.getElementById('splashView');
-    const entryView  = document.getElementById('entryView');
-    const workersView = document.getElementById('workersView');
-    const goEntryBtn = document.getElementById('goEntry');
-    const goOverviewBtn = document.getElementById('goOverview');
-    const goWorkersBtn = document.getElementById('goWorkers');
+    const homeView = document.getElementById('homeView');
+    const costsView = document.getElementById('costsView');
+    const measuresView = document.getElementById('measuresView');
+    const pricesView = document.getElementById('pricesView');
+
+    const views = [homeView, costsView, measuresView, pricesView];
+
     const headerLogo = document.getElementById('headerLogo');
-    const workersSummary = document.getElementById('workersSummary');
+    const btnHomeCosts = document.getElementById('btnHomeCosts');
+    const btnHomeMeasures = document.getElementById('btnHomeMeasures');
+    const btnHomePrices = document.getElementById('btnHomePrices');
+    const btnBackFromCosts = document.getElementById('btnBackFromCosts');
+    const btnBackFromMeasures = document.getElementById('btnBackFromMeasures');
+    const btnBackFromPrices = document.getElementById('btnBackFromPrices');
 
     function showView(id) {
-      [splashView, entryView, workersView].forEach(v => v.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
+      views.forEach(v => v.classList.remove('active'));
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
-    goEntryBtn.addEventListener('click', () => showView('entryView'));
-    goOverviewBtn.addEventListener('click', () => showView('entryView'));
-    goWorkersBtn.addEventListener('click', () => { renderWorkersSummary(); showView('workersView'); });
-    headerLogo.addEventListener('click', () => showView('splashView'));
+
+    headerLogo.addEventListener('click', () => showView('homeView'));
+    btnHomeCosts.addEventListener('click', () => showView('costsView'));
+    btnHomeMeasures.addEventListener('click', () => showView('measuresView'));
+    btnHomePrices.addEventListener('click', () => showView('pricesView'));
+    btnBackFromCosts.addEventListener('click', () => showView('homeView'));
+    btnBackFromMeasures.addEventListener('click', () => showView('homeView'));
+    btnBackFromPrices.addEventListener('click', () => showView('homeView'));
 
     // -------------------------------------------------------
     // ELEMENTI TROŠKOVA
@@ -644,6 +737,7 @@
     const syncCodeInput = document.getElementById('syncCodeInput');
     const btnUploadBackup = document.getElementById('btnUploadBackup');
     const btnDownloadBackup = document.getElementById('btnDownloadBackup');
+    const workersSummary = document.getElementById('workersSummary');
 
     let latestImageDataUrl = null;
     let listMode = 'all';
@@ -717,7 +811,7 @@
     const gbToDateInput = document.getElementById('gbToDateInput');
     const btnExportGbPdf = document.getElementById('btnExportGbPdf');
 
-    // veza mjerenja -> gbSite
+    // veza mjerenja -> gbSite & priceSite
     measureSiteInput.addEventListener('input', () => {
       if (!gbSiteInput.value.trim()) gbSiteInput.value = measureSiteInput.value;
       if (!priceSiteSiteInput.value.trim()) priceSiteSiteInput.value = measureSiteInput.value;
@@ -1063,7 +1157,6 @@
         opt.value = s;
         opt.textContent = s;
         if (s === currentSite) opt.selected = true;
-        workerFilter.appendChild;
         siteFilter.appendChild(opt);
       });
 
@@ -1172,7 +1265,7 @@
           btnShowWorker.classList.add('active');
           btnShowAll.classList.remove('active');
           renderAll();
-          showView('entryView');
+          showView('costsView');
         });
       });
     }
@@ -1345,7 +1438,6 @@
         y += 2;
       });
 
-      // dodaj logo & footer s brojem stranica
       const pageCount = doc.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -1438,7 +1530,6 @@
         y += 5;
         doc.setFontSize(8);
 
-        // tablični header
         doc.text('Vrsta', 10, y);
         doc.text('Količina', 55, y);
         doc.text('Jed.', 80, y);
@@ -1483,7 +1574,7 @@
         y += 3;
       });
 
-      // Ukupno po vrsti radova za gradilište
+      // Ukupno po vrsti radova
       if (Object.keys(totalByType).length) {
         if (y > 260) { doc.addPage(); y = 20; }
         doc.setFontSize(11);
@@ -1531,7 +1622,6 @@
       y += 20;
       doc.text('Stručni nadzor:  _______________________________', 10, y);
 
-      // Header logo i numeracija na svim stranicama
       const pageCount = doc.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
