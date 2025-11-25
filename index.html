@@ -1707,14 +1707,14 @@
       }
     });
 
-    // inicijalni render
-    renderAll();
-  </script>
-</body>
-</html>
-if ("serviceWorker" in navigator) {
+  if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("/kob-keramika-web./service-worker.js")
     .then(() => console.log("SW registered"))
     .catch((err) => console.warn("SW failed", err));
-}
+}  // inicijalni render
+    renderAll();
+  </script>
+</body>
+</html>
+
