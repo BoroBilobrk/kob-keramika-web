@@ -1,20 +1,25 @@
 {
-  "name": "KOB Keramika",
-  "short_name": "KOB",
-  "start_url": "/",
+  "name": "KOB-Keramika",
+  "short_name": "KOB-Keramika",
+  "description": "Interna aplikacija za troškove, mjere, građevinsku knjigu i cjenik.",
+  "start_url": "/kob-keramika-web./?source=pwa",
+  "scope": "/kob-keramika-web./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "logo.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
