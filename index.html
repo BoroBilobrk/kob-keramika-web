@@ -1328,19 +1328,20 @@
     // -------------------------------------------------------
     // CLOUD BACKUP (FIREBASE – OPCIJSKI)
     // -------------------------------------------------------
-    const USE_FIREBASE = false; // postavi na true nakon što dodaš svoj firebaseConfig
+    const USE_FIREBASE = true; // postavi na true nakon što dodaš svoj firebaseConfig
     let db = null;
 
     if (USE_FIREBASE && window.firebase) {
       const firebaseConfig = {
-        // TODO: ovdje zalijepiš svoj Firebase config iz konzole
-        // apiKey: "...",
-        // authDomain: "...",
-        // projectId: "...",
-        // storageBucket: "...",
-        // messagingSenderId: "...",
-        // appId: "..."
-      };
+        // TODO: const firebaseConfig = {
+  apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
+  authDomain: "kob-keramika.firebaseapp.com",
+  projectId: "kob-keramika",
+  storageBucket: "kob-keramika.firebasestorage.app",
+  messagingSenderId: "604488601212",
+  appId: "1:604488601212:web:70552af260d9e5a283c3f9",
+  measurementId: "G-KDTBSP3H39"
+};
       firebase.initializeApp(firebaseConfig);
       db = firebase.firestore();
     }
