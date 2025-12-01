@@ -1711,37 +1711,51 @@ if (chkSilikon) {
       dmTotal += signedVal;
       dmRowsData.push({ name, val, sign, signedVal });
     ;
-
 // DODATNE MJERE
-html += `<b>Dodatne mjere (+/-):</b><br>`;
-
-if (!dmRowsData.length) {
-    html += `Nema unesenih dodatnih mjera.<br><br>`;
-} else {
-    dmRowsData.forEach((r, idx) => {
-        html += `${idx + 1}. ${r.name || 'Mjera'}: ${r.sign}${formatHr(r.val)} m → ${r.applyTo}<br>`;
+  let dmTotal = 0;
+  let dmRowsData = [];
+  if (chkDodatne) {
+    const rows = dmContainer.querySelectorAll('.dm-row');
+    rows.forEach(row => {
+      const name = row.querySelector('.dmName').value || '';
+      const val  = parseNum(row.querySelector('.dmVal').value);
+      const sign = row.querySelector('.dmSign').value;
+      const signedVal = sign === '-' ? -val : val;
+      dmTotal += signedVal;
+      dmRowsData.push({ name, val, sign, signedVal });
     });
-    html += `Ukupno dodatne mjere = <b>${formatHr(dmTotal)} m</b><br><br>`;
-}
 
-if (dmTotal !== 0) {
-    if (dmPod && results.pod != null) results.pod += dmTotal;
-    if (dmZid && results.zidoviNeto != null) results.zidoviNeto += dmTotal;
-    if (dmHid && results.hidroPod != null) results.hidroPod += dmTotal;
-    if (dmSil && results.silikon != null) results.silikon += dmTotal;
-    if (dmTrak && results.hidroTraka != null) results.hidroTraka += dmTotal;
-    if (dmSok && results.sokl != null) results.sokl += dmTotal;
-}
+    const dmPod  = document.getElementById('dmPod').checked;
+    const dmZid  = document.getElementById('dmZidovi').checked;
+    const dmHid  = document.getElementById('dmHidro').checked;
+    const dmSil  = document.getElementById('dmSil').checked;
+    const dmTrak = document.getElementById('dmTraka').checked;
+    const dmSok  = document.getElementById('dmSokl').checked;
 
-results.dm = { total: dmTotal, rows: dmRowsData };
+    html += `<b>Dodatne mjere (+/−):</b><br>`;
+    if (!dmRowsData.length) {
+      html += `Nema unesenih dodatnih mjera.<br><br>`;
+    } else {
+      dmRowsData.forEach((r, idx) => {
+        html += `${idx + 1}. ${r.name || 'Mjera'}: ${r.sign}${formatHr(r.val)} ⇒ ${formatHr(r.signedVal)}<br>`;
+      });
+      html += `Ukupno dodatne mjere = <b>${formatHr(dmTotal)}</b><br><br>`;
+    }
 
-state.lastCalc = {
-    D, S, V,
-    meta,
-    openings: JSON.parse(JSON.stringify(openings)),
-    results,
-    prices
-};
+    if (dmTotal !== 0) {
+      if (dmPod && results.pod        != null) results.pod        += dmTotal;
+      if (dmZid && results.zidoviNeto != null) results.zidoviNeto += dmTotal;
+      if (dmHid && results.hidroPod   != null) results.hidroPod   += dmTotal;
+      if (dmSil && results.silikon    != null) results.silikon    += dmTotal;
+      if (dmTrak && results.hidroTraka!= null) results.hidroTraka += dmTotal;
+      if (dmSok && results.sokl       != null) results.sokl       += dmTotal;
+    }
+
+    results.dm = { total: dmTotal, rows: dmRowsData };
+  }
+
+  // spremimo zadnji izračun u state (za PDF/CSV/Cloud)
+  state.lastCalc = {
     D, S, V,
     meta,
     openings: JSON.parse(JSON.stringify(openings)),
@@ -1755,7 +1769,7 @@ state.lastCalc = {
   }
 
   return state.lastCalc;
-}
+    }
 
 // PDF – GRAĐEVINSKA KNJIGA (tablica + obrazloženje)
 function buildPdfDocument(data) {
