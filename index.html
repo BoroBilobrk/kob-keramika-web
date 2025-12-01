@@ -1,50 +1,84 @@
 <!DOCTYPE html>
 <html lang="hr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KOB-Keramika</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KOB-Keramika - Obračun radova</title>
 
-    <!-- CSS mora imati ispravan path -->
-    <link rel="stylesheet" href="CSS/style.css">
+    <!-- CSS -->
+    <link rel="stylesheet" href="CSS/main.css">
 
-    <link rel="icon" href="logo.png">
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"></script>
+
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
+          authDomain: "kob-keramika.firebaseapp.com",
+          projectId: "kob-keramika",
+          storageBucket: "kob-keramika.firebasestorage.app",
+          messagingSenderId: "604488601212",
+          appId: "1:604488601212:web:70552af260d9e5a283c3f9",
+          measurementId: "G-KDTBSP3H39"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.getAuth();
+    </script>
 </head>
 
 <body>
 
-<div class="login-container">
+    <!-- HEADER S LOGOM -->
+    <header class="header">
+        <img src="logo.png" class="logo">
+        <h1>KOB-Keramika</h1>
+        <h2>Interni obračun keramičarskih radova</h2>
+    </header>
 
-    <img src="logo.png" class="logo" alt="Logo">
+    <!-- LOGIN / REGISTER BOX -->
+    <section id="authBox" class="auth-box">
 
-    <h1>KOB-Keramika</h1>
-    <p class="subtitle">Interni obračun keramičarskih radova</p>
+        <div class="auth-section">
+            <h3>Prijava</h3>
 
-    <!-- PRIJAVA -->
-    <div class="card">
-        <h2>Prijava</h2>
+            <input type="email" id="loginEmail" placeholder="E-mail">
+            <input type="password" id="loginPass" placeholder="Lozinka">
 
-        <input type="email" id="loginEmail" placeholder="E-mail">
-        <input type="password" id="loginPass" placeholder="Lozinka">
+            <button onclick="loginUser()">Prijava</button>
+        </div>
 
-        <button id="btnLogin">Prijava</button>
+        <div class="divider">ili</div>
 
-        <p class="or">ili</p>
+        <div class="auth-section">
+            <h3>Registracija</h3>
 
-        <!-- REGISTRACIJA -->
-        <h2>Registracija</h2>
+            <input type="email" id="regEmail" placeholder="E-mail">
+            <input type="password" id="regPass" placeholder="Lozinka (min. 6 znakova)">
 
-        <input type="email" id="regEmail" placeholder="E-mail">
-        <input type="password" id="regPass" placeholder="Lozinka (min. 6 znakova)">
+            <button onclick="registerUser()">Registracija</button>
+        </div>
+    </section>
 
-        <button id="btnRegister">Registracija</button>
+    <!-- GLAVNI SADRŽAJ (POJAVLJUJE SE NAKON LOGIN-A) -->
+    <section id="mainApp" class="hidden">
 
-        <p class="info">Pristup je interni. Svaki korisnik ima svoj cjenik i svoje Cloud datoteke.</p>
-    </div>
-</div>
+        <button class="logout-btn" onclick="logoutUser()">Odjava</button>
 
-<!-- JS mora imati ispravan path -->
-<script src="Js/app.js"></script>
+        <h2>Obračun radova</h2>
+
+        <div id="calcContainer">
+
+            <!-- ovdje će JS generirati sve module (podovi, zidovi, tuš, podloge, hidro, sokl, silikon itd.) -->
+            <div id="calcContent"></div>
+
+        </div>
+    </section>
+
+    <!-- APLIKACIJSKI JS -->
+    <script src="JS/app.js"></script>
 
 </body>
 </html>
