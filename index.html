@@ -1593,7 +1593,7 @@ if (chkSilikon) {
     html += `Ukupno silikon = <b>${formatHr(silikon)} m</b><br><br>`;
 
     prices.silikon = { qty: silikon, unit: "m" };
-});
+;
 
     const silikon = base + extraHeights + perimSilOpenings;
     results.silikon = silikon;
@@ -1724,7 +1724,7 @@ if (chkSilikon) {
       const signedVal = sign === '-' ? -val : val;
       dmTotal += signedVal;
       dmRowsData.push({ name, val, sign, signedVal });
-    });
+    ;
 
     const dmPod  = document.getElementById('dmPod').checked;
     const dmZid  = document.getElementById('dmZidovi').checked;
