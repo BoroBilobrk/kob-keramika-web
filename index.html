@@ -1726,7 +1726,7 @@ if (chkSilikon) {
     html += `Nema unesenih dodatnih mjera.<br><br>`;
   } else {
     dmRowsData.forEach((r, idx) => {
-      html += `${idx + 1}. ${r.name || 'Mjera'}: ${r.sign}${formatHr(r.val)} m → ${r.targetLabel}<br>`;
+      html += `${idx + 1}. ${r.name || ˝Mjera˝}: ${r.sign}${formatHr(r.val)} m → ${r.targetLabel}<br>`;
     });
     html += `Ukupno dodatne mjere = <b>${formatHr(dmTotal)} m</b><br><br>`;
   }
