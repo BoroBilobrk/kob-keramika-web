@@ -1473,8 +1473,9 @@ function runAutoCalc(showHtml = true) {
     }
     html += `Neto zidovi = <b>${formatHr(zidoviNeto)} m²</b><br><br>`;
 
-    prices.zidovi = { qty: zidoviNeto, unit: "m2" };
-    });
+    prices.zidovi = { qty: zidoviNeto, unit: "m2" 
+    };
+    
     const zidoviNeto = zidoviBruto - areaVrata;
     results.zidoviBruto = zidoviBruto;
     results.zidoviNeto  = zidoviNeto;
