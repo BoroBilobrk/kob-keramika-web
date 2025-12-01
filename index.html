@@ -1476,18 +1476,7 @@ function runAutoCalc(showHtml = true) {
     prices.zidovi = { qty: zidoviNeto, unit: "m2" 
     };
     
-    const zidoviNeto = zidoviBruto - areaVrata;
-    results.zidoviBruto = zidoviBruto;
-    results.zidoviNeto  = zidoviNeto;
-    results.odbitakVrata = areaVrata;
-
-    html += `<b>Zidovi:</b><br>`;
-    html += `Bruto = 2×(D×V) + 2×(Š×V) = 2×(${formatHr(D)}×${formatHr(V)}) + 2×(${formatHr(S)}×${formatHr(V)}) = <b>${formatHr(zidoviBruto)} m²</b><br>`;
-    html += `Odbitak vrata = ${formatHr(areaVrata)} m²<br>`;
-    html += `Neto zidovi = <b>${formatHr(zidoviNeto)} m²</b><br><br>`;
-
-    prices.zidovi = { qty: zidoviNeto, unit: "m2" };
-  }
+    
 
   // HIDRO POD
 if (chkHidroPod) {
