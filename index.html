@@ -1,142 +1,50 @@
 <!DOCTYPE html>
 <html lang="hr">
 <head>
-  <meta charset="UTF-8" />
-  <title>KOB-Keramika – Pro obračun</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KOB-Keramika</title>
 
-  <!-- Manifest (može ostati, nije obvezan) -->
-  <link rel="manifest" href="manifest.webmanifest">
+    <!-- CSS mora imati ispravan path -->
+    <link rel="stylesheet" href="CSS/style.css">
 
-  <!-- Stilovi -->
-  <link rel="stylesheet" href="css/style.css" />
-
-  <!-- Firebase CDN (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <link rel="icon" href="logo.png">
 </head>
+
 <body>
 
-<header class="topbar">
-  <div class="top-left">
-    <img src="logo.png" class="logo" alt="KOB-Keramika" />
-    <div>
-      <div class="app-title">KOB-Keramika</div>
-      <div class="app-subtitle">Interni obračun keramičarskih radova</div>
+<div class="login-container">
+
+    <img src="logo.png" class="logo" alt="Logo">
+
+    <h1>KOB-Keramika</h1>
+    <p class="subtitle">Interni obračun keramičarskih radova</p>
+
+    <!-- PRIJAVA -->
+    <div class="card">
+        <h2>Prijava</h2>
+
+        <input type="email" id="loginEmail" placeholder="E-mail">
+        <input type="password" id="loginPass" placeholder="Lozinka">
+
+        <button id="btnLogin">Prijava</button>
+
+        <p class="or">ili</p>
+
+        <!-- REGISTRACIJA -->
+        <h2>Registracija</h2>
+
+        <input type="email" id="regEmail" placeholder="E-mail">
+        <input type="password" id="regPass" placeholder="Lozinka (min. 6 znakova)">
+
+        <button id="btnRegister">Registracija</button>
+
+        <p class="info">Pristup je interni. Svaki korisnik ima svoj cjenik i svoje Cloud datoteke.</p>
     </div>
-  </div>
-  <div class="top-right">
-    <span id="userEmailLabel"></span>
-    <button id="btnLogout" class="btn-secondary" style="display:none;">Odjava</button>
-  </div>
-</header>
+</div>
 
-<main class="main">
-
-  <!-- AUTH VIEW -->
-  <section id="authView" class="view active">
-    <div class="card auth-card">
-      <h2>Prijava</h2>
-      <label>E-mail
-        <input type="email" id="loginEmail" placeholder="ime@firma.hr" />
-      </label>
-      <label>Lozinka
-        <input type="password" id="loginPassword" placeholder="••••••••" />
-      </label>
-      <button id="btnLogin">Prijava</button>
-
-      <div class="auth-divider">ili</div>
-
-      <h3>Registracija</h3>
-      <label>E-mail
-        <input type="email" id="regEmail" placeholder="ime@firma.hr" />
-      </label>
-      <label>Lozinka
-        <input type="password" id="regPassword" placeholder="min. 6 znakova" />
-      </label>
-      <button id="btnRegister" class="btn-secondary">Registracija</button>
-
-      <p id="authMessage" class="msg"></p>
-    </div>
-  </section>
-
-  <!-- APP VIEW -->
-  <section id="appView" class="view">
-
-    <!-- Početni ekran -->
-    <section id="homeView" class="view-inner active">
-      <div class="home-hero">
-        <img src="logo.png" class="home-logo" alt="KOB-Keramika logo" />
-        <div class="home-title">KOB-KERAMIKA</div>
-        <div class="home-subtitle">Odaberi što želiš raditi</div>
-      </div>
-
-      <div class="home-menu card">
-        <button data-target="calcView">📐 Automatski obračun prostorije</button>
-        <!-- kasnije: ručni unos, knjiga, troškovi... -->
-      </div>
-    </section>
-
-    <!-- Automatki obračun prostorije -->
-    <section id="calcView" class="view-inner">
-      <div class="card">
-        <button class="btn-secondary" data-target="homeView">← Natrag</button>
-        <h2>📐 Automatski obračun prostorije</h2>
-        <p>Dimenzije prostorije + dodatne dimenzije, pod, zidovi, hidro, traka, silikon...</p>
-      </div>
-
-      <div class="card">
-        <h3>Osnovne dimenzije prostorije</h3>
-        <label>Duljina D (m)
-          <input type="text" id="dimD" placeholder="npr. 4,20" />
-        </label>
-        <label>Širina Š (m)
-          <input type="text" id="dimS" placeholder="npr. 3,10" />
-        </label>
-        <label>Visina V (m)
-          <input type="text" id="dimV" placeholder="npr. 2,65" />
-        </label>
-      </div>
-
-      <div class="card">
-        <h3>Dodatne dimenzije prostorije</h3>
-        <p class="hint">
-          Svaki red predstavlja dodatni dio prostorije (npr. uvučeni zid, proširenje…).
-          Primjenjuje se:
-          Pod / hidro pod: ±(d+š), Zidovi: +(2d+š)×v, Traka: +(2d+š), Silikon: +(2d+š+2v).
-        </p>
-        <div id="extraDimsContainer"></div>
-        <button id="btnAddExtraDim" class="btn-secondary btn-small">➕ Dodaj dodatne dimenzije</button>
-      </div>
-
-      <div class="card">
-        <h3>Što računamo?</h3>
-        <label class="chk-row"><input type="checkbox" id="chkPod" checked /> Pod</label>
-        <label class="chk-row"><input type="checkbox" id="chkZidovi" checked /> Zidovi (s odbitkom vrata)</label>
-        <label class="chk-row"><input type="checkbox" id="chkHidroPod" /> Hidroizolacija poda</label>
-        <label class="chk-row"><input type="checkbox" id="chkHidroTraka" /> Hidro traka</label>
-        <label class="chk-row"><input type="checkbox" id="chkSilikon" /> Silikon</label>
-      </div>
-
-      <div class="card">
-        <button id="btnCalcNow">🔍 Izračunaj</button>
-      </div>
-
-      <section id="calcResult" class="card" style="display:none;">
-        <h3>Rezultati</h3>
-        <div id="calcOutput"></div>
-      </section>
-    </section>
-
-  </section>
-
-</main>
-
-<!-- Naši JS fajlovi -->
-<script src="js/firebase.js"></script>
-<script src="js/calc.js"></script>
-<script src="js/app.js"></script>
+<!-- JS mora imati ispravan path -->
+<script src="Js/app.js"></script>
 
 </body>
 </html>
