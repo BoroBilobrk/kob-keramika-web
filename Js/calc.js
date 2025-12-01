@@ -16,8 +16,8 @@ function buildCalcView() {
   if (!root) return;
 
   root.innerHTML = `
-    <div class="card">
-      <h3>Osnovne dimenzije prostorije</h3>
+    <div class="calc-section">
+      <div class="section-title">📏 Osnovne dimenzije prostorije</div>
       <div class="calc-grid">
         <div class="calc-field">
           <div class="calc-label">Duljina D (m)</div>
@@ -34,17 +34,17 @@ function buildCalcView() {
       </div>
     </div>
 
-    <div class="card">
-      <h3>Dodatne dimenzije prostorije</h3>
+    <div class="calc-section">
+      <div class="section-title">➕ Dodatne dimenzije (izbočine, niše...)</div>
       <p class="small-text">
-        Svaki red je dodatni dio (niša, ispupčenje). Utječe na pod, zidove, hidro pod, hidro traku i silikon prema pravilima (+/-).
+        Svaki red je dodatni dio prostorije. Pozitivan (+) dodaje površinu/opseg, negativan (−) oduzima.
       </p>
       <div id="extraDims"></div>
-      <button class="btn-secondary" onclick="addExtraDimRow()">➕ Dodaj dodatne dimenzije</button>
+      <button class="btn-secondary" onclick="addExtraDimRow()">➕ Dodaj red dodatnih dimenzija</button>
     </div>
 
-    <div class="card">
-      <h3>Što se računa?</h3>
+    <div class="calc-section">
+      <div class="section-title">✅ Što se računa?</div>
       <div class="checkbox-row">
         <span>Pod (m²)</span><input type="checkbox" id="chkPod" checked>
       </div>
@@ -62,9 +62,11 @@ function buildCalcView() {
       </div>
     </div>
 
-    <div class="card">
-      <h3>Otvor i elementi za silikon / lajsne / gerung</h3>
-      <p class="small-text">Vrata se ne računaju u silikon. Prozori, geberit i vertikale ulaze u silikon, i po želji u lajsne/gerung.</p>
+    <div class="calc-section">
+      <div class="section-title">🪟 Otvori i elementi (silikon / lajsne / gerung)</div>
+      <p class="small-text">
+        Vrata se ne računaju u silikon. Prozori, geberiti i vertikale ulaze u silikon i po želji u lajsne / gerung.
+      </p>
 
       <h4>Prozori</h4>
       <div class="checkbox-row">
@@ -87,26 +89,25 @@ function buildCalcView() {
       </div>
       <div id="vertikalaRows"></div>
 
-      <h4>Vrata</h4>
-      <p class="small-text">Vrata se ne računaju u silikon (samo info):</p>
+      <h4>Vrata (info)</h4>
+      <p class="small-text">Vrata se ne računaju u silikon (samo informativno):</p>
       <div class="checkbox-row">
         <span>Broj vrata</span>
         <input id="brVrata" value="0">
       </div>
     </div>
 
-    <div class="card">
+    <div class="calc-section">
       <button class="btn-primary" onclick="runCalc()">🔍 Izračunaj</button>
     </div>
 
-    <div id="calcResultCard" class="card result-card hidden">
-      <h3>Rezultat</h3>
+    <div id="calcResultCard" class="result-card hidden">
+      <h3>Rezultat obračuna</h3>
       <div id="calcResultHtml"></div>
     </div>
   `;
 
-  addExtraDimRow(); // jedan red odmah
-
+  addExtraDimRow();
   document.getElementById("brProzora").addEventListener("input", rebuildProzoriRows);
   document.getElementById("brGeberita").addEventListener("input", rebuildGeberitRows);
   document.getElementById("brVertikala").addEventListener("input", rebuildVertikalaRows);
@@ -212,7 +213,6 @@ function runCalc() {
   const chkTraka = document.getElementById("chkHidroTraka").checked;
   const chkSil = document.getElementById("chkSilikon").checked;
 
-  // dodatne dimenzije
   const rows = document.querySelectorAll("#extraDims .extra-row");
   let extraPod = 0;
   let extraZid = 0;
@@ -287,22 +287,14 @@ function runCalc() {
   }
 
   // SILIKON + LAJSNE + GERUNG
-  let silikonTotal = 0;
-  let silikonBase = 0;
-  let silikonOtvor = 0;
-  let lajsne = 0;
-  let gerung = 0;
-
   if (chkSil) {
     const base = 2 * D + 2 * S + 4 * V;
-    silikonBase = base + extraSil;
-
-    const parts = izracunSilikonLajsneGerung(D, S, V);
-    silikonOtvor = parts.silOpenings;
-    lajsne = parts.lajsneUkupno;
-    gerung = parts.gerungUkupno;
-
-    silikonTotal = silikonBase + silikonOtvor;
+    const silikonBase = base + extraSil;
+    const parts = izracunSilikonLajsneGerung();
+    const silikonOtvor = parts.silOpenings;
+    const lajsne = parts.lajsneUkupno;
+    const gerung = parts.gerungUkupno;
+    const silikonTotal = silikonBase + silikonOtvor;
 
     results.silikon = silikonTotal;
     results.lajsne = lajsne;
@@ -310,7 +302,7 @@ function runCalc() {
 
     html += `<b>Silikon:</b><br>`;
     html += `Osnovni opseg (2D+2Š+4V) + dodatne dimenzije = ${kobFmt(silikonBase)} m<br>`;
-    html += `Otvor (prozori/geberiti/vertikale) = ${kobFmt(silikonOtvor)} m<br>`;
+    html += `Otvori (prozori / geberiti / vertikale) = ${kobFmt(silikonOtvor)} m<br>`;
     html += `Ukupno silikon = <b>${kobFmt(silikonTotal)} m</b><br><br>`;
 
     html += `<b>Lajsne:</b> ${kobFmt(lajsne)} m<br>`;
@@ -322,7 +314,6 @@ function runCalc() {
   resEl.innerHTML = html || "Nema rezultata.";
   card.classList.remove("hidden");
 
-  // za kasniju integraciju u projekte / knjigu
   window.lastCalc = {
     dimensions: { D, S, V },
     extras: { extraPod, extraZid, extraHidro, extraTraka, extraSil },
@@ -332,7 +323,7 @@ function runCalc() {
 
 /* izračun silikona / lajsni / gerunga za otvore */
 
-function izracunSilikonLajsneGerung(D, S, V) {
+function izracunSilikonLajsneGerung() {
   let silOpenings = 0;
   let lajsneUkupno = 0;
   let gerungUkupno = 0;
@@ -357,8 +348,7 @@ function izracunSilikonLajsneGerung(D, S, V) {
     const v = kobParseNum(document.getElementById(`geberitV${i}`)?.value);
     const s = kobParseNum(document.getElementById(`geberitS${i}`)?.value);
     if (!v && !s) continue;
-    // tvoja formula: 2x visina + širina
-    const duljina = 2 * v + s;
+    const duljina = 2 * v + s; // 2x visina + širina
     silOpenings += duljina;
     const chkLajsna = document.getElementById(`geberitLajsna${i}`)?.checked;
     const chkGerung = document.getElementById(`geberitGerung${i}`)?.checked;
@@ -371,7 +361,7 @@ function izracunSilikonLajsneGerung(D, S, V) {
   for (let i = 1; i <= brVertikala; i++) {
     const v = kobParseNum(document.getElementById(`vertikalaV${i}`)?.value);
     if (!v) continue;
-    const duljina = v;
+    const duljina = v; // samo visina
     silOpenings += duljina;
     const chkLajsna = document.getElementById(`vertikalaLajsna${i}`)?.checked;
     const chkGerung = document.getElementById(`vertikalaGerung${i}`)?.checked;
@@ -379,7 +369,7 @@ function izracunSilikonLajsneGerung(D, S, V) {
     if (chkGerung) gerungUkupno += duljina;
   }
 
-  // VRATA namjerno ignoriramo za silikon, lajsne, gerung
+  // VRATA namjerno ignoriramo za silikon / lajsne / gerung
 
   return { silOpenings, lajsneUkupno, gerungUkupno };
-}
+    }
