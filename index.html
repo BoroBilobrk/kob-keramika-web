@@ -5,7 +5,7 @@
   <title>KOB-Keramika – Pro obračun</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- PWA manifest (ako ga imaš) -->
+  <!-- PWA manifest (ako postoji) -->
   <link rel="manifest" href="manifest.webmanifest">
 
   <!-- jsPDF za PDF export -->
@@ -261,6 +261,7 @@
 
   <!-- AUTOMATSKI OBRAČUN PROSTORIJE -->
   <section id="autoCalcView" class="view">
+
     <div class="card">
       <button class="secondary" onclick="showView('homeView')">← Natrag</button>
       <h2>📐 Automatski obračun prostorije</h2>
@@ -269,6 +270,25 @@
         hidroizolacije, traka, silikona, sokla, stepenica, lajsni i gerunga. Na kraju se generira detaljna građevinska knjiga (PDF)
         i CSV za Excel.
       </p>
+    </div>
+
+    <!-- PODACI O GRADILIŠTU -->
+    <div class="card">
+      <div class="section-title">🏗 Podaci o gradilištu</div>
+      <label>Naziv gradilišta
+        <input type="text" id="siteName" placeholder="npr. Stan Novak – Maksimir">
+      </label>
+      <label>Prostorija
+        <input type="text" id="roomName" placeholder="npr. Kupaonica 1">
+      </label>
+      <div class="two-col">
+        <label>Situcija / redni broj
+          <input type="text" id="situationNo" placeholder="npr. Situacija 1">
+        </label>
+        <label>Investitor
+          <input type="text" id="investorName" placeholder="npr. Novak Ivan">
+        </label>
+      </div>
     </div>
 
     <div class="layout-split">
@@ -302,7 +322,7 @@
 
           <div class="checkbox-row">
             <input type="checkbox" id="chkZidovi">
-            <label for="chkZidovi">Zidovi (bruto – samo vrata)</label>
+            <label for="chkZidovi">Zidovi (bruto – samo vrata se odbijaju)</label>
           </div>
 
           <div class="checkbox-row">
@@ -517,7 +537,24 @@
 </main>
 
 <script>
-/* ------------ POMOĆNE FUNKCIJE / STATE ------------ */
+/* ---------------- POMOĆNE FUNKCIJE / STATE ---------------- */
+
+// Cjenik – ovdje upiši svoje cijene (po m2, m ili kom).
+// Ako je cijena 0, ta stavka neće ući u financijski dio PDF-a.
+const UNIT_PRICES = {
+  pod: 0,          // €/m2
+  zidovi: 0,       // €/m2
+  hidroPod: 0,     // €/m2
+  hidroTus: 0,     // €/m2
+  hidroTraka: 0,   // €/m
+  silikon: 0,      // €/m
+  sokl: 0,         // €/m
+  stepeniceM: 0,   // €/m
+  stepeniceKom: 0, // €/kom
+  lajsne: 0,       // €/m
+  gerung: 0        // €/m
+};
+
 // parsiranje broja – prihvaća 0,4 i 0.4
 function parseNum(val) {
   if (val === undefined || val === null) return 0;
@@ -531,6 +568,12 @@ function parseIntSafe(val) {
   let s = String(val).trim().replace(',', '.');
   const n = parseInt(s, 10);
   return isNaN(n) ? 0 : n;
+}
+
+// HR format broja s decimalnim zarezom
+function formatHr(n, dec = 3) {
+  if (typeof n !== "number" || isNaN(n)) n = 0;
+  return n.toFixed(dec).replace('.', ',');
 }
 
 function showView(id) {
@@ -667,9 +710,9 @@ function renderOpenings() {
         <div class="opening-title">${o.label}</div>
         <div class="opening-meta">
           Tip: ${o.type}<br>
-          Š=${o.w.toFixed(3)} m, V=${o.h.toFixed(3)} m, kom=${o.count}<br>
-          Površina: ${area.toFixed(3)} m²<br>
-          Obod (rubovi): ${perim.toFixed(3)} m
+          Š=${formatHr(o.w)} m, V=${formatHr(o.h)} m, kom=${o.count}<br>
+          Površina: ${formatHr(area)} m²<br>
+          Obod (rubovi): ${formatHr(perim)} m
         </div>
         <div style="margin-top:4px;">
           <span class="tag">${o.subtract ? "Odbija zidove: DA" : "Odbija zidove: NE"}</span>
@@ -700,6 +743,13 @@ function runAutoCalc(showHtml = true) {
   const S = parseNum(document.getElementById('dimS').value);
   const V = parseNum(document.getElementById('dimV').value);
 
+  const meta = {
+    siteName: document.getElementById('siteName').value || "",
+    roomName: document.getElementById('roomName').value || "",
+    situationNo: document.getElementById('situationNo').value || "",
+    investorName: document.getElementById('investorName').value || ""
+  };
+
   const chkPod        = document.getElementById('chkPod').checked;
   const chkZidovi     = document.getElementById('chkZidovi').checked;
   const chkHidroPod   = document.getElementById('chkHidroPod').checked;
@@ -713,17 +763,19 @@ function runAutoCalc(showHtml = true) {
   const chkDodatne    = document.getElementById('chkDodatne').checked;
 
   let html = `<h4>Dimenzije prostorije:</h4>
-    D = ${D} m<br>
-    Š = ${S} m<br>
-    V = ${V} m<br><br>`;
+    D = ${formatHr(D)} m<br>
+    Š = ${formatHr(S)} m<br>
+    V = ${formatHr(V)} m<br><br>`;
 
   const results = {};
+  const prices  = {}; // za financijski dio
 
   // POD
   if (chkPod) {
     const pod = D * S;
     results.pod = pod;
-    html += `<b>Pod:</b><br>D × Š = ${D} × ${S} = <b>${pod.toFixed(3)} m²</b><br><br>`;
+    html += `<b>Pod:</b><br>D × Š = ${formatHr(D)} × ${formatHr(S)} = <b>${formatHr(pod)} m²</b><br><br>`;
+    prices.pod = { qty: pod, unit: "m2", price: UNIT_PRICES.pod };
   }
 
   // ZIDOVI bruto / neto (samo vrata odbijaju)
@@ -741,16 +793,19 @@ function runAutoCalc(showHtml = true) {
     results.odbitakVrata = areaVrata;
 
     html += `<b>Zidovi:</b><br>`;
-    html += `Bruto = 2×(D×V) + 2×(Š×V) = 2×(${D}×${V}) + 2×(${S}×${V}) = <b>${zidoviBruto.toFixed(3)} m²</b><br>`;
-    html += `Odbitak vrata = ${areaVrata.toFixed(3)} m²<br>`;
-    html += `Neto zidovi = <b>${zidoviNeto.toFixed(3)} m²</b><br><br>`;
+    html += `Bruto = 2×(D×V) + 2×(Š×V) = 2×(${formatHr(D)}×${formatHr(V)}) + 2×(${formatHr(S)}×${formatHr(V)}) = <b>${formatHr(zidoviBruto)} m²</b><br>`;
+    html += `Odbitak vrata = ${formatHr(areaVrata)} m²<br>`;
+    html += `Neto zidovi = <b>${formatHr(zidoviNeto)} m²</b><br><br>`;
+
+    prices.zidovi = { qty: zidoviNeto, unit: "m2", price: UNIT_PRICES.zidovi };
   }
 
   // HIDRO POD
   if (chkHidroPod) {
     const hidroPod = D * S;
     results.hidroPod = hidroPod;
-    html += `<b>Hidro – pod:</b><br>D × Š = ${D} × ${S} = <b>${hidroPod.toFixed(3)} m²</b><br><br>`;
+    html += `<b>Hidro – pod:</b><br>D × Š = ${formatHr(D)} × ${formatHr(S)} = <b>${formatHr(hidroPod)} m²</b><br><br>`;
+    prices.hidroPod = { qty: hidroPod, unit: "m2", price: UNIT_PRICES.hidroPod };
   }
 
   // HIDRO TUŠ: (2×d + š) × v
@@ -765,8 +820,10 @@ function runAutoCalc(showHtml = true) {
     results.tus = { td, ts, tv, opseg: opsegTus };
 
     html += `<b>Hidro – tuš zona:</b><br>`;
-    html += `Opseg tuša = 2×d + š = 2×${td} + ${ts} = ${opsegTus.toFixed(3)} m<br>`;
-    html += `Hidro tuš = opseg × visina = ${opsegTus.toFixed(3)} × ${tv} = <b>${hidroTus.toFixed(3)} m²</b><br><br>`;
+    html += `Opseg tuša = 2×d + š = 2×${formatHr(td)} + ${formatHr(ts)} = ${formatHr(opsegTus)} m<br>`;
+    html += `Hidro tuš = opseg × visina = ${formatHr(opsegTus)} × ${formatHr(tv)} = <b>${formatHr(hidroTus)} m²</b><br><br>`;
+
+    prices.hidroTus = { qty: hidroTus, unit: "m2", price: UNIT_PRICES.hidroTus };
   }
 
   // HIDRO TRAKA = 2D + 2Š + 2V + rub prozora + rub niša
@@ -783,9 +840,11 @@ function runAutoCalc(showHtml = true) {
     results.hidroTrakaData = { base, perimProzoriNise };
 
     html += `<b>Hidro traka:</b><br>`;
-    html += `Osnovno = 2×D + 2×Š + 2×V = 2×${D} + 2×${S} + 2×${V} = ${base.toFixed(3)} m<br>`;
-    html += `Rub prozora i niša = ${perimProzoriNise.toFixed(3)} m<br>`;
-    html += `Ukupno hidro traka = <b>${hidroTraka.toFixed(3)} m</b><br><br>`;
+    html += `Osnovno = 2×D + 2×Š + 2×V = 2×${formatHr(D)} + 2×${formatHr(S)} + 2×${formatHr(V)} = ${formatHr(base)} m<br>`;
+    html += `Rub prozora i niša = ${formatHr(perimProzoriNise)} m<br>`;
+    html += `Ukupno hidro traka = <b>${formatHr(hidroTraka)} m</b><br><br>`;
+
+    prices.hidroTraka = { qty: hidroTraka, unit: "m", price: UNIT_PRICES.hidroTraka };
   }
 
   // RUBOVI OTVORA ZA SILIKON (svi osim vrata)
@@ -815,10 +874,12 @@ function runAutoCalc(showHtml = true) {
     };
 
     html += `<b>Silikon:</b><br>`;
-    html += `Osnovni opseg = 2×D + 2×Š + 4×V = 2×${D} + 2×${S} + 4×${V} = ${base.toFixed(3)} m<br>`;
-    html += `Zbroj dodatnih visina = ${extraHeights.toFixed(3)} m<br>`;
-    html += `Rubovi svih otvora osim vrata = ${perimSilOpenings.toFixed(3)} m<br>`;
-    html += `Ukupno silikon = <b>${silikon.toFixed(3)} m</b><br><br>`;
+    html += `Osnovni opseg = 2×D + 2×Š + 4×V = 2×${formatHr(D)} + 2×${formatHr(S)} + 4×${formatHr(V)} = ${formatHr(base)} m<br>`;
+    html += `Zbroj dodatnih visina = ${formatHr(extraHeights)} m<br>`;
+    html += `Rubovi svih otvora osim vrata = ${formatHr(perimSilOpenings)} m<br>`;
+    html += `Ukupno silikon = <b>${formatHr(silikon)} m</b><br><br>`;
+
+    prices.silikon = { qty: silikon, unit: "m", price: UNIT_PRICES.silikon };
   }
 
   // SOKL
@@ -831,10 +892,12 @@ function runAutoCalc(showHtml = true) {
     results.soklData = { osnovni, minus, plus };
 
     html += `<b>Sokl:</b><br>`;
-    html += `Osnovni opseg = 2×(D+Š) = 2×(${D}+${S}) = ${osnovni.toFixed(3)} m<br>`;
-    html += `− odbijanje = ${minus.toFixed(3)} m<br>`;
-    html += `+ dodatno = ${plus.toFixed(3)} m<br>`;
-    html += `Ukupno sokl = <b>${sokl.toFixed(3)} m</b><br><br>`;
+    html += `Osnovni opseg = 2×(D+Š) = 2×(${formatHr(D)}+${formatHr(S)}) = ${formatHr(osnovni)} m<br>`;
+    html += `− odbijanje = ${formatHr(minus)} m<br>`;
+    html += `+ dodatno = ${formatHr(plus)} m<br>`;
+    html += `Ukupno sokl = <b>${formatHr(sokl)} m</b><br><br>`;
+
+    prices.sokl = { qty: sokl, unit: "m", price: UNIT_PRICES.sokl };
   }
 
   // STEPENICE
@@ -846,7 +909,13 @@ function runAutoCalc(showHtml = true) {
     results.stepenice = { vrijednost: stepeniceVal, mode, sw, sc };
 
     html += `<b>Stepenice:</b><br>`;
-    html += `Širina × komada = ${sw} × ${sc} = <b>${stepeniceVal.toFixed(3)} ${mode === 'duzni' ? 'm' : 'kom'}</b><br><br>`;
+    html += `Širina × komada = ${formatHr(sw)} × ${sc} = <b>${formatHr(stepeniceVal)} ${mode === 'duzni' ? 'm' : 'kom'}</b><br><br>`;
+
+    if (mode === 'duzni') {
+      prices.stepeniceM = { qty: stepeniceVal, unit: "m", price: UNIT_PRICES.stepeniceM };
+    } else {
+      prices.stepeniceKom = { qty: sc, unit: "kom", price: UNIT_PRICES.stepeniceKom };
+    }
   }
 
   // LAJSNE
@@ -874,9 +943,11 @@ function runAutoCalc(showHtml = true) {
     results.lajsneData = { baseL, perimLajsne };
 
     html += `<b>Lajsne:</b><br>`;
-    html += `Ručno = ${baseL.toFixed(3)} m<br>`;
-    html += `Rubovi prozor/niša/geberit/vertikale (prema kvačicama) = ${perimLajsne.toFixed(3)} m<br>`;
-    html += `Ukupno lajsne = <b>${lajsne.toFixed(3)} m</b><br><br>`;
+    html += `Ručno = ${formatHr(baseL)} m<br>`;
+    html += `Rubovi prozor/niša/geberit/vertikale (prema kvačicama) = ${formatHr(perimLajsne)} m<br>`;
+    html += `Ukupno lajsne = <b>${formatHr(lajsne)} m</b><br><br>`;
+
+    prices.lajsne = { qty: lajsne, unit: "m", price: UNIT_PRICES.lajsne };
   }
 
   // GERUNG
@@ -904,9 +975,11 @@ function runAutoCalc(showHtml = true) {
     results.gerungData = { baseG, perimGerung };
 
     html += `<b>Gerung:</b><br>`;
-    html += `Ručno = ${baseG.toFixed(3)} m<br>`;
-    html += `Rubovi prozor/niša/geberit/vertikale (prema kvačicama) = ${perimGerung.toFixed(3)} m<br>`;
-    html += `Ukupno gerung = <b>${gerung.toFixed(3)} m</b><br><br>`;
+    html += `Ručno = ${formatHr(baseG)} m<br>`;
+    html += `Rubovi prozor/niša/geberit/vertikale (prema kvačicama) = ${formatHr(perimGerung)} m<br>`;
+    html += `Ukupno gerung = <b>${formatHr(gerung)} m</b><br><br>`;
+
+    prices.gerung = { qty: gerung, unit: "m", price: UNIT_PRICES.gerung };
   }
 
   // DODATNE MJERE
@@ -935,9 +1008,9 @@ function runAutoCalc(showHtml = true) {
       html += `Nema unesenih dodatnih mjera.<br><br>`;
     } else {
       dmRowsData.forEach((r, idx) => {
-        html += `${idx+1}. ${r.name || 'Mjera'}: ${r.sign}${r.val} ⇒ ${r.signedVal.toFixed(3)}<br>`;
+        html += `${idx+1}. ${r.name || 'Mjera'}: ${r.sign}${formatHr(r.val)} ⇒ ${formatHr(r.signedVal)}<br>`;
       });
-      html += `Ukupno dodatne mjere = <b>${dmTotal.toFixed(3)}</b><br><br>`;
+      html += `Ukupno dodatne mjere = <b>${formatHr(dmTotal)}</b><br><br>`;
     }
 
     // primjena na rezultate
@@ -955,8 +1028,10 @@ function runAutoCalc(showHtml = true) {
 
   lastCalc = {
     D, S, V,
+    meta,
     openings,
-    results
+    results,
+    prices
   };
 
   if (showHtml) {
@@ -972,7 +1047,7 @@ document.getElementById('btnCalcNow').addEventListener('click', () => {
   runAutoCalc(true);
 });
 
-// PDF EXPORT – detaljan
+/* ---------------- PDF EXPORT – GRADEVINSKA KNJIGA ---------------- */
 document.getElementById('btnExportPdfAuto').addEventListener('click', () => {
   const data = runAutoCalc(true);
   if (!data) {
@@ -986,93 +1061,257 @@ document.getElementById('btnExportPdfAuto').addEventListener('click', () => {
   }
   const doc = new jsPDF();
   let y = 15;
-  doc.setFontSize(14);
-  doc.text("KOB-Keramika – Građevinska knjiga (auto obračun)", 10, y);
-  y += 8;
-  doc.setFontSize(11);
-  doc.text(`Dimenzije: D=${data.D} m, Š=${data.S} m, V=${data.V} m`, 10, y);
-  y += 8;
 
-  function w(text) {
+  function newPage() {
+    doc.addPage();
+    y = 15;
+  }
+
+  function w(text, extra = 0) {
     const lines = doc.splitTextToSize(text, 190);
     lines.forEach(line => {
-      if (y > 280) { doc.addPage(); y = 15; }
+      if (y > 280) newPage();
       doc.text(line, 10, y);
       y += 5;
     });
+    y += extra;
   }
+
+  // HEADER
+  doc.setFontSize(14);
+  doc.text("KOB-Keramika – Gradevinska knjiga (auto obracun)", 10, y);
+  y += 8;
+
+  // Podaci o gradilištu
+  doc.setFontSize(11);
+  const m = data.meta;
+  w(`Gradiliste: ${m.siteName || "-"}`);
+  w(`Prostorija: ${m.roomName || "-"}`);
+  w(`Situacija: ${m.situationNo || "-"}`);
+  w(`Investitor: ${m.investorName || "-"}`);
+  const today = new Date();
+  const dStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}.`;
+  w(`Datum izrade: ${dStr}`, 4);
+
+  // Dimenzije
+  doc.setFontSize(12);
+  w("1. Osnovne dimenzije", 2);
+  doc.setFontSize(11);
+  w(`Duljina (D): ${formatHr(data.D)} m`);
+  w(`Sirina (S): ${formatHr(data.S)} m`);
+  w(`Visina (V): ${formatHr(data.V)} m`, 4);
 
   const r = data.results;
 
+  // Pomoć za tablicu
+  function tableRow(c1, c2, c3) {
+    if (y > 280) newPage();
+    doc.text(String(c1), 10, y);
+    doc.text(String(c2), 80, y);
+    doc.text(String(c3), 140, y);
+    y += 5;
+  }
+
+  // POD
   if (r.pod != null) {
-    w(`POD: D×Š = ${data.D} × ${data.S} = ${r.pod.toFixed(3)} m² (uključeno s dodatnim mjerama ako je označeno)`);
-    y += 2;
+    doc.setFontSize(12);
+    w("2. Pod", 2);
+    doc.setFontSize(11);
+    tableRow("Opis", "Formula", "Rezultat");
+    tableRow("Povrsina poda", "D × S", `${formatHr(r.pod)} m2`);
+    y += 4;
   }
+
+  // ZIDOVI
   if (r.zidoviNeto != null) {
-    w(`ZIDOVI: Neto ${r.zidoviNeto.toFixed(3)} m² (Bruto ${(r.zidoviBruto || 0).toFixed(3)} m², odbitak vrata ${(r.odbitakVrata || 0).toFixed(3)} m²)`);
-    y += 2;
+    doc.setFontSize(12);
+    w("3. Zidovi", 2);
+    doc.setFontSize(11);
+    tableRow("Opis", "Formula", "Rezultat");
+    tableRow("Bruto zidovi", "2(D×V)+2(S×V)", `${formatHr(r.zidoviBruto || 0)} m2`);
+    tableRow("Vrata (odbitak)", "povrsina vrata", `-${formatHr(r.odbitakVrata || 0)} m2`);
+    tableRow("Neto zidovi", "Bruto - vrata", `${formatHr(r.zidoviNeto)} m2`);
+    y += 4;
   }
+
+  // HIDRO POD
   if (r.hidroPod != null) {
-    w(`HIDRO POD: ${r.hidroPod.toFixed(3)} m²`);
-    y += 2;
+    doc.setFontSize(12);
+    w("4. Hidroizolacija – pod", 2);
+    doc.setFontSize(11);
+    tableRow("Hidro pod", "D × S", `${formatHr(r.hidroPod)} m2`);
+    y += 4;
   }
+
+  // HIDRO TUŠ
   if (r.hidroTus != null) {
-    w(`HIDRO TUŠ ZONA: (2d + š) × v = ${r.tus.opseg.toFixed(3)} × ${r.tus.tv} = ${r.hidroTus.toFixed(3)} m²`);
-    y += 2;
+    doc.setFontSize(12);
+    w("5. Hidroizolacija – tus zona", 2);
+    doc.setFontSize(11);
+    const t = r.tus;
+    tableRow("Opseg tusa", "2d + s", `${formatHr(t.opseg)} m`);
+    tableRow("Povrsina tusa", "(2d + s) × v", `${formatHr(r.hidroTus)} m2`);
+    y += 4;
   }
+
+  // HIDRO TRAKA
   if (r.hidroTraka != null) {
+    doc.setFontSize(12);
+    w("6. Hidro traka", 2);
+    doc.setFontSize(11);
     const d = r.hidroTrakaData || { base:0, perimProzoriNise:0 };
-    w(`HIDRO TRAKA: osnovno 2D+2Š+2V = ${d.base.toFixed(3)} m + rub prozora/niša ${d.perimProzoriNise.toFixed(3)} m = ${r.hidroTraka.toFixed(3)} m`);
-    y += 2;
+    tableRow("Osnovno", "2D + 2S + 2V", `${formatHr(d.base)} m`);
+    tableRow("Rub prozora i nisa", "∑ obod", `${formatHr(d.perimProzoriNise)} m`);
+    tableRow("Ukupno", "osnovno + rubovi", `${formatHr(r.hidroTraka)} m`);
+    y += 4;
   }
+
+  // SILIKON
   if (r.silikon != null) {
+    doc.setFontSize(12);
+    w("7. Silikon", 2);
+    doc.setFontSize(11);
     const d = r.silikonData || { base:0, extraHeights:0, perimSilOpenings:0 };
-    w(`SILIKON: (2D+2Š+4V) = ${d.base.toFixed(3)} m + dodatne visine ${d.extraHeights.toFixed(3)} m + rubovi otvora (bez vrata) ${d.perimSilOpenings.toFixed(3)} m = ${r.silikon.toFixed(3)} m`);
-    y += 2;
+    tableRow("Osnovni opseg", "2D + 2S + 4V", `${formatHr(d.base)} m`);
+    tableRow("Dodatne visine", "∑ visine", `${formatHr(d.extraHeights)} m`);
+    tableRow("Rubovi otvora (bez vrata)", "∑ obod", `${formatHr(d.perimSilOpenings)} m`);
+    tableRow("Ukupno", "zbroj svega", `${formatHr(r.silikon)} m`);
+    y += 4;
   }
+
+  // SOKL
   if (r.sokl != null) {
+    doc.setFontSize(12);
+    w("8. Sokl", 2);
+    doc.setFontSize(11);
     const d = r.soklData || { osnovni:0, minus:0, plus:0 };
-    w(`SOKL: osnovni opseg 2(D+Š) = ${d.osnovni.toFixed(3)} m − ${d.minus.toFixed(3)} m + ${d.plus.toFixed(3)} m = ${r.sokl.toFixed(3)} m`);
-    y += 2;
+    tableRow("Osnovni opseg", "2(D+S)", `${formatHr(d.osnovni)} m`);
+    tableRow("Odbijanje", "-", `-${formatHr(d.minus)} m`);
+    tableRow("Dodatno", "+", `${formatHr(d.plus)} m`);
+    tableRow("Ukupno sokl", "", `${formatHr(r.sokl)} m`);
+    y += 4;
   }
+
+  // STEPENICE
   if (r.stepenice != null) {
-    w(`STEPENICE: Š × kom = ${r.stepenice.sw} × ${r.stepenice.sc} = ${r.stepenice.vrijednost.toFixed(3)} ${r.stepenice.mode === 'duzni' ? 'm' : 'kom'}`);
-    y += 2;
+    doc.setFontSize(12);
+    w("9. Stepenice", 2);
+    doc.setFontSize(11);
+    const st = r.stepenice;
+    tableRow("Sirina × kom", `${formatHr(st.sw)} × ${st.sc}`, `${formatHr(st.vrijednost)} ${st.mode === 'duzni' ? 'm' : 'kom'}`);
+    y += 4;
   }
+
+  // LAJSNE
   if (r.lajsne != null) {
+    doc.setFontSize(12);
+    w("10. Lajsne", 2);
+    doc.setFontSize(11);
     const d = r.lajsneData || { baseL:0, perimLajsne:0 };
-    w(`LAJSNE: ručno ${d.baseL.toFixed(3)} m + rubovi elemenata ${d.perimLajsne.toFixed(3)} m = ${r.lajsne.toFixed(3)} m`);
-    y += 2;
+    tableRow("Rucno lajsne", "", `${formatHr(d.baseL)} m`);
+    tableRow("Rubovi elemenata", "", `${formatHr(d.perimLajsne)} m`);
+    tableRow("Ukupno lajsne", "", `${formatHr(r.lajsne)} m`);
+    y += 4;
   }
+
+  // GERUNG
   if (r.gerung != null) {
+    doc.setFontSize(12);
+    w("11. Gerung", 2);
+    doc.setFontSize(11);
     const d = r.gerungData || { baseG:0, perimGerung:0 };
-    w(`GERUNG: ručno ${d.baseG.toFixed(3)} m + rubovi elemenata ${d.perimGerung.toFixed(3)} m = ${r.gerung.toFixed(3)} m`);
-    y += 2;
+    tableRow("Rucno gerung", "", `${formatHr(d.baseG)} m`);
+    tableRow("Rubovi elemenata", "", `${formatHr(d.perimGerung)} m`);
+    tableRow("Ukupno gerung", "", `${formatHr(r.gerung)} m`);
+    y += 4;
   }
 
-  // dodatne mjere
+  // DODATNE MJERE
   if (r.dm && r.dm.rows && r.dm.rows.length) {
-    y += 4;
-    w("DODATNE MJERE:");
+    doc.setFontSize(12);
+    w("12. Dodatne mjere", 2);
+    doc.setFontSize(11);
     r.dm.rows.forEach((row, idx) => {
-      w(`${idx+1}. ${row.name || 'Mjera'}: ${row.sign}${row.val} ⇒ ${row.signedVal.toFixed(3)}`);
+      w(`${idx+1}. ${row.name || 'Mjera'}: ${row.sign}${formatHr(row.val)} ⇒ ${formatHr(row.signedVal)}`);
     });
-    w(`Ukupno dodatne mjere: ${r.dm.total.toFixed(3)}`);
+    w(`Ukupno dodatne mjere: ${formatHr(r.dm.total)}`, 4);
   }
 
-  // otvori
+  // OTVORI
   if (data.openings && data.openings.length) {
-    y += 4;
-    w("OTVORI:");
+    doc.setFontSize(12);
+    w("13. Otvori – specifikacija", 2);
+    doc.setFontSize(11);
     data.openings.forEach(o => {
-      w(`- ${o.label}: tip=${o.type}, Š=${o.w} m, V=${o.h} m, kom=${o.count}, površina=${(openingArea(o)).toFixed(3)} m², obod=${(openingPerim(o)).toFixed(3)} m, odbija zidove=${o.subtract ? 'DA' : 'NE'}`);
+      w(`- ${o.label}: tip=${o.type}, S=${formatHr(o.w)} m, V=${formatHr(o.h)} m, kom=${o.count}, povrsina=${formatHr(openingArea(o))} m2, obod=${formatHr(openingPerim(o))} m, odbija zidove=${o.subtract ? 'DA':'NE'}`);
     });
+    y += 4;
   }
+
+  // FINANCIJSKI OBRAČUN
+  const p = data.prices || {};
+  const priceRows = [];
+
+  function addPriceRow(name, key) {
+    const item = p[key];
+    if (!item || !item.qty || !UNIT_PRICES[key]) return;
+    const qty = item.qty;
+    const unit = item.unit;
+    const pr  = UNIT_PRICES[key];
+    const total = qty * pr;
+    priceRows.push({ name, qty, unit, pr, total });
+  }
+
+  addPriceRow("Pod", "pod");
+  addPriceRow("Zidovi", "zidovi");
+  addPriceRow("Hidro pod", "hidroPod");
+  addPriceRow("Hidro tus", "hidroTus");
+  addPriceRow("Hidro traka", "hidroTraka");
+  addPriceRow("Silikon", "silikon");
+  addPriceRow("Sokl", "sokl");
+  addPriceRow("Stepenice (m)", "stepeniceM");
+  addPriceRow("Stepenice (kom)", "stepeniceKom");
+  addPriceRow("Lajsne", "lajsne");
+  addPriceRow("Gerung", "gerung");
+
+  if (priceRows.length) {
+    let ukupno = 0;
+    priceRows.forEach(rp => ukupno += rp.total);
+
+    if (y > 260) newPage();
+    doc.setFontSize(12);
+    w("14. Financijski obracun", 2);
+    doc.setFontSize(11);
+    if (y > 280) newPage();
+    doc.text("Stavka", 10, y);
+    doc.text("Kolicina", 70, y);
+    doc.text("Jed.", 100, y);
+    doc.text("Cijena", 120, y);
+    doc.text("Ukupno", 160, y);
+    y += 5;
+
+    priceRows.forEach(rp => {
+      if (y > 280) newPage();
+      doc.text(rp.name, 10, y);
+      doc.text(formatHr(rp.qty), 70, y);
+      doc.text(rp.unit, 100, y);
+      doc.text(formatHr(rp.pr, 2), 120, y);
+      doc.text(formatHr(rp.total, 2), 160, y);
+      y += 5;
+    });
+    y += 4;
+    w(`UKUPNO: ${formatHr(ukupno, 2)} EUR`, 4);
+  }
+
+  // Kraj
+  if (y > 270) newPage();
+  doc.setFontSize(11);
+  w("Napomena: izracun je informativan – konacna faktura moze imati dodatne stavke (priprema podloge, prijevoz, materijal itd.).");
 
   doc.save("kob-keramika-gradevinska-knjiga.pdf");
 });
 
-// CSV EXPORT
+/* ---------------- CSV EXPORT ---------------- */
 document.getElementById('btnExportCsvAuto').addEventListener('click', () => {
   const data = runAutoCalc(true);
   if (!data) {
@@ -1081,42 +1320,43 @@ document.getElementById('btnExportCsvAuto').addEventListener('click', () => {
   }
   const r = data.results;
   const rows = [];
-  const push = (name, val, unit, note="") => {
-    rows.push([name, String(val), unit, note]);
+  const push = (name, val, unit, desc, tip) => {
+    rows.push([name, formatHr(val), unit, desc, tip]);
   };
 
-  push("Duljina", data.D, "m");
-  push("Širina", data.S, "m");
-  push("Visina", data.V, "m");
+  push("Duljina", data.D, "m", "Unesena mjera", "osnovno");
+  push("Sirina", data.S, "m", "Unesena mjera", "osnovno");
+  push("Visina", data.V, "m", "Unesena mjera", "osnovno");
 
-  if (r.pod != null)        push("Pod", r.pod.toFixed(3), "m2", "D×Š");
-  if (r.zidoviNeto != null) push("Zidovi neto", r.zidoviNeto.toFixed(3), "m2", "2(DV)+2(SV) - vrata");
-  if (r.hidroPod != null)   push("Hidro pod", r.hidroPod.toFixed(3), "m2", "");
-  if (r.hidroTus != null)   push("Hidro tuš zona", r.hidroTus.toFixed(3), "m2", "");
-  if (r.hidroTraka != null) push("Hidro traka", r.hidroTraka.toFixed(3), "m", "");
-  if (r.silikon != null)    push("Silikon", r.silikon.toFixed(3), "m", "");
-  if (r.sokl != null)       push("Sokl", r.sokl.toFixed(3), "m", "");
-  if (r.stepenice != null)  push("Stepenice", r.stepenice.vrijednost.toFixed(3), (r.stepenice.mode === 'duzni' ? "m" : "kom"), "");
-  if (r.lajsne != null)     push("Lajsne", r.lajsne.toFixed(3), "m", "");
-  if (r.gerung != null)     push("Gerung", r.gerung.toFixed(3), "m", "");
+  if (r.pod != null)        push("Pod", r.pod, "m2", "D×S", "povrsina");
+  if (r.zidoviNeto != null) push("Zidovi neto", r.zidoviNeto, "m2", "Bruto - vrata", "povrsina");
+  if (r.hidroPod != null)   push("Hidro pod", r.hidroPod, "m2", "", "povrsina");
+  if (r.hidroTus != null)   push("Hidro tus zona", r.hidroTus, "m2", "(2d+š)×v", "povrsina");
+  if (r.hidroTraka != null) push("Hidro traka", r.hidroTraka, "m", "", "duzni");
+  if (r.silikon != null)    push("Silikon", r.silikon, "m", "", "duzni");
+  if (r.sokl != null)       push("Sokl", r.sokl, "m", "", "duzni");
+  if (r.stepenice != null)  push("Stepenice", r.stepenice.vrijednost, (r.stepenice.mode === 'duzni' ? "m" : "kom"), "", r.stepenice.mode === 'duzni' ? "duzni" : "kom");
+  if (r.lajsne != null)     push("Lajsne", r.lajsne, "m", "", "duzni");
+  if (r.gerung != null)     push("Gerung", r.gerung, "m", "", "duzni");
 
   if (data.openings && data.openings.length) {
     data.openings.forEach(o => {
       push(
         `Otvor - ${o.label}`,
-        (openingArea(o)).toFixed(3),
+        openingArea(o),
         "m2",
-        `tip=${o.type}, Š=${o.w}, V=${o.h}, kom=${o.count}, odbija=${o.subtract?'DA':'NE'}`
+        `tip=${o.type}, S=${formatHr(o.w)}, V=${formatHr(o.h)}, kom=${o.count}, odbija=${o.subtract?'DA':'NE'}`,
+        "otvor"
       );
     });
   }
 
-  const header = ["Naziv","Vrijednost","Jedinica","Opis"];
+  const header = ["Naziv","Vrijednost","Jedinica","Opis","Tip"];
   const csv = [header].concat(rows)
     .map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(";"))
     .join("\n");
 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }); // BOM + HR encoding
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
