@@ -1,366 +1,456 @@
 // JS/app.js
 
-// ➜ 1. Firebase inicijalizacija
-const firebaseConfig = {
-  apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
-  authDomain: "kob-keramika.firebaseapp.com",
-  projectId: "kob-keramika",
-  storageBucket: "kob-keramika.firebasestorage.app",
-  messagingSenderId: "604488601212",
-  appId: "1:604488601212:web:70552af260d9e5a283c3f9",
-  measurementId: "G-KDTBSP3H39"
+// global state
+window.kobState = {
+  prices: null
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// Globalni state
-let currentUser = null;
-
-// ➜ 2. Pomoćne funkcije UI
-function showMessage(msg, isError = false) {
-  const el = document.getElementById("authMessage");
-  if (!el) return;
-  el.textContent = msg || "";
-  el.classList.toggle("error", !!isError);
+// helper za prikaz / skrivanje glavnih viewa
+function showAuthView() {
+  document.getElementById("authView").classList.remove("hidden");
+  document.getElementById("appView").classList.add("hidden");
 }
 
-function showView(id) {
-  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-  const target = document.getElementById(id);
-  if (target) target.classList.add("active");
+function showAppView() {
+  document.getElementById("authView").classList.add("hidden");
+  document.getElementById("appView").classList.remove("hidden");
+}
+
+// SWITCH TAB
+function switchTab(tabName) {
+  const tabs = ["home", "calc", "projects", "archive", "costs", "prices"];
+  tabs.forEach(t => {
+    const view = document.getElementById("tab" + capitalize(t));
+    if (!view) return;
+    if (t === tabName) view.classList.remove("hidden");
+    else view.classList.add("hidden");
+  });
 
   document.querySelectorAll(".nav-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.view === id);
+    const tab = btn.getAttribute("data-tab");
+    if (tab === tabName) btn.classList.add("active");
+    else btn.classList.remove("active");
   });
+
+  // specijalno inicijaliziraj sadržaj
+  if (tabName === "calc") buildCalcView();
+  if (tabName === "projects") buildProjectsView();
+  if (tabName === "archive") buildArchiveView();
+  if (tabName === "costs") buildCostsView();
+  if (tabName === "prices") buildPricesView();
 }
 
-function updateAuthUI(user) {
-  const statusEl = document.getElementById("userStatus");
-  const logoutBtn = document.getElementById("btnLogout");
-  const nav = document.getElementById("mainNav");
-  const appContent = document.getElementById("appContent");
-
-  if (user) {
-    statusEl.textContent = user.email;
-    logoutBtn.classList.remove("hidden");
-    nav.classList.remove("hidden");
-    appContent.classList.remove("hidden");
-    showView("quickCalcView");
-    loadProjects();
-    loadArchive();
-  } else {
-    statusEl.textContent = "Nije prijavljen";
-    logoutBtn.classList.add("hidden");
-    nav.classList.add("hidden");
-    appContent.classList.add("hidden");
-  }
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-// ➜ 3. AUTH HANDLERI
+/* ========== AUTH ========== */
 
-async function handleLogin(e) {
-  e.preventDefault();
-  const email = document.getElementById("loginEmail").value.trim();
-  const pass = document.getElementById("loginPassword").value;
-
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-    showMessage("Prijava uspješna.");
-  } catch (err) {
-    console.error(err);
-    showMessage("Greška pri prijavi: " + err.message, true);
-  }
-}
-
-async function handleRegister(e) {
-  e.preventDefault();
+function registerUser() {
   const email = document.getElementById("regEmail").value.trim();
-  const pass = document.getElementById("regPassword").value;
-
-  try {
-    const cred = await auth.createUserWithEmailAndPassword(email, pass);
-    // kreiraj osnovni user dokument
-    await db.collection("users").doc(cred.user.uid).set({
-      email,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    showMessage("Registracija uspješna. Možete se prijaviti.");
-  } catch (err) {
-    console.error(err);
-    showMessage("Greška pri registraciji: " + err.message, true);
-  }
-}
-
-async function handleLogout() {
-  try {
-    await auth.signOut();
-    showMessage("Odjava uspješna.");
-  } catch (err) {
-    console.error(err);
-    showMessage("Greška pri odjavi: " + err.message, true);
-  }
-}
-
-// ➜ 4. Firestore – PROJEKTI & ARHIVA
-
-async function saveProjectFromLastCalc() {
-  if (!currentUser) {
-    alert("Prijavite se prije spremanja projekta.");
+  const pass = document.getElementById("regPass").value.trim();
+  if (!email || !pass) {
+    alert("Unesi email i lozinku.");
     return;
   }
-  if (!window.lastCalc) {
-    alert("Prvo napravite obračun.");
+  if (pass.length < 6) {
+    alert("Lozinka mora imati barem 6 znakova.");
     return;
   }
-
-  const site = document.getElementById("metaSite").value.trim();
-  const room = document.getElementById("metaRoom").value.trim();
-  const situation = Number(document.getElementById("metaSituation").value || 1);
-  const tileFormat = document.getElementById("metaTileFormat").value || "";
-  const unitPrice = Number(document.getElementById("metaUnitPrice").value || 0);
-
-  const payload = {
-    site: site || "Bez naziva",
-    room: room || "Bez prostorije",
-    situation,
-    tileFormat,
-    unitPrice,
-    calc: window.lastCalc,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
-  try {
-    await db.collection("users")
-      .doc(currentUser.uid)
-      .collection("projects")
-      .add(payload);
-
-    alert("Projekt spremljen.");
-    loadProjects();
-  } catch (err) {
-    console.error(err);
-    alert("Greška pri spremanju projekta: " + err.message);
-  }
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(() => alert("Registracija uspješna! Sada se prijavi."))
+    .catch(err => alert("Greška: " + err.message));
 }
 
-async function saveArchiveFromLastCalc() {
-  if (!currentUser) {
-    alert("Prijavite se prije spremanja u arhivu.");
+function loginUser() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const pass = document.getElementById("loginPass").value.trim();
+  if (!email || !pass) {
+    alert("Unesi email i lozinku.");
     return;
   }
-  if (!window.lastCalc) {
-    alert("Prvo napravite obračun.");
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(err => alert("Greška: " + err.message));
+}
+
+function logoutUser() {
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    showAppView();
+    const label = document.getElementById("userEmailLabel");
+    if (label) label.textContent = user.email || "";
+    switchTab("home");
+    loadPrices();
+  } else {
+    showAuthView();
+  }
+});
+
+/* ========== PROJECTS & ARCHIVE ========== */
+
+// Firestore kolekcije (root)
+function projectsCollection() {
+  return db.collection("projects");
+}
+function archiveCollection() {
+  return db.collection("archive");
+}
+function pricesCollection() {
+  return db.collection("prices");
+}
+function costsCollection() {
+  return db.collection("costs");
+}
+
+// PROJEKTI
+async function buildProjectsView() {
+  const container = document.getElementById("projectsContainer");
+  if (!container) return;
+  const user = auth.currentUser;
+  if (!user) {
+    container.innerHTML = "<p>Prijavi se za projekte.</p>";
     return;
   }
 
-  const payload = {
-    calc: window.lastCalc,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
+  let html = `
+    <div class="card">
+      <h3>Novi projekt</h3>
+      <input id="projName" placeholder="Naziv projekta / gradilišta">
+      <input id="projInvest" placeholder="Investitor (opcionalno)">
+      <input id="projPlace" placeholder="Lokacija / grad (opcionalno)">
+      <button class="btn-primary" onclick="createProject()">Spremi projekt</button>
+    </div>
+  `;
 
-  try {
-    await db.collection("users")
-      .doc(currentUser.uid)
-      .collection("archive")
-      .add(payload);
+  html += `<div class="card"><h3>Postojeći projekti</h3>`;
+  const snap = await projectsCollection()
+    .where("userId", "==", user.uid)
+    .orderBy("createdAt", "desc")
+    .get();
 
-    alert("Obračun spremljen u arhivu.");
-    loadArchive();
-  } catch (err) {
-    console.error(err);
-    alert("Greška pri spremanju u arhivu: " + err.message);
+  if (snap.empty) {
+    html += `<p class="small-text">Još nemaš spremljenih projekata.</p></div>`;
+    container.innerHTML = html;
+    return;
   }
-}
 
-async function loadProjects() {
-  if (!currentUser) return;
-  const ul = document.getElementById("projectList");
-  if (!ul) return;
-  ul.innerHTML = "<li>Učitavanje...</li>";
-
-  try {
-    const snap = await db.collection("users")
-      .doc(currentUser.uid)
-      .collection("projects")
-      .orderBy("createdAt", "desc")
-      .limit(50)
-      .get();
-
-    if (snap.empty) {
-      ul.innerHTML = "<li>Nema spremljenih projekata.</li>";
-      return;
-    }
-
-    ul.innerHTML = "";
-    snap.forEach(doc => {
-      const d = doc.data();
-      const li = document.createElement("li");
-      li.dataset.id = doc.id;
-      const title = `${d.site || "Gradilište"} – ${d.room || "Prostorija"} (sit. ${d.situation || 1})`;
-      const qty = d.calc && d.calc.summary
-        ? d.calc.summary
-        : "";
-      li.innerHTML = `
-        <strong>${title}</strong>
-        <span class="meta">
-          Format: ${d.tileFormat || "-"} · Jed. cijena: ${d.unitPrice || 0} €/m²
-        </span>
-        <span class="meta">${qty}</span>
-      `;
-      li.addEventListener("click", () => loadProjectIntoCalc(doc.id));
-      ul.appendChild(li);
-    });
-  } catch (err) {
-    console.error(err);
-    ul.innerHTML = "<li>Greška pri učitavanju projekata.</li>";
-  }
-}
-
-async function loadArchive() {
-  if (!currentUser) return;
-  const ul = document.getElementById("archiveList");
-  if (!ul) return;
-  ul.innerHTML = "<li>Učitavanje...</li>";
-
-  try {
-    const snap = await db.collection("users")
-      .doc(currentUser.uid)
-      .collection("archive")
-      .orderBy("createdAt", "desc")
-      .limit(100)
-      .get();
-
-    if (snap.empty) {
-      ul.innerHTML = "<li>Arhiva je prazna.</li>";
-      return;
-    }
-
-    ul.innerHTML = "";
-    snap.forEach(doc => {
-      const d = doc.data();
-      const meta = d.calc && d.calc.meta ? d.calc.meta : {};
-      const li = document.createElement("li");
-      const title = `${meta.site || "Gradilište"} – ${meta.room || "Prostorija"} (sit. ${meta.situation || "-"})`;
-      li.innerHTML = `
-        <strong>${title}</strong>
-        <span class="meta">${d.calc && d.calc.summary ? d.calc.summary : ""}</span>
-      `;
-      ul.appendChild(li);
-    });
-  } catch (err) {
-    console.error(err);
-    ul.innerHTML = "<li>Greška pri učitavanju arhive.</li>";
-  }
-}
-
-async function loadProjectIntoCalc(docId) {
-  if (!currentUser) return;
-  try {
-    const doc = await db.collection("users")
-      .doc(currentUser.uid)
-      .collection("projects")
-      .doc(docId)
-      .get();
-
-    if (!doc.exists) return;
+  snap.forEach(doc => {
     const d = doc.data();
-
-    if (d.calc && d.calc.dimensions) {
-      const { D, S, V } = d.calc.dimensions;
-      document.getElementById("dimD").value = D;
-      document.getElementById("dimS").value = S;
-      document.getElementById("dimV").value = V;
-    }
-
-    showView("quickCalcView");
-  } catch (err) {
-    console.error(err);
-    alert("Greška pri učitavanju projekta: " + err.message);
-  }
-}
-
-// ➜ 5. PDF & CSV eksport koristeći window.lastCalc (popunjava calc.js)
-
-function exportPdfFromLastCalc() {
-  if (!window.lastCalc || !window.lastCalc.text) {
-    alert("Prvo napravi obračun.");
-    return;
-  }
-  const { jsPDF } = window.jspdf || {};
-  if (!jsPDF) {
-    alert("PDF modul nije učitan.");
-    return;
-  }
-  const doc = new jsPDF();
-  const lines = window.lastCalc.text.split("\n");
-  let y = 14;
-  doc.setFontSize(12);
-  doc.text("KOB-Keramika – Građevinska knjiga (sažetak)", 10, y);
-  y += 8;
-  doc.setFontSize(10);
-  lines.forEach(line => {
-    if (y > 280) {
-      doc.addPage();
-      y = 14;
-    }
-    doc.text(line, 10, y);
-    y += 5;
+    const created = d.createdAt && d.createdAt.toDate
+      ? d.createdAt.toDate().toLocaleString("hr-HR")
+      : "";
+    html += `
+      <div class="list-item">
+        <div class="list-item-header">
+          <span>${d.name || "Bez naziva"}</span>
+          <span class="small-text">${created}</span>
+        </div>
+        <div class="small-text">Investitor: ${d.investor || "-"}</div>
+        <div class="small-text">Lokacija: ${d.place || "-"}</div>
+        <div class="list-item-actions">
+          <button onclick="openProject('${doc.id}')">Otvori</button>
+          <button onclick="archiveProject('${doc.id}')">Arhiviraj</button>
+        </div>
+      </div>`;
   });
-  doc.save("kob-keramika-obracun.pdf");
+
+  html += `</div>`;
+  container.innerHTML = html;
 }
 
-function exportCsvFromLastCalc() {
-  if (!window.lastCalc || !window.lastCalc.rows) {
-    alert("Prvo napravi obračun.");
+async function createProject() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const name = document.getElementById("projName").value.trim();
+  const investor = document.getElementById("projInvest").value.trim();
+  const place = document.getElementById("projPlace").value.trim();
+  if (!name) {
+    alert("Unesi naziv projekta.");
     return;
   }
-  const header = ["Naziv", "Vrijednost", "Jedinica"];
-  const rows = window.lastCalc.rows;
-  const csv = [header.join(",")]
-    .concat(rows.map(r =>
-      [r.name, String(r.value).replace(".", ","), r.unit || ""].join(",")
-    ))
-    .join("\n");
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "kob-keramika-obracun.csv";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  await projectsCollection().add({
+    userId: user.uid,
+    name,
+    investor,
+    place,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  document.getElementById("projName").value = "";
+  document.getElementById("projInvest").value = "";
+  document.getElementById("projPlace").value = "";
+  buildProjectsView();
 }
 
-// ➜ 6. DOMContentLoaded – sve spajamo
+function openProject(projectId) {
+  alert("Otvaranje projekta (detaljna razrada situacija dolazi u sljedećem koraku).\nID: " + projectId);
+}
+
+async function archiveProject(projectId) {
+  const user = auth.currentUser;
+  if (!user) return;
+  const docRef = projectsCollection().doc(projectId);
+  const snap = await docRef.get();
+  if (!snap.exists) {
+    alert("Projekt ne postoji.");
+    return;
+  }
+  const data = snap.data();
+  await archiveCollection().add({
+    ...data,
+    projectId,
+    archivedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await docRef.delete();
+  alert("Projekt arhiviran.");
+  buildProjectsView();
+  buildArchiveView();
+}
+
+// ARHIVA
+async function buildArchiveView() {
+  const container = document.getElementById("archiveContainer");
+  if (!container) return;
+  const user = auth.currentUser;
+  if (!user) {
+    container.innerHTML = "<p>Prijavi se za arhivu.</p>";
+    return;
+  }
+  let html = `<div class="card"><h3>Arhivirani projekti</h3>`;
+  const snap = await archiveCollection()
+    .where("userId", "==", user.uid)
+    .orderBy("archivedAt", "desc")
+    .get();
+
+  if (snap.empty) {
+    html += `<p class="small-text">Nema arhiviranih projekata.</p></div>`;
+    container.innerHTML = html;
+    return;
+  }
+
+  snap.forEach(doc => {
+    const d = doc.data();
+    const archived = d.archivedAt && d.archivedAt.toDate
+      ? d.archivedAt.toDate().toLocaleString("hr-HR")
+      : "";
+    html += `
+      <div class="list-item">
+        <div class="list-item-header">
+          <span>${d.name || "Bez naziva"}</span>
+          <span class="small-text">${archived}</span>
+        </div>
+        <div class="small-text">Investitor: ${d.investor || "-"}</div>
+        <div class="small-text">Lokacija: ${d.place || "-"}</div>
+      </div>`;
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+/* ========== TROŠKOVI ========== */
+
+async function buildCostsView() {
+  const container = document.getElementById("costsContainer");
+  if (!container) return;
+  const user = auth.currentUser;
+  if (!user) {
+    container.innerHTML = "<p>Prijavi se za unos troškova.</p>";
+    return;
+  }
+
+  let html = `
+    <div class="card">
+      <h3>Novi trošak</h3>
+      <input id="costWorker" placeholder="Radnik">
+      <input id="costAmount" placeholder="Iznos (EUR)">
+      <textarea id="costDesc" placeholder="Opis troška"></textarea>
+      <button class="btn-primary" onclick="addCost()">Spremi trošak</button>
+    </div>
+    <div class="card">
+      <h3>Pregled troškova</h3>
+      <input id="costFilter" placeholder="Filter po radniku (prazno = svi)">
+      <button onclick="loadCosts()" class="btn-secondary">Osvježi</button>
+      <div id="costsList" style="margin-top:10px;"></div>
+    </div>
+  `;
+  container.innerHTML = html;
+  loadCosts();
+}
+
+async function addCost() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const worker = document.getElementById("costWorker").value.trim();
+  const amount = parseFloat((document.getElementById("costAmount").value || "").replace(",", "."));
+  const desc = document.getElementById("costDesc").value.trim();
+  if (!worker || isNaN(amount)) {
+    alert("Unesi radnika i iznos.");
+    return;
+  }
+  await costsCollection().add({
+    userId: user.uid,
+    worker,
+    amount,
+    desc,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  document.getElementById("costWorker").value = "";
+  document.getElementById("costAmount").value = "";
+  document.getElementById("costDesc").value = "";
+  loadCosts();
+}
+
+async function loadCosts() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const filter = (document.getElementById("costFilter").value || "").trim().toLowerCase();
+  const listEl = document.getElementById("costsList");
+  if (!listEl) return;
+
+  const snap = await costsCollection()
+    .where("userId", "==", user.uid)
+    .orderBy("createdAt", "desc")
+    .limit(100)
+    .get();
+
+  if (snap.empty) {
+    listEl.innerHTML = "<p class='small-text'>Nema unesenih troškova.</p>";
+    return;
+  }
+
+  let total = 0;
+  let totalFilt = 0;
+  let html = "";
+  snap.forEach(doc => {
+    const d = doc.data();
+    const w = d.worker || "";
+    const a = d.amount || 0;
+    const desc = d.desc || "";
+    const match = !filter || w.toLowerCase().includes(filter);
+    total += a;
+    if (!match) return;
+    totalFilt += a;
+    const dt = d.createdAt && d.createdAt.toDate
+      ? d.createdAt.toDate().toLocaleString("hr-HR")
+      : "";
+    html += `
+      <div class="cost-row">
+        <span><b>${w}</b> – ${a.toFixed(2)} €</span>
+        <span class="small-text">${dt}</span>
+        <span class="small-text">${desc}</span>
+      </div>`;
+  });
+
+  listEl.innerHTML =
+    `<p class="small-text">Ukupno svi troškovi: ${total.toFixed(2)} €</p>` +
+    (filter ? `<p class="small-text">Za filter "${filter}": ${totalFilt.toFixed(2)} €</p>` : "") +
+    html;
+}
+
+/* ========== CJENIK ========== */
+
+async function buildPricesView() {
+  const container = document.getElementById("pricesContainer");
+  if (!container) return;
+  const user = auth.currentUser;
+  if (!user) {
+    container.innerHTML = "<p>Prijavi se za uređivanje cjenika.</p>";
+    return;
+  }
+
+  const p = kobState.prices || {};
+  const get = (k) => (p[k] != null ? String(p[k]).replace(".", ",") : "");
+
+  container.innerHTML = `
+    <div class="card">
+      <h3>Cjenik (po jedinici)</h3>
+      <p class="small-text">Ove cijene se koriste u građevinskoj knjizi i obračunu.</p>
+      <div class="price-row">
+        <span>Zidovi (€/m²)</span>
+        <input id="priceZidovi" value="${get("zidovi")}">
+      </div>
+      <div class="price-row">
+        <span>Pod (€/m²)</span>
+        <input id="pricePod" value="${get("pod")}">
+      </div>
+      <div class="price-row">
+        <span>Hidro pod (€/m²)</span>
+        <input id="priceHidroPod" value="${get("hidroPod")}">
+      </div>
+      <div class="price-row">
+        <span>Hidro traka (€/m)</span>
+        <input id="priceHidroTraka" value="${get("hidroTraka")}">
+      </div>
+      <div class="price-row">
+        <span>Silikon (€/m)</span>
+        <input id="priceSilikon" value="${get("silikon")}">
+      </div>
+      <div class="price-row">
+        <span>Sokl (€/m)</span>
+        <input id="priceSokl" value="${get("sokl")}">
+      </div>
+      <div class="price-row">
+        <span>Lajsne (€/m)</span>
+        <input id="priceLajsne" value="${get("lajsne")}">
+      </div>
+      <div class="price-row">
+        <span>Gerung (€/m)</span>
+        <input id="priceGerung" value="${get("gerung")}">
+      </div>
+      <div class="price-row">
+        <span>Stepenice (€/kom)</span>
+        <input id="priceStepenice" value="${get("stepenice")}">
+      </div>
+      <button class="btn-primary" onclick="savePrices()">Spremi cjenik</button>
+    </div>
+  `;
+}
+
+async function loadPrices() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const docRef = pricesCollection().doc(user.uid);
+  const snap = await docRef.get();
+  if (snap.exists) {
+    kobState.prices = snap.data();
+  } else {
+    kobState.prices = {};
+  }
+}
+
+async function savePrices() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const docRef = pricesCollection().doc(user.uid);
+
+  const parsePrice = (id) => {
+    const v = (document.getElementById(id).value || "").replace(",", ".");
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  };
+
+  const data = {
+    userId: user.uid,
+    zidovi: parsePrice("priceZidovi"),
+    pod: parsePrice("pricePod"),
+    hidroPod: parsePrice("priceHidroPod"),
+    hidroTraka: parsePrice("priceHidroTraka"),
+    silikon: parsePrice("priceSilikon"),
+    sokl: parsePrice("priceSokl"),
+    lajsne: parsePrice("priceLajsne"),
+    gerung: parsePrice("priceGerung"),
+    stepenice: parsePrice("priceStepenice")
+  };
+
+  await docRef.set(data, { merge: true });
+  kobState.prices = data;
+  alert("Cjenik spremljen.");
+}
+
+/* ========== INIT ========== */
 
 document.addEventListener("DOMContentLoaded", () => {
-  // auth
-  document.getElementById("loginForm").addEventListener("submit", handleLogin);
-  document.getElementById("registerForm").addEventListener("submit", handleRegister);
-  document.getElementById("btnLogout").addEventListener("click", handleLogout);
-
-  // nav
-  document.querySelectorAll(".nav-btn").forEach(btn => {
-    btn.addEventListener("click", () => showView(btn.dataset.view));
-  });
-
-  // dodatne dimenzije (handler u calc.js koristi isti container, ali ovdje dodamo prvi red)
-  if (typeof initCalcUI === "function") {
-    initCalcUI();
-  }
-
-  document.getElementById("btnSaveProject").addEventListener("click", saveProjectFromLastCalc);
-  document.getElementById("btnSaveArchive").addEventListener("click", saveArchiveFromLastCalc);
-  document.getElementById("btnExportPdf").addEventListener("click", exportPdfFromLastCalc);
-  document.getElementById("btnExportCsv").addEventListener("click", exportCsvFromLastCalc);
-
-  // Firebase auth listener
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    updateAuthUI(user);
-  });
+  showAuthView();
 });
