@@ -8,10 +8,13 @@
   <!-- CSS -->
   <link rel="stylesheet" href="CSS/main.css" />
 
-  <!-- Firebase COMPAT 9.x -->
+  <!-- Firebase COMPAT -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+  <!-- jsPDF (za kasniji PDF) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -30,10 +33,10 @@
 </head>
 <body>
 
-  <!-- AUTH VIEW -->
+  <!-- LOGIN / REGISTRACIJA -->
   <section id="authView" class="view">
     <header class="header">
-      <img src="logo.png" class="logo" alt="KOB-Keramika">
+      <img src="logo.png" class="logo" alt="KOB-Keramika" />
       <h1 class="title">KOB-Keramika</h1>
       <p class="subtitle">Interni sustav za obračun keramičarskih radova</p>
     </header>
@@ -55,7 +58,7 @@
     </div>
   </section>
 
-  <!-- MAIN APP VIEW -->
+  <!-- GLAVNA APLIKACIJA -->
   <section id="appView" class="view hidden">
 
     <!-- GORNJI BAR -->
@@ -67,82 +70,99 @@
       <button class="btn-danger" onclick="logoutUser()">Odjava</button>
     </div>
 
-    <!-- HOME TAB -->
-    <div id="tabHome" class="tab-view">
+    <!-- GLAVNI IZBORNIK (kao stara verzija) -->
+    <section id="menuView" class="subview">
       <header class="header small-header">
-        <img src="logo.png" class="logo home-logo" alt="KOB-Keramika">
-        <h2 class="title">Dobrodošli</h2>
+        <img src="logo.png" class="logo home-logo" alt="KOB-Keramika" />
+        <h2 class="title">Izbornik</h2>
         <p class="subtitle">Odaberi što želiš raditi</p>
       </header>
 
-      <div class="card-grid">
-        <button class="card-btn" onclick="switchTab('calc')">
-          <span class="card-emoji">📐</span>
-          <span>Brzi obračun</span>
+      <div class="menu-list">
+        <button class="menu-item" onclick="showSection('calc')">
+          <span>📐 Automatski obračun prostorije</span>
         </button>
-        <button class="card-btn" onclick="switchTab('projects')">
-          <span class="card-emoji">📁</span>
-          <span>Projekti</span>
+        <button class="menu-item" onclick="showSection('manual')">
+          <span>✏️ Ručni unos mjera (u pripremi)</span>
         </button>
-        <button class="card-btn" onclick="switchTab('archive')">
-          <span class="card-emoji">📦</span>
-          <span>Arhiva</span>
+        <button class="menu-item" onclick="showSection('costs')">
+          <span>💰 Troškovi po radniku</span>
         </button>
-        <button class="card-btn" onclick="switchTab('costs')">
-          <span class="card-emoji">💰</span>
-          <span>Troškovi</span>
+        <button class="menu-item" onclick="showSection('prices')">
+          <span>💶 Cjenik</span>
         </button>
-        <button class="card-btn" onclick="switchTab('prices')">
-          <span class="card-emoji">💶</span>
-          <span>Cjenik</span>
+        <button class="menu-item" onclick="showSection('projects')">
+          <span>📁 Projekti</span>
+        </button>
+        <button class="menu-item" onclick="showSection('archive')">
+          <span>📦 Arhiva</span>
         </button>
       </div>
-    </div>
+    </section>
 
-    <!-- CALC TAB -->
-    <div id="tabCalc" class="tab-view hidden">
-      <h2 class="tab-title">Brzi obračun prostorije</h2>
+    <!-- AUTOMATSKI OBRAČUN PROSTORIJE -->
+    <section id="calcView" class="subview hidden">
+      <div class="card">
+        <button class="btn-secondary" onclick="showSection('menu')">← Natrag na izbornik</button>
+        <h2>📐 Automatski obračun prostorije</h2>
+        <p class="small-text">
+          Unesi dimenzije prostorije, dodatne plohe i otvore (vrata, prozore, geberite, vertikale). 
+          Program računa pod, zidove, hidro, hidro trake, silikon, lajsne i gerung.
+        </p>
+      </div>
       <div id="calcContainer"></div>
-    </div>
+    </section>
 
-    <!-- PROJECTS TAB -->
-    <div id="tabProjects" class="tab-view hidden">
-      <h2 class="tab-title">Projekti</h2>
-      <div id="projectsContainer"></div>
-    </div>
+    <!-- RUČNI UNOS MJERA (stub) -->
+    <section id="manualView" class="subview hidden">
+      <div class="card">
+        <button class="btn-secondary" onclick="showSection('menu')">← Natrag na izbornik</button>
+        <h2>✏️ Ručni unos mjera</h2>
+        <p class="small-text">Ovaj modul je u pripremi.</p>
+      </div>
+    </section>
 
-    <!-- ARCHIVE TAB -->
-    <div id="tabArchive" class="tab-view hidden">
-      <h2 class="tab-title">Arhiva</h2>
-      <div id="archiveContainer"></div>
-    </div>
-
-    <!-- COSTS TAB -->
-    <div id="tabCosts" class="tab-view hidden">
-      <h2 class="tab-title">Troškovi po radniku</h2>
+    <!-- TROŠKOVI -->
+    <section id="costsView" class="subview hidden">
+      <div class="card">
+        <button class="btn-secondary" onclick="showSection('menu')">← Natrag na izbornik</button>
+        <h2>💰 Troškovi po radniku</h2>
+      </div>
       <div id="costsContainer"></div>
-    </div>
+    </section>
 
-    <!-- PRICES TAB -->
-    <div id="tabPrices" class="tab-view hidden">
-      <h2 class="tab-title">Cjenik</h2>
+    <!-- CJENIK -->
+    <section id="pricesView" class="subview hidden">
+      <div class="card">
+        <button class="btn-secondary" onclick="showSection('menu')">← Natrag na izbornik</button>
+        <h2>💶 Cjenik</h2>
+      </div>
       <div id="pricesContainer"></div>
-    </div>
+    </section>
 
-    <!-- DONJA NAVIGACIJA -->
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-tab="home" onclick="switchTab('home')">🏠<span>Početna</span></button>
-      <button class="nav-btn" data-tab="calc" onclick="switchTab('calc')">📐<span>Obračun</span></button>
-      <button class="nav-btn" data-tab="projects" onclick="switchTab('projects')">📁<span>Projekti</span></button>
-      <button class="nav-btn" data-tab="archive" onclick="switchTab('archive')">📦<span>Arhiva</span></button>
-      <button class="nav-btn" data-tab="costs" onclick="switchTab('costs')">💰<span>Troškovi</span></button>
-      <button class="nav-btn" data-tab="prices" onclick="switchTab('prices')">💶<span>Cjenik</span></button>
-    </nav>
+    <!-- PROJEKTI -->
+    <section id="projectsView" class="subview hidden">
+      <div class="card">
+        <button class="btn-secondary" onclick="showSection('menu')">← Natrag na izbornik</button>
+        <h2>📁 Projekti</h2>
+      </div>
+      <div id="projectsContainer"></div>
+    </section>
+
+    <!-- ARHIVA -->
+    <section id="archiveView" class="subview hidden">
+      <div class="card">
+        <button class="btn-secondary" onclick="showSection('menu')">← Natrag na izbornik</button>
+        <h2>📦 Arhiva</h2>
+      </div>
+      <div id="archiveContainer"></div>
+    </section>
 
   </section>
 
   <!-- JS -->
-  <script src="Js/calc.js"></script>
-  <script src="Js/app.js"></script>
+  <script src="JS/calc.js"></script>
+  <script src="JS/app.js"></script>
+
 </body>
 </html>
