@@ -1,71 +1,56 @@
-// JS/app.js
+/* ---------------- FIREBASE ---------------- */
 
-function loginUser() {
-  const email = document.getElementById("loginEmail").value.trim();
-  const pass = document.getElementById("loginPass").value.trim();
+const firebaseConfig = {
+  apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
+  authDomain: "kob-keramika.firebaseapp.com",
+  projectId: "kob-keramika",
+  storageBucket: "kob-keramika.firebasestorage.app",
+  messagingSenderId: "604488601212",
+  appId: "1:604488601212:web:70552af260d9e5a283c3f9",
+  measurementId: "G-KDTBSP3H39"
+};
 
-  if (!email || !pass) {
-    alert("Unesi email i lozinku.");
-    return;
-  }
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-  firebase.auth().signInWithEmailAndPassword(email, pass)
-    .catch(err => alert("Greška: " + err.message));
+
+/* ---------------- VIEW HANDLER ---------------- */
+
+function showView(id) {
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
 }
 
+
+/* ---------------- AUTH ---------------- */
+
 function registerUser() {
-  const email = document.getElementById("regEmail").value.trim();
-  const pass = document.getElementById("regPass").value.trim();
+    const email = document.getElementById("regEmail").value;
+    const pass = document.getElementById("regPass").value;
 
-  if (!email || !pass) {
-    alert("Unesi email i lozinku.");
-    return;
-  }
-  if (pass.length < 6) {
-    alert("Lozinka mora imati barem 6 znakova.");
-    return;
-  }
+    auth.createUserWithEmailAndPassword(email, pass)
+        .then(() => alert("Registracija uspješna!"))
+        .catch(err => alert(err.message));
+}
 
-  firebase.auth().createUserWithEmailAndPassword(email, pass)
-    .then(() => alert("Registracija uspješna! Sada se prijavi."))
-    .catch(err => alert("Greška: " + err.message));
+function loginUser() {
+    const email = document.getElementById("loginEmail").value;
+    const pass = document.getElementById("loginPass").value;
+
+    auth.signInWithEmailAndPassword(email, pass)
+        .then(() => showView("homeView"))
+        .catch(err => alert(err.message));
 }
 
 function logoutUser() {
-  firebase.auth().signOut();
+    auth.signOut().then(() => showView("loginView"));
 }
 
-// prikaži login ili app ovisno o stanju
-firebase.auth().onAuthStateChanged(user => {
-  const authBox = document.getElementById("authBox");
-  const mainApp = document.getElementById("mainApp");
-  const userEmailLabel = document.getElementById("kobUserEmail");
 
-  if (user) {
-    authBox.classList.add("hidden");
-    mainApp.classList.remove("hidden");
-    if (userEmailLabel) userEmailLabel.textContent = user.email || "";
+/* ---------------- LISTENER ---------------- */
 
-    // inicijaliziraj UI modula (samo jednom)
-    if (!window.__kobAppInitialized) {
-      kobInitAllViews();
-      window.__kobAppInitialized = true;
-    }
-  } else {
-    authBox.classList.remove("hidden");
-    mainApp.classList.add("hidden");
-  }
-});
-
-// navigacija između tabova
-document.addEventListener("DOMContentLoaded", () => {
-  const navButtons = document.querySelectorAll(".nav-btn");
-  navButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      navButtons.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      const view = btn.getAttribute("data-view");
-      kobShowView(view);
-    });
-  });
+auth.onAuthStateChanged(user => {
+    if (user) showView("homeView");
+    else showView("loginView");
 });
