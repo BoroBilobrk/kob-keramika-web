@@ -1,106 +1,80 @@
 <!DOCTYPE html>
 <html lang="hr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KOB-Keramika</title>
 
     <!-- CSS -->
-    <link rel="stylesheet" href="css/main.css">
-
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="CSS/main.css" />
 </head>
-
 <body>
-    <div id="app">
 
-        <!-- LOGIN VIEW -->
-        <section id="loginView" class="view active">
+    <!-- LOGO -->
+    <header class="header">
+        <img src="logo.png" class="logo" alt="KOB Keramika">
+        <h1 class="title">KOB-Keramika</h1>
+        <p class="subtitle">Interni sustav za obračun keramičarskih radova</p>
+    </header>
 
-            <div class="logoBox">
-                <img src="logo.png" class="logo">
-            </div>
+    <!-- AUTH VIEW -->
+    <section id="authView" class="view">
 
-            <h1>KOB-Keramika</h1>
-            <p class="subtitle">Interni obračun keramičarskih radova</p>
+        <div class="card">
+            <h2>Prijava</h2>
+            <input id="loginEmail" type="email" placeholder="E-mail" />
+            <input id="loginPass" type="password" placeholder="Lozinka" />
+            <button onclick="loginUser()" class="btn-primary">Prijava</button>
+        </div>
 
-            <div class="card">
-                <h2>Prijava</h2>
+        <p class="center-text">ili</p>
 
-                <input id="loginEmail" type="email" placeholder="E-mail">
-                <input id="loginPass" type="password" placeholder="Lozinka">
-                <button class="btn" onclick="loginUser()">Prijava</button>
+        <div class="card">
+            <h2>Registracija</h2>
+            <input id="regEmail" type="email" placeholder="E-mail" />
+            <input id="regPass" type="password" placeholder="Lozinka (min. 6 znakova)" />
+            <button onclick="registerUser()" class="btn-secondary">Registracija</button>
+        </div>
 
-                <div class="divider">ili</div>
+    </section>
 
-                <h2>Registracija</h2>
+    <!-- MAIN VIEW (nakon login-a) -->
+    <section id="mainView" class="view hidden">
 
-                <input id="regEmail" type="email" placeholder="E-mail">
-                <input id="regPass" type="password" placeholder="Lozinka (min 6 znakova)">
-                <button class="btn" onclick="registerUser()">Registracija</button>
+        <div class="top-bar">
+            <h2>KOB-Keramika</h2>
+            <button onclick="logoutUser()" class="btn-danger">Odjava</button>
+        </div>
 
-            </div>
-        </section>
+        <div class="nav">
+            <button onclick="showCalc()" class="btn-nav">Brzi obračun</button>
+            <button onclick="showProjects()" class="btn-nav">Projekti</button>
+            <button onclick="showArchive()" class="btn-nav">Arhiva</button>
+        </div>
 
+        <!-- VIEW: CALC -->
+        <div id="calcView" class="subview">
+            <h3>Brzi obračun</h3>
+            <p class="info">Ovdje će ići svi kalkulatori koje ćemo naknadno dodati.</p>
+        </div>
 
-        <!-- HOME VIEW -->
-        <section id="homeView" class="view">
+        <!-- VIEW: PROJECTS -->
+        <div id="projectsView" class="subview hidden">
+            <h3>Projekti</h3>
+            <p class="info">Ovdje će biti lista projekata (Firestore integracija je spremna).</p>
+        </div>
 
-            <header class="topbar">
-                <span>KOB-Keramika</span>
-                <button class="logoutBtn" onclick="logoutUser()">Odjava</button>
-            </header>
+        <!-- VIEW: ARCHIVE -->
+        <div id="archiveView" class="subview hidden">
+            <h3>Arhiva</h3>
+            <p class="info">Ovdje će se prikazivati arhivirani obračuni.</p>
+        </div>
 
-            <div class="menuCard">
-                <button class="menuBtn" onclick="showView('calcView')">🧮 Brzi obračun</button>
-                <button class="menuBtn" onclick="showView('projectsView')">📁 Projekti</button>
-                <button class="menuBtn" onclick="showView('archiveView')">📦 Arhiva</button>
-            </div>
-
-        </section>
-
-
-
-        <!-- CALC VIEW -->
-        <section id="calcView" class="view">
-
-            <header class="topbar">
-                <button class="backBtn" onclick="showView('homeView')">⟵</button>
-                <span>Brzi obračun</span>
-            </header>
-
-            <div id="calcArea"></div>
-
-        </section>
-
-
-        <!-- PROJECTS VIEW -->
-        <section id="projectsView" class="view">
-            <header class="topbar">
-                <button class="backBtn" onclick="showView('homeView')">⟵</button>
-                <span>Projekti</span>
-            </header>
-            <div id="projectsArea"></div>
-        </section>
-
-
-        <!-- ARCHIVE VIEW -->
-        <section id="archiveView" class="view">
-            <header class="topbar">
-                <button class="backBtn" onclick="showView('homeView')">⟵</button>
-                <span>Arhiva</span>
-            </header>
-            <div id="archiveArea"></div>
-        </section>
-
-    </div>
+    </section>
 
     <!-- JS -->
-    <script src="js/app.js"></script>
-    <script src="js/calc.js"></script>
+    <script type="module" src="Js/app.js"></script>
+    <script type="module" src="Js/calc.js"></script>
 
 </body>
 </html>
