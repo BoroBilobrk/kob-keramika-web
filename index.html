@@ -1,118 +1,106 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="hr">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KOB-Keramika</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- CSS -->
-    <link rel="stylesheet" href="CSS/main.css">
+    <link rel="stylesheet" href="css/main.css">
 
-    <!-- Firebase COMPAT -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-
-    <!-- jsPDF za PDF (za kasnije) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
-            authDomain: "kob-keramika.firebaseapp.com",
-            projectId: "kob-keramika",
-            storageBucket: "kob-keramika.firebasestorage.app",
-            messagingSenderId: "604488601212",
-            appId: "1:604488601212:web:70552af260d9e5a283c3f9",
-            measurementId: "G-KDTBSP3H39"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-    </script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body>
+    <div id="app">
 
-    <!-- HEADER -->
-    <div class="header">
-        <img src="logo.png" class="logo" alt="Logo">
-        <h1>KOB-Keramika</h1>
-        <h2>Profesionalni sustav za obračun keramičarskih radova</h2>
-    </div>
+        <!-- LOGIN VIEW -->
+        <section id="loginView" class="view active">
 
-    <!-- LOGIN/REGISTER BOX -->
-    <div id="authBox" class="auth-box">
-        <div class="auth-section">
-            <h3>Prijava</h3>
-            <input id="loginEmail" type="email" placeholder="Email">
-            <input id="loginPass" type="password" placeholder="Lozinka">
-            <button onclick="loginUser()">Prijavi se</button>
-        </div>
-
-        <div class="divider">— ili —</div>
-
-        <div class="section">
-  <h2>Što računamo?</h2>
-
-  <div class="calc-options">
-
-    <div class="option-row">
-      <span>Pod</span>
-      <input type="checkbox" id="chkPod">
-    </div>
-
-    <div class="option-row">
-      <span>Zidovi</span>
-      <input type="checkbox" id="chkZidovi">
-    </div>
-
-    <div class="option-row">
-      <span>Hidroizolacija poda</span>
-      <input type="checkbox" id="chkHidroPod">
-    </div>
-
-    <div class="option-row">
-      <span>Hidro traka</span>
-      <input type="checkbox" id="chkHidroTraka">
-    </div>
-
-    <div class="option-row">
-      <span>Silikon</span>
-      <input type="checkbox" id="chkSilikon">
-    </div>
-
-  </div>
-        </div>
-
-    <!-- MAIN APP -->
-    <div id="mainApp" class="hidden">
-
-        <div class="top-bar-app card">
-            <div>
-                <h2>Obračun radova</h2>
-                <div id="kobUserEmail" class="user-email"></div>
+            <div class="logoBox">
+                <img src="logo.png" class="logo">
             </div>
-            <button class="logout-btn" onclick="logoutUser()">Odjava</button>
-        </div>
 
-        <!-- NAVIGACIJA MODULA -->
-        <div class="card nav-tabs">
-            <button class="nav-btn active" data-view="calc">Prostorija</button>
-            <button class="nav-btn" data-view="tiles">Pločice</button>
-            <button class="nav-btn" data-view="book">Građevinska knjiga</button>
-            <button class="nav-btn" data-view="costs">Troškovi</button>
-        </div>
+            <h1>KOB-Keramika</h1>
+            <p class="subtitle">Interni obračun keramičarskih radova</p>
 
-        <!-- SADRŽAJ MODULA -->
-        <div id="viewCalc" class="view-inner"></div>
-        <div id="viewTiles" class="view-inner hidden"></div>
-        <div id="viewBook" class="view-inner hidden"></div>
-        <div id="viewCosts" class="view-inner hidden"></div>
+            <div class="card">
+                <h2>Prijava</h2>
+
+                <input id="loginEmail" type="email" placeholder="E-mail">
+                <input id="loginPass" type="password" placeholder="Lozinka">
+                <button class="btn" onclick="loginUser()">Prijava</button>
+
+                <div class="divider">ili</div>
+
+                <h2>Registracija</h2>
+
+                <input id="regEmail" type="email" placeholder="E-mail">
+                <input id="regPass" type="password" placeholder="Lozinka (min 6 znakova)">
+                <button class="btn" onclick="registerUser()">Registracija</button>
+
+            </div>
+        </section>
+
+
+        <!-- HOME VIEW -->
+        <section id="homeView" class="view">
+
+            <header class="topbar">
+                <span>KOB-Keramika</span>
+                <button class="logoutBtn" onclick="logoutUser()">Odjava</button>
+            </header>
+
+            <div class="menuCard">
+                <button class="menuBtn" onclick="showView('calcView')">🧮 Brzi obračun</button>
+                <button class="menuBtn" onclick="showView('projectsView')">📁 Projekti</button>
+                <button class="menuBtn" onclick="showView('archiveView')">📦 Arhiva</button>
+            </div>
+
+        </section>
+
+
+
+        <!-- CALC VIEW -->
+        <section id="calcView" class="view">
+
+            <header class="topbar">
+                <button class="backBtn" onclick="showView('homeView')">⟵</button>
+                <span>Brzi obračun</span>
+            </header>
+
+            <div id="calcArea"></div>
+
+        </section>
+
+
+        <!-- PROJECTS VIEW -->
+        <section id="projectsView" class="view">
+            <header class="topbar">
+                <button class="backBtn" onclick="showView('homeView')">⟵</button>
+                <span>Projekti</span>
+            </header>
+            <div id="projectsArea"></div>
+        </section>
+
+
+        <!-- ARCHIVE VIEW -->
+        <section id="archiveView" class="view">
+            <header class="topbar">
+                <button class="backBtn" onclick="showView('homeView')">⟵</button>
+                <span>Arhiva</span>
+            </header>
+            <div id="archiveArea"></div>
+        </section>
+
     </div>
 
     <!-- JS -->
-    <script src="Js/calc.js"></script>
-    <script src="Js/app.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/calc.js"></script>
 
 </body>
 </html>
