@@ -1,80 +1,225 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hr">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KOB-Keramika</title>
+  <meta charset="utf-8" />
+  <title>KOB-Keramika – Interni obračun</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="CSS/main.css" />
+  <!-- Glavni CSS -->
+  <link rel="stylesheet" href="CSS/main.css" />
 </head>
 <body>
-
-    <!-- LOGO -->
-    <header class="header">
-        <img src="logo.png" class="logo" alt="KOB Keramika">
-        <h1 class="title">KOB-Keramika</h1>
-        <p class="subtitle">Interni sustav za obračun keramičarskih radova</p>
+  <div class="app-shell">
+    <!-- GORNJI HEADER -->
+    <header class="app-header">
+      <div class="brand">
+        <img src="logo.png" alt="KOB-Keramika logo" class="brand-logo" />
+        <div class="brand-text">
+          <h1>KOB-Keramika</h1>
+          <p>Interni obračun keramičarskih radova</p>
+        </div>
+      </div>
+      <div class="user-box">
+        <span id="userStatus">Nije prijavljen</span>
+        <button id="btnLogout" class="btn ghost small hidden">Odjava</button>
+      </div>
     </header>
 
-    <!-- AUTH VIEW -->
-    <section id="authView" class="view">
-
-        <div class="card">
-            <h2>Prijava</h2>
-            <input id="loginEmail" type="email" placeholder="E-mail" />
-            <input id="loginPass" type="password" placeholder="Lozinka" />
-            <button onclick="loginUser()" class="btn-primary">Prijava</button>
+    <!-- HERO + AUTH -->
+    <main>
+      <section id="landing" class="card landing">
+        <div class="landing-left">
+          <h2>Profesionalni obračun keramičarskih radova</h2>
+          <p>
+            Automatski izračun poda, zidova, hidroizolacije, trake, silikona
+            i više prostorija po projektu – uz mogućnost spremanja u Cloud.
+          </p>
         </div>
 
-        <p class="center-text">ili</p>
+        <div class="landing-right">
+          <div class="auth-box">
+            <h3>Prijava</h3>
+            <form id="loginForm" class="form">
+              <label>
+                E-mail
+                <input type="email" id="loginEmail" required placeholder="you@example.com" />
+              </label>
+              <label>
+                Lozinka
+                <input type="password" id="loginPassword" required minlength="6" />
+              </label>
+              <button type="submit" class="btn primary full">Prijava</button>
+            </form>
 
-        <div class="card">
-            <h2>Registracija</h2>
-            <input id="regEmail" type="email" placeholder="E-mail" />
-            <input id="regPass" type="password" placeholder="Lozinka (min. 6 znakova)" />
-            <button onclick="registerUser()" class="btn-secondary">Registracija</button>
+            <div class="divider">ili</div>
+
+            <h3>Registracija</h3>
+            <form id="registerForm" class="form">
+              <label>
+                E-mail
+                <input type="email" id="regEmail" required placeholder="you@example.com" />
+              </label>
+              <label>
+                Lozinka (min. 6 znakova)
+                <input type="password" id="regPassword" required minlength="6" />
+              </label>
+              <button type="submit" class="btn secondary full">Registracija</button>
+            </form>
+
+            <div id="authMessage" class="auth-message"></div>
+          </div>
         </div>
+      </section>
 
-    </section>
+      <!-- NAVIGACIJA (vidljiva tek nakon prijave) -->
+      <nav id="mainNav" class="main-nav hidden">
+        <button class="nav-btn active" data-view="quickCalcView">Brzi obračun</button>
+        <button class="nav-btn" data-view="projectsView">Projekti</button>
+        <button class="nav-btn" data-view="archiveView">Arhiva</button>
+      </nav>
 
-    <!-- MAIN VIEW (nakon login-a) -->
-    <section id="mainView" class="view hidden">
+      <!-- APLIKACIJSKI SADRŽAJ (sakriven dok korisnik nije prijavljen) -->
+      <section id="appContent" class="app-content hidden">
 
-        <div class="top-bar">
-            <h2>KOB-Keramika</h2>
-            <button onclick="logoutUser()" class="btn-danger">Odjava</button>
-        </div>
+        <!-- BRZI OBRAČUN -->
+        <section id="quickCalcView" class="view card active">
+          <h2>Brzi obračun prostorije</h2>
 
-        <div class="nav">
-            <button onclick="showCalc()" class="btn-nav">Brzi obračun</button>
-            <button onclick="showProjects()" class="btn-nav">Projekti</button>
-            <button onclick="showArchive()" class="btn-nav">Arhiva</button>
-        </div>
+          <div class="grid-3">
+            <label>
+              Duljina D (m)
+              <input type="text" id="dimD" placeholder="npr. 4,20" />
+            </label>
+            <label>
+              Širina Š (m)
+              <input type="text" id="dimS" placeholder="npr. 3,10" />
+            </label>
+            <label>
+              Visina V (m)
+              <input type="text" id="dimV" placeholder="npr. 2,65" />
+            </label>
+          </div>
 
-        <!-- VIEW: CALC -->
-        <div id="calcView" class="subview">
-            <h3>Brzi obračun</h3>
-            <p class="info">Ovdje će ići svi kalkulatori koje ćemo naknadno dodati.</p>
-        </div>
+          <h3 class="sub-title">Dodatne dimenzije prostorije</h3>
+          <p class="hint">
+            Svaki red predstavlja dodatni dio (uvučen zid, proširenje…). Utječe na pod, zidove,
+            hidro pod, traku i silikon.
+          </p>
 
-        <!-- VIEW: PROJECTS -->
-        <div id="projectsView" class="subview hidden">
-            <h3>Projekti</h3>
-            <p class="info">Ovdje će biti lista projekata (Firestore integracija je spremna).</p>
-        </div>
+          <div id="dmContainer" class="dm-container">
+            <!-- redovi se dodaju dinamički -->
+          </div>
+          <button id="btnAddDmRow" class="btn ghost full">+ Dodaj dodatne dimenzije</button>
 
-        <!-- VIEW: ARCHIVE -->
-        <div id="archiveView" class="subview hidden">
-            <h3>Arhiva</h3>
-            <p class="info">Ovdje će se prikazivati arhivirani obračuni.</p>
-        </div>
+          <h3 class="sub-title">Što računamo?</h3>
+          <div class="calc-options">
+            <label class="chk-line">
+              <input type="checkbox" id="chkPod" checked />
+              <span>Pod</span>
+            </label>
+            <label class="chk-line">
+              <input type="checkbox" id="chkZidovi" checked />
+              <span>Zidovi</span>
+            </label>
+            <label class="chk-line">
+              <input type="checkbox" id="chkHidroPod" />
+              <span>Hidroizolacija poda</span>
+            </label>
+            <label class="chk-line">
+              <input type="checkbox" id="chkHidroTraka" />
+              <span>Hidro traka</span>
+            </label>
+            <label class="chk-line">
+              <input type="checkbox" id="chkSilikon" />
+              <span>Silikon</span>
+            </label>
+          </div>
 
-    </section>
+          <button id="btnCalc" class="btn primary full">🔍 Izračunaj</button>
 
-    <!-- JS -->
-    <script type="module" src="Js/app.js"></script>
-    <script type="module" src="Js/calc.js"></script>
+          <div id="calcOutput" class="calc-output"></div>
 
+          <div class="calc-actions">
+            <button id="btnSaveProject" class="btn secondary">💾 Spremi kao projekt</button>
+            <button id="btnSaveArchive" class="btn ghost">📁 Spremi u arhivu</button>
+            <button id="btnExportPdf" class="btn ghost">📄 PDF</button>
+            <button id="btnExportCsv" class="btn ghost">📊 CSV</button>
+          </div>
+        </section>
+
+        <!-- PROJEKTI -->
+        <section id="projectsView" class="view card">
+          <h2>Projekti</h2>
+
+          <div class="grid-2">
+            <div>
+              <h3 class="sub-title">Podaci o projektu</h3>
+              <form id="projectMetaForm" class="form">
+                <label>
+                  Naziv gradilišta
+                  <input type="text" id="metaSite" placeholder="npr. Stambena zgrada A" />
+                </label>
+                <label>
+                  Prostorija
+                  <input type="text" id="metaRoom" placeholder="npr. Kupaonica 1" />
+                </label>
+                <label>
+                  Situacija (obračunska)
+                  <input type="number" id="metaSituation" min="1" value="1" />
+                </label>
+                <label>
+                  Format pločica
+                  <select id="metaTileFormat">
+                    <option value="">Odaberi…</option>
+                    <option>30×60</option>
+                    <option>60×60</option>
+                    <option>80×80</option>
+                    <option>100×100</option>
+                    <option>60×120</option>
+                    <option>120×120</option>
+                    <option>100×300</option>
+                    <option>120×280</option>
+                  </select>
+                </label>
+                <label>
+                  Jedinična cijena (€/m²)
+                  <input type="number" id="metaUnitPrice" step="0.01" />
+                </label>
+              </form>
+            </div>
+
+            <div>
+              <h3 class="sub-title">Moji projekti</h3>
+              <ul id="projectList" class="list"></ul>
+              <p class="hint small">Klikni projekt za učitavanje u brzi obračun.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ARHIVA -->
+        <section id="archiveView" class="view card">
+          <h2>Arhiva obračuna</h2>
+          <ul id="archiveList" class="list"></ul>
+          <p class="hint small">Arhiva prikazuje sve spremljene obračune (snapshot kalkulacije).</p>
+        </section>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>© KOB-Keramika – interni alat</span>
+    </footer>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- jsPDF za PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Glavni JS -->
+  <script src="Js/app.js"></script>
+  <script src="Js/calc.js"></script>
 </body>
 </html>
