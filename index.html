@@ -2118,6 +2118,29 @@ async function deleteCloudRecord(id) {
   }
 }
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
 
+  // HOME VIEW button handlers
+  const btns = [
+    ["btnOpenAutoCalc",   "autoCalcView"],
+    ["btnOpenMeasures",   "measuresView"],
+    ["btnOpenCosts",      "costsView"],
+    ["btnOpenPrices",     "pricesView"],
+    ["btnOpenArchive",    "cloudView"],
+    ["btnOpenBook",       "bookView"]  // ako ga još nemaš, samo ignorira
+  ];
+
+  btns.forEach(([btnId, view]) => {
+    const b = document.getElementById(btnId);
+    if (!b) return;
+    b.addEventListener("click", () => {
+      if (typeof requireAuth === "function" && !requireAuth()) return;
+      showView(view);
+    });
+  });
+
+});
+</script>
 </body>
 </html>
