@@ -5,18 +5,11 @@
   <title>KOB-Keramika – Pro obračun</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- PWA manifest -->
+  <!-- PWA manifest (ako ga imaš) -->
   <link rel="manifest" href="manifest.webmanifest">
 
-  <!-- OCR -->
-  <script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
-
-  <!-- jsPDF -->
+  <!-- jsPDF za PDF export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-  <!-- Firebase (opcionalno) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
   <style>
     :root {
@@ -26,6 +19,8 @@
       --accent: #ffffff;
       --accent-soft: #888;
     }
+
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -44,6 +39,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      z-index: 10;
     }
 
     header .left {
@@ -56,13 +52,13 @@
       height: 42px;
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,0.15);
-      cursor: pointer;
     }
 
-    .view { display: none; }
-    .view.active { display: block; }
-
-    main { padding: 12px; max-width: 1000px; margin: 0 auto; }
+    main {
+      padding: 12px;
+      max-width: 1100px;
+      margin: 0 auto 40px auto;
+    }
 
     .card {
       border-radius: 16px;
@@ -72,67 +68,152 @@
       border: 1px solid rgba(255,255,255,0.06);
     }
 
-    label { font-size: 14px; display: block; margin-top: 10px; }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    h2 { margin-top: 0; }
+
+    label {
+      font-size: 13px;
+      display: block;
+      margin-top: 8px;
+    }
+
     input, select {
       width: 100%;
       padding: 8px;
-      margin-top: 4px;
+      margin-top: 3px;
       background: #000;
       color: #fff;
       border: 1px solid #333;
       border-radius: 8px;
+      font-size: 13px;
     }
 
     button {
       width: 100%;
       padding: 10px;
-      margin-top: 12px;
+      margin-top: 10px;
       border-radius: 12px;
       background: #fff;
       color: #000;
       border: none;
       cursor: pointer;
-      font-weight: bold;
+      font-weight: 600;
+      font-size: 14px;
     }
 
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+    button.secondary {
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .btn-small {
+      width: auto;
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 10px;
+      margin-top: 4px;
     }
 
     .checkbox-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 4px;
+      font-size: 13px;
     }
 
     .checkbox-row input {
       width: auto;
+      margin-top: 0;
     }
 
     .section-title {
-      margin-top: 16px;
-      font-size: 16px;
-      font-weight: bold;
+      margin-top: 4px;
+      font-size: 15px;
+      font-weight: 700;
       border-bottom: 1px solid #333;
       padding-bottom: 4px;
+      margin-bottom: 6px;
     }
 
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .openings-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+      margin-bottom: 8px;
+    }
+
+    .opening-card {
+      border-radius: 12px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      background: #141414;
+      border: 1px solid #333;
+      font-size: 12px;
+    }
+
+    .opening-title {
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .opening-meta {
+      opacity: 0.85;
+    }
+
+    .opening-actions {
+      margin-top: 6px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #444;
+      margin-right: 4px;
+      margin-top: 2px;
+    }
+
+    #calcOutput {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    @media (min-width: 800px) {
+      .layout-split {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 12px;
+      }
+    }
   </style>
 </head>
 <body>
 
 <header>
   <div class="left">
-    <img src="logo.png" class="logo" id="headerLogo" />
+    <img src="logo.png" class="logo" alt="Logo">
     <div>
       <div style="font-weight:bold">KOB-Keramika</div>
       <div style="font-size:12px;opacity:0.8">Pro obračun prostorije</div>
     </div>
   </div>
-  <div>INTERNI</div>
+  <div style="font-size:11px;opacity:0.7;">INTERNI ALAT</div>
 </header>
 
 <main>
@@ -142,712 +223,702 @@
     <div class="card">
       <h2>Što želiš raditi?</h2>
       <button id="btnOpenAutoCalc">📐 Automatski obračun prostorije</button>
-      <button id="btnOpenMeasures">✏️ Ručni unos mjera</button>
-      <button id="btnOpenCosts">💰 Troškovi</button>
-      <button id="btnOpenPrices">💶 Cjenik</button>
+      <button id="btnOpenMeasures">✏️ Ručni unos mjera (u pripremi)</button>
+      <button id="btnOpenCosts">💰 Troškovi (postojeći modul)</button>
+      <button id="btnOpenPrices">💶 Cjenik (postojeći modul)</button>
     </div>
   </section>
 
-  <!-- NOVI AUTOMATSKI OBRAČUN PROSTORIJE -->
+  <!-- AUTOMATSKI OBRAČUN PROSTORIJE -->
   <section id="autoCalcView" class="view">
-
     <div class="card">
-      <button onclick="showView('homeView')" style="background:#333;color:#fff;">← Natrag</button>
+      <button class="secondary" onclick="showView('homeView')">← Natrag</button>
       <h2>📐 Automatski obračun prostorije</h2>
-      <p>Ovdje se dimenzijama automatski izračunava: pod, zidovi, hidro, trake, silikon, sokl, stepenice, lajsne, gerung i dodatne mjere.</p>
+      <p style="font-size:13px;opacity:0.8;">
+        Dimenzije prostorije + otvori (vrata, prozori, niše...) → automatski obračun poda, zidova, hidroizolacije, traka,
+        silikona, sokla, stepenica, lajsni i gerunga. Na kraju možeš generirati PDF građevinsku knjigu i CSV za Excel.
+      </p>
     </div>
 
-    <div class="card">
-      <div class="section-title">📏 Osnovne dimenzije prostorije</div>
+    <div class="layout-split">
 
-      <label>Duljina (m)
-        <input type="number" id="dimD" step="0.001">
-      </label>
+      <!-- LIJEVA STRANA – UNOS -->
+      <div>
 
-      <label>Širina (m)
-        <input type="number" id="dimS" step="0.001">
-      </label>
+        <div class="card">
+          <div class="section-title">📏 Osnovne dimenzije prostorije</div>
 
-      <label>Visina (m)
-        <input type="number" id="dimV" step="0.001">
-      </label>
-    </div>
+          <label>Duljina D (m)
+            <input type="number" id="dimD" step="0.001" placeholder="npr. 4.20">
+          </label>
 
-    <div class="card">
-      <div class="section-title">☑ Što se računa?</div>
+          <label>Širina Š (m)
+            <input type="number" id="dimS" step="0.001" placeholder="npr. 3.10">
+          </label>
 
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkPod">
-        <label for="chkPod">Pod</label>
+          <label>Visina V (m)
+            <input type="number" id="dimV" step="0.001" placeholder="npr. 2.65">
+          </label>
+        </div>
+
+        <div class="card">
+          <div class="section-title">☑ Što se računa?</div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkPod">
+            <label for="chkPod">Pod (m²)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkZidovi">
+            <label for="chkZidovi">Zidovi (bruto + odbitak vrata)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkHidroPod">
+            <label for="chkHidroPod">Hidroizolacija – pod</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkHidroTus">
+            <label for="chkHidroTus">Hidroizolacija – tuš zona</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkHidroTraka">
+            <label for="chkHidroTraka">Hidro traka</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkSilikon">
+            <label for="chkSilikon">Silikon</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkSokl">
+            <label for="chkSokl">Sokl</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkStepenice">
+            <label for="chkStepenice">Stepenice</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkLajsne">
+            <label for="chkLajsne">Lajsne (ukupno)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkGerung">
+            <label for="chkGerung">Gerung (ukupno)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkDodatne">
+            <label for="chkDodatne">Dodatne mjere (3 polja)</label>
+          </div>
+        </div>
+
+        <!-- Tuš zona -->
+        <div class="card" id="cardTus" style="display:none;">
+          <div class="section-title">🚿 Tuš zona</div>
+          <div class="two-col">
+            <label>Duljina tuša (m)
+              <input type="number" id="tusD" step="0.001">
+            </label>
+            <label>Širina tuša (m)
+              <input type="number" id="tusS" step="0.001">
+            </label>
+          </div>
+          <label>Visina tuša (m)
+            <input type="number" id="tusV" step="0.001" value="2.65">
+          </label>
+        </div>
+
+        <!-- Silikon – više visina -->
+        <div class="card" id="cardSilikon" style="display:none;">
+          <div class="section-title">🧼 Silikon – visine</div>
+          <p style="font-size:12px;opacity:0.8;">Ako prostor ima više visina, upiši ih redom (zbrajaju se).</p>
+          <label>Visina 1 (m)
+            <input type="number" id="silV1" step="0.001">
+          </label>
+          <label>Visina 2 (m)
+            <input type="number" id="silV2" step="0.001">
+          </label>
+          <label>Visina 3 (m)
+            <input type="number" id="silV3" step="0.001">
+          </label>
+        </div>
+
+        <!-- Sokl -->
+        <div class="card" id="cardSokl" style="display:none;">
+          <div class="section-title">📏 Sokl – korekcije</div>
+          <label>Odbijanje sokla (m)
+            <input type="number" id="soklMinus" step="0.001">
+          </label>
+          <label>Dodatno sokla (m)
+            <input type="number" id="soklPlus" step="0.001">
+          </label>
+        </div>
+
+        <!-- Stepenice -->
+        <div class="card" id="cardStepenice" style="display:none;">
+          <div class="section-title">🪜 Stepenice</div>
+          <label>Širina stepenice (m)
+            <input type="number" id="stepWidth" step="0.001">
+          </label>
+          <label>Broj stepenica (kom)
+            <input type="number" id="stepCount" step="1">
+          </label>
+          <label>Vrsta obračuna
+            <select id="stepMode">
+              <option value="duzni">Dužni metri</option>
+              <option value="komada">Komada</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Lajsne manual -->
+        <div class="card" id="cardLajsne" style="display:none;">
+          <div class="section-title">🔹 Lajsne – ručni metri</div>
+          <label>Lajsna 1 (m)
+            <input type="number" id="l1" step="0.001">
+          </label>
+          <label>Lajsna 2 (m)
+            <input type="number" id="l2" step="0.001">
+          </label>
+          <label>Lajsna 3 (m)
+            <input type="number" id="l3" step="0.001">
+          </label>
+        </div>
+
+        <!-- Gerung manual -->
+        <div class="card" id="cardGerung" style="display:none;">
+          <div class="section-title">🔪 Gerung – ručni metri</div>
+          <label>Gerung 1 (m)
+            <input type="number" id="g1" step="0.001">
+          </label>
+          <label>Gerung 2 (m)
+            <input type="number" id="g2" step="0.001">
+          </label>
+          <label>Gerung 3 (m)
+            <input type="number" id="g3" step="0.001">
+          </label>
+        </div>
+
+        <!-- Dodatne mjere -->
+        <div class="card" id="cardDodatne" style="display:none;">
+          <div class="section-title">➕ Dodatne mjere (3 polja)</div>
+          <label>Mjera 1
+            <input type="number" id="dm1" step="0.001">
+          </label>
+          <label>Mjera 2
+            <input type="number" id="dm2" step="0.001">
+          </label>
+          <label>Mjera 3
+            <input type="number" id="dm3" step="0.001">
+          </label>
+          <div class="section-title">Gdje se dodaje?</div>
+          <div class="checkbox-row"><input type="checkbox" id="dmPod"><label for="dmPod">Pod</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmZidovi"><label for="dmZidovi">Zidovi</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmHidro"><label for="dmHidro">Hidro</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmSilikon"><label for="dmSilikon">Silikon</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmTraka"><label for="dmTraka">Hidro traka</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmSokl"><label for="dmSokl">Sokl</label></div>
+        </div>
+
+        <!-- Gumbi za izračun -->
+        <div class="card">
+          <button id="btnCalcNow">🔍 Izračunaj sve</button>
+          <button id="btnExportPdfAuto" class="secondary">📄 PDF – građevinska knjiga</button>
+          <button id="btnExportCsvAuto" class="secondary">📑 CSV – Excel export</button>
+        </div>
+
       </div>
 
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkZidovi">
-        <label for="chkZidovi">Zidovi (bez odbijanja)</label>
+      <!-- DESNA STRANA – OTVORI + REZULTATI -->
+      <div>
+
+        <!-- Otvori kao kartice -->
+        <div class="card">
+          <div class="section-title">🧱 Otvori (vrata, prozori, niše...)</div>
+          <p style="font-size:12px;opacity:0.8;">
+            Vrata se odbijaju od zidova. Ostali otvori služe za obračun rubova (silikon, lajsne, gerung).
+          </p>
+          <div class="openings-header">
+            <button id="btnAddDoor"   class="btn-small">➕ Vrata</button>
+            <button id="btnAddWindow" class="btn-small">➕ Prozor</button>
+            <button id="btnAddGeberit" class="btn-small">➕ Geberit</button>
+            <button id="btnAddNiche"  class="btn-small">➕ Niša</button>
+            <button id="btnAddCustom" class="btn-small">➕ Custom otvor</button>
+          </div>
+          <div id="openingsList"></div>
+        </div>
+
+        <!-- Rezultati -->
+        <div class="card" id="calcResult" style="display:none;">
+          <h3>📊 Rezultati obračuna</h3>
+          <div id="calcOutput"></div>
+        </div>
+
       </div>
 
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkHidroPod">
-        <label for="chkHidroPod">Hidroizolacija pod</label>
-      </div>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkHidroTus">
-        <label for="chkHidroTus">Hidroizolacija tuš zona</label>
-      </div>
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkHidroTraka">
-        <label for="chkHidroTraka">Hidroizolacijska traka</label>
-      </div>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkSilikon">
-        <label for="chkSilikon">Silikon</label>
-      </div>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkSokl">
-        <label for="chkSokl">Sokl</label>
-      </div>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkStepenice">
-        <label for="chkStepenice">Stepenice</label>
-      </div>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkLajsne">
-        <label for="chkLajsne">Lajsne (prozor / vertikala)</label>
-      </div>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkGerung">
-        <label for="chkGerung">Gerung (ručno)</label>
-      </div>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkDodatne">
-        <label for="chkDodatne">Dodatne mjere (3 polja)</label>
-      </div>
     </div>
-
-    
-    <!-- TUŠ ZONA -->
-    <div class="card" id="cardTus" style="display:none;">
-      <div class="section-title">🚿 Tuš zona</div>
-
-      <label>Duljina tuša (m)
-        <input type="number" id="tusD" step="0.001">
-      </label>
-
-      <label>Širina tuša (m)
-        <input type="number" id="tusS" step="0.001">
-      </label>
-
-      <label>Visina tuša (m)
-        <input type="number" id="tusV" value="2.65" step="0.001">
-      </label>
-    </div>
-
-    <!-- SILIKON – VIŠE VISINA -->
-    <div class="card" id="cardSilikon" style="display:none;">
-      <div class="section-title">🧼 Silikon – visine</div>
-      <p style="font-size:13px;opacity:0.7;">Ako prostor ima više visina, upiši ih redom.</p>
-
-      <label>Visina 1 (m)
-        <input type="number" id="silV1" step="0.001">
-      </label>
-      <label>Visina 2 (m)
-        <input type="number" id="silV2" step="0.001">
-      </label>
-      <label>Visina 3 (m)
-        <input type="number" id="silV3" step="0.001">
-      </label>
-    </div>
-
-    <!-- SOKL -->
-    <div class="card" id="cardSokl" style="display:none;">
-      <div class="section-title">📏 Sokl – dodaci i odbijanja</div>
-
-      <label>Odbijanje sokla (m)
-        <input type="number" id="soklMinus" step="0.001">
-      </label>
-
-      <label>Dodatno sokla (m)
-        <input type="number" id="soklPlus" step="0.001">
-      </label>
-    </div>
-
-    <!-- STEPENICE -->
-    <div class="card" id="cardStepenice" style="display:none;">
-      <div class="section-title">🪜 Stepenice</div>
-      <label>Širina stepenice (m)
-        <input type="number" id="stepWidth" step="0.001">
-      </label>
-
-      <label>Broj stepenica
-        <input type="number" id="stepCount" step="1">
-      </label>
-
-      <label>Vrsta obračuna
-        <select id="stepMode">
-          <option value="duzni">Dužni metri</option>
-          <option value="komada">Komada</option>
-        </select>
-      </label>
-    </div>
-
-    <!-- LAJSNE -->
-    <div class="card" id="cardLajsne" style="display:none;">
-      <div class="section-title">🔹 Lajsne (ručni unos)</div>
-
-      <label>Lajsna 1 (m)
-        <input type="number" id="l1" step="0.001">
-      </label>
-
-      <label>Lajsna 2 (m)
-        <input type="number" id="l2" step="0.001">
-      </label>
-
-      <label>Lajsna 3 (m)
-        <input type="number" id="l3" step="0.001">
-      </label>
-    </div>
-
-    <!-- GERUNG -->
-    <div class="card" id="cardGerung" style="display:none;">
-      <div class="section-title">🔪 Gerung (ručno)</div>
-
-      <label>Gerung 1 (m)
-        <input type="number" id="g1" step="0.001">
-      </label>
-
-      <label>Gerung 2 (m)
-        <input type="number" id="g2" step="0.001">
-      </label>
-
-      <label>Gerung 3 (m)
-        <input type="number" id="g3" step="0.001">
-      </label>
-    </div>
-
-    <!-- DODATNE MJERE -->
-    <div class="card" id="cardDodatne" style="display:none;">
-      <div class="section-title">➕ Dodatne mjere (3 polja)</div>
-
-      <label>Mjera 1 (m² ili m)
-        <input type="number" id="dm1" step="0.001">
-      </label>
-
-      <label>Mjera 2 (m² ili m)
-        <input type="number" id="dm2" step="0.001">
-      </label>
-
-      <label>Mjera 3 (m² ili m)
-        <input type="number" id="dm3" step="0.001">
-      </label>
-
-      <div class="section-title">Gdje se dodaje?</div>
-
-      <label><input type="checkbox" id="dmPod"> Pod</label>
-      <label><input type="checkbox" id="dmZidovi"> Zidovi</label>
-      <label><input type="checkbox" id="dmHidro"> Hidro</label>
-      <label><input type="checkbox" id="dmSilikon"> Silikon</label>
-      <label><input type="checkbox" id="dmTraka"> Hidro traka</label>
-      <label><input type="checkbox" id="dmSokl"> Sokl</label>
-    </div>
-
-    <!-- GUMB ZA IZRAČUN -->
-    <div class="card">
-      <button id="btnCalcNow">🔍 Izračunaj sve</button>
-    </div>
-
-    <!-- PRIKAZ REZULTATA -->
-    <div class="card" id="calcResult" style="display:none;">
-      <h3>📊 Rezultati obračuna</h3>
-      <div id="calcOutput"></div>
-    </div>
-
   </section>
+
+</main>
+
 <script>
-// Helper: prebacivanje između pogleda
-function showView(viewId) {
+/* ------------ POMOĆNE FUNKCIJE / STATE ------------ */
+function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const el = document.getElementById(viewId);
-  if (el) el.classList.add('active');
+  document.getElementById(id).classList.add('active');
 }
 
-// Navigacija s početne
 document.getElementById('btnOpenAutoCalc').onclick = () => showView('autoCalcView');
-document.getElementById('btnOpenMeasures').onclick = () => alert("Ručni modul mjera ostaje za kasnije proširenje.");
-document.getElementById('btnOpenCosts').onclick = () => alert("Modul troškova je u staroj verziji – ovdje fokus na auto obračun.");
-document.getElementById('btnOpenPrices').onclick = () => alert("Cjenik i backup ostaju kao u web verziji – može se naknadno spojiti.");
+document.getElementById('btnOpenMeasures').onclick = () => alert("Ručni modul mjera će se naknadno preseliti na novi engine.");
+document.getElementById('btnOpenCosts').onclick = () => alert("Modul troškova ostaje kao posebna stranica.");
+document.getElementById('btnOpenPrices').onclick = () => alert("Cjenik i backup ostaju kao u postojećoj verziji.");
 
-// Pomoćna funkcija za prikaz / skrivanje kartica po kvačici
-function toggleCard(chkId, cardId) {
-  const cb = document.getElementById(chkId);
+// pokaži/sakrij kartice prema kvačicama
+function bindToggle(chkId, cardId) {
+  const chk = document.getElementById(chkId);
   const card = document.getElementById(cardId);
-  if (!cb || !card) return;
-  cb.addEventListener('change', () => {
-    card.style.display = cb.checked ? 'block' : 'none';
+  if (!chk || !card) return;
+  chk.addEventListener('change', () => {
+    card.style.display = chk.checked ? 'block' : 'none';
   });
 }
+bindToggle('chkHidroTus', 'cardTus');
+bindToggle('chkSilikon', 'cardSilikon');
+bindToggle('chkSokl', 'cardSokl');
+bindToggle('chkStepenice', 'cardStepenice');
+bindToggle('chkLajsne', 'cardLajsne');
+bindToggle('chkGerung', 'cardGerung');
+bindToggle('chkDodatne', 'cardDodatne');
 
-// Vežemo sve podsustave
-toggleCard("chkHidroTus", "cardTus");
-toggleCard("chkSilikon", "cardSilikon");
-toggleCard("chkSokl", "cardSokl");
-toggleCard("chkStepenice", "cardStepenice");
-toggleCard("chkLajsne", "cardLajsne");
-toggleCard("chkGerung", "cardGerung");
-toggleCard("chkDodatne", "cardDodatne");
+// OTVORI – kartice
+let openings = []; // {id, type, label, w, h, count, subtract}
 
-// Elementi koje često koristimo
-const dimD = document.getElementById("dimD");
-const dimS = document.getElementById("dimS");
-const dimV = document.getElementById("dimV");
+// generiraj ID
+function newId() {
+  return 'o_' + Math.random().toString(36).substr(2, 9);
+}
 
-const chkPod        = document.getElementById("chkPod");
-const chkZidovi     = document.getElementById("chkZidovi");
-const chkHidroPod   = document.getElementById("chkHidroPod");
-const chkHidroTus   = document.getElementById("chkHidroTus");
-const chkHidroTraka = document.getElementById("chkHidroTraka");
-const chkSilikon    = document.getElementById("chkSilikon");
-const chkSokl       = document.getElementById("chkSokl");
-const chkStepenice  = document.getElementById("chkStepenice");
-const chkLajsne     = document.getElementById("chkLajsne");
-const chkGerung     = document.getElementById("chkGerung");
-const chkDodatne    = document.getElementById("chkDodatne");
+// dodavanje otvora putem prompt prozora (jednostavno za sada)
+function addOpening(type) {
+  let label;
+  if (type === 'vrata') label = 'Vrata';
+  else if (type === 'prozor') label = 'Prozor';
+  else if (type === 'geberit') label = 'Geberit';
+  else if (type === 'nisa') label = 'Niša';
+  else label = prompt("Naziv otvora:", "Custom otvor") || "Custom otvor";
 
-// Tuš
-const tusD = document.getElementById("tusD");
-const tusS = document.getElementById("tusS");
-const tusV = document.getElementById("tusV");
+  const w = parseFloat(prompt(label + " - širina (m):", "0.9") || "0") || 0;
+  const h = parseFloat(prompt(label + " - visina (m):", "2.0") || "0") || 0;
+  const c = parseInt(prompt(label + " - komada:", "1") || "0") || 0;
 
-// Silikon visine
-const silV1 = document.getElementById("silV1");
-const silV2 = document.getElementById("silV2");
-const silV3 = document.getElementById("silV3");
+  if (!w || !h || !c) {
+    alert("Nije unesena puna dimenzija – otvor je preskočen.");
+    return;
+  }
 
-// Sokl
-const soklMinus = document.getElementById("soklMinus");
-const soklPlus  = document.getElementById("soklPlus");
+  const subtract = (type === 'vrata'); // samo vrata odbijaju zidove
 
-// Stepenice
-const stepWidth = document.getElementById("stepWidth");
-const stepCount = document.getElementById("stepCount");
-const stepMode  = document.getElementById("stepMode");
+  openings.push({ id: newId(), type, label, w, h, count: c, subtract });
+  renderOpenings();
+}
 
-// Lajsne
-const l1 = document.getElementById("l1");
-const l2 = document.getElementById("l2");
-const l3 = document.getElementById("l3");
+function deleteOpening(id) {
+  openings = openings.filter(o => o.id !== id);
+  renderOpenings();
+}
 
-// Gerung
-const g1 = document.getElementById("g1");
-const g2 = document.getElementById("g2");
-const g3 = document.getElementById("g3");
+function renderOpenings() {
+  const list = document.getElementById('openingsList');
+  if (!openings.length) {
+    list.innerHTML = '<p style="font-size:12px;opacity:0.7;">Nema unesenih otvora.</p>';
+    return;
+  }
+  let html = '';
+  openings.forEach(o => {
+    const perim = 2 * (o.w + o.h) * o.count;
+    const area = (o.w * o.h * o.count);
+    html += `
+      <div class="opening-card">
+        <div class="opening-title">${o.label}</div>
+        <div class="opening-meta">
+          Tip: ${o.type}<br>
+          Š=${o.w} m, V=${o.h} m, kom=${o.count}<br>
+          Površina: ${area.toFixed(3)} m²<br>
+          Obod (rubovi): ${perim.toFixed(3)} m
+        </div>
+        <div style="margin-top:4px;">
+          <span class="tag">${o.subtract ? "Odbija zidove: DA" : "Odbija zidove: NE"}</span>
+          <span class="tag">Rubovi za silikon/lajsne/gerung</span>
+        </div>
+        <div class="opening-actions">
+          <button class="btn-small secondary" onclick="deleteOpening('${o.id}')">🗑 Obriši</button>
+        </div>
+      </div>
+    `;
+  });
+  list.innerHTML = html;
+}
 
-// Dodatne mjere
-const dm1 = document.getElementById("dm1");
-const dm2 = document.getElementById("dm2");
-const dm3 = document.getElementById("dm3");
+document.getElementById('btnAddDoor').onclick    = () => addOpening('vrata');
+document.getElementById('btnAddWindow').onclick  = () => addOpening('prozor');
+document.getElementById('btnAddGeberit').onclick = () => addOpening('geberit');
+document.getElementById('btnAddNiche').onclick   = () => addOpening('nisa');
+document.getElementById('btnAddCustom').onclick  = () => addOpening('custom');
 
-const dmPod     = document.getElementById("dmPod");
-const dmZidovi  = document.getElementById("dmZidovi");
-const dmHidro   = document.getElementById("dmHidro");
-const dmSilikon = document.getElementById("dmSilikon");
-const dmTraka   = document.getElementById("dmTraka");
-const dmSokl    = document.getElementById("dmSokl");
-
-// Rezultati
-const calcResult  = document.getElementById("calcResult");
-const calcOutput  = document.getElementById("calcOutput");
-const btnCalcNow  = document.getElementById("btnCalcNow");
-const btnPdf      = document.getElementById("btnExportPdfAuto");
-const btnCsv      = document.getElementById("btnExportCsvAuto");
-
-// U ovo spremamo zadnji izračun da ga PDF / CSV mogu koristiti
+// Glavni izračun
 let lastCalc = null;
 
-/**
- * Glavna funkcija: radi obračun, vraća objekt i (opcionalno) ispisuje HTML.
- */
 function runAutoCalc(showHtml = true) {
-  // Osnovne dimenzije
-  const D = parseFloat(dimD.value) || 0;
-  const S = parseFloat(dimS.value) || 0;
-  const V = parseFloat(dimV.value) || 0;
+  const D = parseFloat(document.getElementById('dimD').value) || 0;
+  const S = parseFloat(document.getElementById('dimS').value) || 0;
+  const V = parseFloat(document.getElementById('dimV').value) || 0;
 
-  let html = "<h4>Dimenzije prostorije:</h4>";
-  html += `D = ${D} m<br>`;
-  html += `Š = ${S} m<br>`;
-  html += `V = ${V} m<br><br>`;
+  const chkPod        = document.getElementById('chkPod').checked;
+  const chkZidovi     = document.getElementById('chkZidovi').checked;
+  const chkHidroPod   = document.getElementById('chkHidroPod').checked;
+  const chkHidroTus   = document.getElementById('chkHidroTus').checked;
+  const chkHidroTraka = document.getElementById('chkHidroTraka').checked;
+  const chkSilikon    = document.getElementById('chkSilikon').checked;
+  const chkSokl       = document.getElementById('chkSokl').checked;
+  const chkStepenice  = document.getElementById('chkStepenice').checked;
+  const chkLajsne     = document.getElementById('chkLajsne').checked;
+  const chkGerung     = document.getElementById('chkGerung').checked;
+  const chkDodatne    = document.getElementById('chkDodatne').checked;
+
+  let html = `<h4>Dimenzije prostorije:</h4>
+    D = ${D} m<br>
+    Š = ${S} m<br>
+    V = ${V} m<br><br>`;
+
+  const results = {};
 
   // POD
-  let pod = 0;
-  if (chkPod.checked) {
-    pod = D * S;
+  if (chkPod) {
+    const pod = D * S;
+    results.pod = pod;
     html += `<b>Pod:</b><br>D × Š = ${D} × ${S} = <b>${pod.toFixed(3)} m²</b><br><br>`;
   }
 
-  // ZIDOVI (bez odbijanja – odbijanja bi išla kasnije)
-  let zidovi = 0;
-  if (chkZidovi.checked) {
-    zidovi = 2 * (D + S) * V;
-    html += `<b>Zidovi:</b><br>2 × (D + Š) × V = 2 × (${D}+${S}) × ${V} = <b>${zidovi.toFixed(3)} m²</b><br><br>`;
+  // ZIDOVI bruto
+  let zidoviBruto = 0;
+  if (chkZidovi) {
+    zidoviBruto = 2 * (D * V) + 2 * (S * V);
+    // odbijanje samo vrata
+    let areaVrata = 0;
+    openings.forEach(o => {
+      if (o.subtract) {
+        areaVrata += o.w * o.h * o.count;
+      }
+    });
+    const zidoviNeto = zidoviBruto - areaVrata;
+    results.zidoviBruto = zidoviBruto;
+    results.zidoviNeto  = zidoviNeto;
+    results.odbitakVrata = areaVrata;
+
+    html += `<b>Zidovi:</b><br>`;
+    html += `Bruto = 2×(D×V) + 2×(Š×V) = ${zidoviBruto.toFixed(3)} m²<br>`;
+    html += `Odbitak vrata = ${areaVrata.toFixed(3)} m²<br>`;
+    html += `Neto zidovi = <b>${zidoviNeto.toFixed(3)} m²</b><br><br>`;
   }
 
   // HIDRO POD
   let hidroPod = 0;
-  if (chkHidroPod.checked) {
+  if (chkHidroPod) {
     hidroPod = D * S;
-    html += `<b>Hidro pod:</b><br>D × Š = ${D} × ${S} = <b>${hidroPod.toFixed(3)} m²</b><br><br>`;
+    results.hidroPod = hidroPod;
+    html += `<b>Hidro – pod:</b><br>D × Š = ${D} × ${S} = <b>${hidroPod.toFixed(3)} m²</b><br><br>`;
   }
 
-  // HIDRO TUŠ ZONA
+  // HIDRO TUŠ
   let hidroTus = 0;
-  let tusOpseg = 0;
-  let td=0, ts=0, tv=0;
-  if (chkHidroTus.checked) {
-    td = parseFloat(tusD.value) || 0;
-    ts = parseFloat(tusS.value) || 0;
-    tv = parseFloat(tusV.value) || 0;
+  if (chkHidroTus) {
+    const td = parseFloat(document.getElementById('tusD').value) || 0;
+    const ts = parseFloat(document.getElementById('tusS').value) || 0;
+    const tv = parseFloat(document.getElementById('tusV').value) || 0;
+    const opsegTus = 2 * (td + ts);
+    hidroTus = opsegTus * tv;
+    results.hidroTus = hidroTus;
+    results.tus = { td, ts, tv, opseg: opsegTus };
 
-    tusOpseg = 2 * (td + ts);
-    hidroTus = tusOpseg * tv;
-
-    html += `<b>Hidro tuš zona:</b><br>`;
-    html += `Opseg tuša = 2 × (d+š) = 2×(${td}+${ts}) = ${tusOpseg.toFixed(3)} m<br>`;
-    html += `Hidro tuš = opseg × visina = ${tusOpseg.toFixed(3)} × ${tv} = <b>${hidroTus.toFixed(3)} m²</b><br><br>`;
+    html += `<b>Hidro – tuš zona:</b><br>`;
+    html += `Opseg tuša = 2×(d+š) = 2×(${td}+${ts}) = ${opsegTus.toFixed(3)} m<br>`;
+    html += `Hidro tuš = opseg × visina = ${opsegTus.toFixed(3)} × ${tv} = <b>${hidroTus.toFixed(3)} m²</b><br><br>`;
   }
 
   // HIDRO TRAKA
   let hidroTraka = 0;
-  if (chkHidroTraka.checked) {
-    hidroTraka = (2 * D) + (2 * S) + (2 * V);
+  if (chkHidroTraka) {
+    hidroTraka = 2 * D + 2 * S + 2 * V;
+    results.hidroTraka = hidroTraka;
     html += `<b>Hidro traka:</b><br>(2×D)+(2×Š)+(2×V) = <b>${hidroTraka.toFixed(3)} m</b><br><br>`;
   }
 
-  // SILIKON – više visina
+  // RUBOVI OTVORA (za silikon / lajsne / gerung)
+  let totalOpeningPerim = 0;
+  openings.forEach(o => {
+    const perim = 2 * (o.w + o.h) * o.count;
+    totalOpeningPerim += perim;
+  });
+
+  // SILIKON
   let silikon = 0;
-  let silOpseg = 0;
-  let silVisineTerm = 0;
-  let sv1=0,sv2=0,sv3=0;
-  if (chkSilikon.checked) {
-    sv1 = parseFloat(silV1.value) || 0;
-    sv2 = parseFloat(silV2.value) || 0;
-    sv3 = parseFloat(silV3.value) || 0;
+  if (chkSilikon) {
+    const v1 = parseFloat(document.getElementById('silV1').value) || 0;
+    const v2 = parseFloat(document.getElementById('silV2').value) || 0;
+    const v3 = parseFloat(document.getElementById('silV3').value) || 0;
+    const opseg = 2 * (D + S);
+    const dodatno = 4 * (v1 + v2 + v3);
+    silikon = opseg + dodatno + totalOpeningPerim;
 
-    silOpseg = 2 * (D + S);
-    silVisineTerm = 4 * (sv1 + sv2 + sv3);
-
-    silikon = silOpseg + silVisineTerm;
+    results.silikon = silikon;
+    results.silikonData = { v1, v2, v3, opseg, dodatno, openings: totalOpeningPerim };
 
     html += `<b>Silikon:</b><br>`;
-    html += `2×(D+Š) = ${silOpseg.toFixed(3)} m<br>`;
-    html += `4×(v1+v2+v3) = 4×(${sv1}+${sv2}+${sv3}) = ${silVisineTerm.toFixed(3)} m<br>`;
-    html += `Ukupno = <b>${silikon.toFixed(3)} m</b><br><br>`;
+    html += `Osnovni opseg poda: 2×(D+Š) = ${opseg.toFixed(3)} m<br>`;
+    html += `Visine: 4×(v1+v2+v3) = ${dodatno.toFixed(3)} m<br>`;
+    html += `Rubovi otvora: ${totalOpeningPerim.toFixed(3)} m<br>`;
+    html += `Ukupno silikon = <b>${silikon.toFixed(3)} m</b><br><br>`;
   }
 
   // SOKL
   let sokl = 0;
-  let soklOsnovni = 0;
-  let soklMinusVal = 0;
-  let soklPlusVal  = 0;
-  if (chkSokl.checked) {
-    soklOsnovni = 2 * (D + S);
-    soklMinusVal = parseFloat(soklMinus.value) || 0;
-    soklPlusVal = parseFloat(soklPlus.value) || 0;
-
-    sokl = soklOsnovni - soklMinusVal + soklPlusVal;
+  if (chkSokl) {
+    const osnovni = 2 * (D + S);
+    const minus = parseFloat(document.getElementById('soklMinus').value) || 0;
+    const plus  = parseFloat(document.getElementById('soklPlus').value)  || 0;
+    sokl = osnovni - minus + plus;
+    results.sokl = sokl;
+    results.soklData = { osnovni, minus, plus };
 
     html += `<b>Sokl:</b><br>`;
-    html += `Osnovni opseg = 2×(D+Š) = ${soklOsnovni.toFixed(3)} m<br>`;
-    html += `− odbijanje = ${soklMinusVal} m<br>`;
-    html += `+ dodatno = ${soklPlusVal} m<br>`;
-    html += `Ukupno = <b>${sokl.toFixed(3)} m</b><br><br>`;
+    html += `Osnovni opseg: 2×(D+Š) = ${osnovni.toFixed(3)} m<br>`;
+    html += `− odbijanje: ${minus} m<br>`;
+    html += `+ dodatno: ${plus} m<br>`;
+    html += `Ukupno sokl = <b>${sokl.toFixed(3)} m</b><br><br>`;
   }
 
-  // STEPENICE – tvoj model: širina × komada
+  // STEPENICE
   let stepenice = 0;
-  let sw=0, sc=0, stepModeVal="duzni";
-  if (chkStepenice.checked) {
-    sw = parseFloat(stepWidth.value) || 0;
-    sc = parseInt(stepCount.value) || 0;
-    stepModeVal = stepMode.value || "duzni";
-
+  if (chkStepenice) {
+    const sw = parseFloat(document.getElementById('stepWidth').value) || 0;
+    const sc = parseInt(document.getElementById('stepCount').value) || 0;
+    const mode = document.getElementById('stepMode').value || 'duzni';
     stepenice = sw * sc;
+    results.stepenice = { vrijednost: stepenice, mode, sw, sc };
 
     html += `<b>Stepenice:</b><br>`;
-    html += `Širina × broj = ${sw} × ${sc} = <b>${stepenice.toFixed(3)} ${stepModeVal === 'duzni' ? 'm' : 'kom'}</b><br><br>`;
+    html += `Širina × komada = ${sw} × ${sc} = <b>${stepenice.toFixed(3)} ${mode === 'duzni' ? 'm' : 'kom'}</b><br><br>`;
   }
 
   // LAJSNE
   let lajsne = 0;
-  let L1=0,L2=0,L3=0;
-  if (chkLajsne.checked) {
-    L1 = parseFloat(l1.value) || 0;
-    L2 = parseFloat(l2.value) || 0;
-    L3 = parseFloat(l3.value) || 0;
-    lajsne = L1 + L2 + L3;
+  if (chkLajsne) {
+    const L1 = parseFloat(document.getElementById('l1').value) || 0;
+    const L2 = parseFloat(document.getElementById('l2').value) || 0;
+    const L3 = parseFloat(document.getElementById('l3').value) || 0;
+    lajsne = L1 + L2 + L3 + totalOpeningPerim;
+    results.lajsne = lajsne;
+    results.lajsneData = { L1, L2, L3, openings: totalOpeningPerim };
 
-    html += `<b>Lajsne (ručno):</b><br>`;
-    html += `L1 + L2 + L3 = ${L1}+${L2}+${L3} = <b>${lajsne.toFixed(3)} m</b><br><br>`;
+    html += `<b>Lajsne:</b><br>`;
+    html += `Ručno: ${L1 + L2 + L3} m<br>`;
+    html += `Rubovi otvora: ${totalOpeningPerim.toFixed(3)} m<br>`;
+    html += `Ukupno lajsne = <b>${lajsne.toFixed(3)} m</b><br><br>`;
   }
 
   // GERUNG
   let gerung = 0;
-  let G1=0,G2=0,G3=0;
-  if (chkGerung.checked) {
-    G1 = parseFloat(g1.value) || 0;
-    G2 = parseFloat(g2.value) || 0;
-    G3 = parseFloat(g3.value) || 0;
-    gerung = G1 + G2 + G3;
+  if (chkGerung) {
+    const G1 = parseFloat(document.getElementById('g1').value) || 0;
+    const G2 = parseFloat(document.getElementById('g2').value) || 0;
+    const G3 = parseFloat(document.getElementById('g3').value) || 0;
+    gerung = G1 + G2 + G3 + totalOpeningPerim;
+    results.gerung = gerung;
+    results.gerungData = { G1, G2, G3, openings: totalOpeningPerim };
 
-    html += `<b>Gerung (ručno):</b><br>`;
-    html += `G1 + G2 + G3 = ${G1}+${G2}+${G3} = <b>${gerung.toFixed(3)} m</b><br><br>`;
+    html += `<b>Gerung:</b><br>`;
+    html += `Ručno: ${G1 + G2 + G3} m<br>`;
+    html += `Rubovi otvora: ${totalOpeningPerim.toFixed(3)} m<br>`;
+    html += `Ukupno gerung = <b>${gerung.toFixed(3)} m</b><br><br>`;
   }
 
   // DODATNE MJERE
-  let dm1v = parseFloat(dm1.value) || 0;
-  let dm2v = parseFloat(dm2.value) || 0;
-  let dm3v = parseFloat(dm3.value) || 0;
+  let dm1v = parseFloat(document.getElementById('dm1').value) || 0;
+  let dm2v = parseFloat(document.getElementById('dm2').value) || 0;
+  let dm3v = parseFloat(document.getElementById('dm3').value) || 0;
   let dmTotal = dm1v + dm2v + dm3v;
+  const dmPod     = document.getElementById('dmPod').checked;
+  const dmZidovi  = document.getElementById('dmZidovi').checked;
+  const dmHidro   = document.getElementById('dmHidro').checked;
+  const dmSil     = document.getElementById('dmSilikon').checked;
+  const dmTraka   = document.getElementById('dmTraka').checked;
+  const dmSokl    = document.getElementById('dmSokl').checked;
 
-  if (chkDodatne.checked) {
+  if (chkDodatne) {
     html += `<b>Dodatne mjere:</b><br>`;
     html += `Mjera 1 = ${dm1v}<br>`;
     html += `Mjera 2 = ${dm2v}<br>`;
-    html += `Mjera 3 = ${dm3v}<br><br>`;
+    html += `Mjera 3 = ${dm3v}<br>`;
+    html += `Ukupno dodatno = ${dmTotal}<br><br>`;
+
+    if (dmPod && results.pod != null)       results.pod       += dmTotal;
+    if (dmZidovi && results.zidoviNeto != null) results.zidoviNeto += dmTotal;
+    if (dmHidro && results.hidroPod != null) results.hidroPod += dmTotal;
+    if (dmSil && results.silikon != null)    results.silikon  += dmTotal;
+    if (dmTraka && results.hidroTraka != null) results.hidroTraka += dmTotal;
+    if (dmSokl && results.sokl != null)      results.sokl     += dmTotal;
   }
 
-  // Integracija dodatnih mjera
-  if (chkDodatne.checked) {
-    if (dmPod.checked)     pod        += dmTotal;
-    if (dmZidovi.checked)  zidovi     += dmTotal;
-    if (dmHidro.checked)   hidroPod   += dmTotal;
-    if (dmSilikon.checked) silikon    += dmTotal;
-    if (dmTraka.checked)   hidroTraka += dmTotal;
-    if (dmSokl.checked)    sokl       += dmTotal;
-  }
-
-  // Spremanje u globalni objekt
   lastCalc = {
     D, S, V,
-    flags: {
-      pod: chkPod.checked,
-      zidovi: chkZidovi.checked,
-      hidroPod: chkHidroPod.checked,
-      hidroTus: chkHidroTus.checked,
-      hidroTraka: chkHidroTraka.checked,
-      silikon: chkSilikon.checked,
-      sokl: chkSokl.checked,
-      stepenice: chkStepenice.checked,
-      lajsne: chkLajsne.checked,
-      gerung: chkGerung.checked,
-      dodatne: chkDodatne.checked
-    },
-    tus: { d: td, s: ts, v: tv, opseg: tusOpseg, m2: hidroTus },
-    silikonData: { v1: sv1, v2: sv2, v3: sv3, opseg: silOpseg, dodatno: silVisineTerm, ukupno: silikon },
-    soklData: { osnovni: soklOsnovni, minus: soklMinusVal, plus: soklPlusVal, ukupno: sokl },
-    stepeniceData: { sirina: sw, komada: sc, mode: stepModeVal, vrijednost: stepenice },
-    lajsneData: { L1, L2, L3, ukupno: lajsne },
-    gerungData: { G1, G2, G3, ukupno: gerung },
-    dodatneData: { dm1: dm1v, dm2: dm2v, dm3: dm3v, total: dmTotal },
-    results: {
-      pod,
-      zidovi,
-      hidroPod,
-      hidroTus,
-      hidroUkupno: hidroPod + hidroTus,
-      hidroTraka,
-      silikon,
-      sokl,
-      stepenice,
-      lajsne,
-      gerung
-    },
-    html
+    openings,
+    results
   };
 
   if (showHtml) {
-    calcOutput.innerHTML = html;
-    calcResult.style.display = "block";
+    document.getElementById('calcOutput').innerHTML = html;
+    document.getElementById('calcResult').style.display = 'block';
   }
 
   return lastCalc;
 }
 
-// Klik na "Izračunaj"
-btnCalcNow.addEventListener("click", () => {
+// BTN Izračunaj
+document.getElementById('btnCalcNow').addEventListener('click', () => {
   runAutoCalc(true);
 });
 
-// Export PDF – građevinska knjiga / dokaznica mjera (auto obračun)
-btnPdf.addEventListener("click", () => {
-  const state = runAutoCalc(true); // osigura da imamo svježe
-
-  if (!state) {
-    alert("Nema podataka za PDF. Prvo izračunaj.");
+// PDF EXPORT
+document.getElementById('btnExportPdfAuto').addEventListener('click', () => {
+  const data = runAutoCalc(true);
+  if (!data) {
+    alert("Prvo izračunaj.");
     return;
   }
   const { jsPDF } = window.jspdf || {};
   if (!jsPDF) {
-    alert("PDF modul (jsPDF) nije učitan.");
+    alert("PDF modul nije učitan.");
     return;
   }
-
   const doc = new jsPDF();
-
-  // Naslov
-  doc.setFontSize(16);
-  doc.text("KOB-Keramika – Građevinska knjiga (auto obračun)", 10, 15);
+  let y = 15;
+  doc.setFontSize(14);
+  doc.text("KOB-Keramika – Građevinska knjiga (auto obračun)", 10, y);
+  y += 8;
   doc.setFontSize(11);
-  doc.text(`Dimenzije prostorije: D=${state.D} m, Š=${state.S} m, V=${state.V} m`, 10, 23);
+  doc.text(`Dimenzije: D=${data.D} m, Š=${data.S} m, V=${data.V} m`, 10, y);
+  y += 8;
 
-  let y = 30;
-  doc.setFontSize(10);
-
-  function writeLine(text) {
+  function w(text) {
     const lines = doc.splitTextToSize(text, 190);
     lines.forEach(line => {
-      if (y > 280) {
-        doc.addPage();
-        y = 20;
-      }
+      if (y > 280) { doc.addPage(); y = 15; }
       doc.text(line, 10, y);
       y += 5;
     });
   }
 
-  // Pod
-  if (state.flags.pod) {
-    writeLine("POD:");
-    writeLine(`  Formula: D × Š = ${state.D} × ${state.S}`);
-    writeLine(`  Rezultat: ${state.results.pod.toFixed(3)} m²`);
+  const r = data.results;
+
+  if (r.pod != null) {
+    w(`POD: ${r.pod.toFixed(3)} m²`);
+    y += 2;
+  }
+  if (r.zidoviNeto != null) {
+    w(`ZIDOVI: Neto ${r.zidoviNeto.toFixed(3)} m² (Bruto ${(r.zidoviBruto || 0).toFixed(3)} m², odbitak vrata ${(r.odbitakVrata || 0).toFixed(3)} m²)`);
+    y += 2;
+  }
+  if (r.hidroPod != null) {
+    w(`HIDRO POD: ${r.hidroPod.toFixed(3)} m²`);
+    y += 2;
+  }
+  if (r.hidroTus != null) {
+    w(`HIDRO TUŠ ZONA: ${r.hidroTus.toFixed(3)} m²`);
+    y += 2;
+  }
+  if (r.hidroTraka != null) {
+    w(`HIDRO TRAKA: ${r.hidroTraka.toFixed(3)} m`);
+    y += 2;
+  }
+  if (r.silikon != null) {
+    w(`SILIKON: ${r.silikon.toFixed(3)} m`);
+    y += 2;
+  }
+  if (r.sokl != null) {
+    w(`SOKL: ${r.sokl.toFixed(3)} m`);
+    y += 2;
+  }
+  if (r.stepenice != null) {
+    w(`STEPENICE: ${r.stepenice.vrijednost.toFixed(3)} ${r.stepenice.mode === 'duzni' ? 'm' : 'kom'}`);
+    y += 2;
+  }
+  if (r.lajsne != null) {
+    w(`LAJSNE: ${r.lajsne.toFixed(3)} m`);
+    y += 2;
+  }
+  if (r.gerung != null) {
+    w(`GERUNG: ${r.gerung.toFixed(3)} m`);
     y += 2;
   }
 
-  // Zidovi
-  if (state.flags.zidovi) {
-    writeLine("ZIDOVI:");
-    writeLine(`  Formula: 2 × (D + Š) × V = 2 × (${state.D}+${state.S}) × ${state.V}`);
-    writeLine(`  Rezultat: ${state.results.zidovi.toFixed(3)} m²`);
-    y += 2;
+  if (data.openings && data.openings.length) {
+    y += 4;
+    w("OTVORI:");
+    data.openings.forEach(o => {
+      w(`- ${o.label}: Š=${o.w} m, V=${o.h} m, kom=${o.count}, odbija zidove: ${o.subtract ? 'DA' : 'NE'}`);
+    });
   }
 
-  // Hidro pod
-  if (state.flags.hidroPod) {
-    writeLine("HIDRO – POD:");
-    writeLine(`  Formula: D × Š = ${state.D} × ${state.S}`);
-    writeLine(`  Rezultat: ${state.results.hidroPod.toFixed(3)} m²`);
-    y += 2;
-  }
-
-  // Hidro tuš
-  if (state.flags.hidroTus) {
-    writeLine("HIDRO – TUŠ ZONA:");
-    writeLine(`  Opseg tuša: 2×(d+š) = 2×(${state.tus.d}+${state.tus.s}) = ${state.tus.opseg.toFixed(3)} m`);
-    writeLine(`  Hidro tuš: opseg × visina = ${state.tus.opseg.toFixed(3)} × ${state.tus.v} = ${state.tus.m2.toFixed(3)} m²`);
-    y += 2;
-  }
-
-  // Hidro traka
-  if (state.flags.hidroTraka) {
-    writeLine("HIDRO TRAKA:");
-    writeLine(`  Formula: (2×D)+(2×Š)+(2×V)`);
-    writeLine(`  Rezultat: ${state.results.hidroTraka.toFixed(3)} m`);
-    y += 2;
-  }
-
-  // Silikon
-  if (state.flags.silikon) {
-    writeLine("SILIKON:");
-    writeLine(`  2×(D+Š) = ${state.silikonData.opseg.toFixed(3)} m`);
-    writeLine(`  4×(v1+v2+v3) = ${state.silikonData.dodatno.toFixed(3)} m`);
-    writeLine(`  Ukupno: ${state.results.silikon.toFixed(3)} m`);
-    y += 2;
-  }
-
-  // Sokl
-  if (state.flags.sokl) {
-    writeLine("SOKL:");
-    writeLine(`  Osnovni opseg: 2×(D+Š) = ${state.soklData.osnovni.toFixed(3)} m`);
-    writeLine(`  − odbijanje: ${state.soklData.minus} m`);
-    writeLine(`  + dodatno: ${state.soklData.plus} m`);
-    writeLine(`  Ukupno: ${state.results.sokl.toFixed(3)} m`);
-    y += 2;
-  }
-
-  // Stepenice
-  if (state.flags.stepenice) {
-    writeLine("STEPENICE:");
-    writeLine(`  Širina × komada = ${state.stepeniceData.sirina} × ${state.stepeniceData.komada}`);
-    writeLine(`  Rezultat: ${state.stepeniceData.vrijednost.toFixed(3)} ${state.stepeniceData.mode === 'duzni' ? 'm' : 'kom'}`);
-    y += 2;
-  }
-
-  // Lajsne
-  if (state.flags.lajsne) {
-    writeLine("LAJSNE (ručni unos):");
-    writeLine(`  L1=${state.lajsneData.L1}, L2=${state.lajsneData.L2}, L3=${state.lajsneData.L3}`);
-    writeLine(`  Ukupno: ${state.lajsneData.ukupno.toFixed(3)} m`);
-    y += 2;
-  }
-
-  // Gerung
-  if (state.flags.gerung) {
-    writeLine("GERUNG (ručni unos):");
-    writeLine(`  G1=${state.gerungData.G1}, G2=${state.gerungData.G2}, G3=${state.gerungData.G3}`);
-    writeLine(`  Ukupno: ${state.gerungData.ukupno.toFixed(3)} m`);
-    y += 2;
-  }
-
-  // Dodatne mjere
-  if (state.flags.dodatne) {
-    writeLine("DODATNE MJERE:");
-    writeLine(`  Mjera 1: ${state.dodatneData.dm1}`);
-    writeLine(`  Mjera 2: ${state.dodatneData.dm2}`);
-    writeLine(`  Mjera 3: ${state.dodatneData.dm3}`);
-    writeLine(`  Ukupno dodatno: ${state.dodatneData.total}`);
-    y += 2;
-  }
-
-  doc.save("kob-keramika-gradevinska-knjiga-auto.pdf");
+  doc.save("kob-keramika-gradevinska-knjiga.pdf");
 });
 
-// Export CSV – za Excel
-btnCsv.addEventListener("click", () => {
-  const state = runAutoCalc(true);
-  if (!state) {
-    alert("Nema podataka za CSV. Prvo izračunaj.");
+// CSV EXPORT
+document.getElementById('btnExportCsvAuto').addEventListener('click', () => {
+  const data = runAutoCalc(true);
+  if (!data) {
+    alert("Prvo izračunaj.");
     return;
   }
-
+  const r = data.results;
   const rows = [];
-  const push = (naziv, vrijednost, jedinica, opis) => {
-    rows.push([naziv, String(vrijednost), jedinica, opis || ""]);
+  const push = (name, val, unit, note="") => {
+    rows.push([name, String(val), unit, note]);
   };
 
-  push("Duljina", state.D, "m", "");
-  push("Širina",  state.S, "m", "");
-  push("Visina",  state.V, "m", "");
+  push("Duljina", data.D, "m");
+  push("Širina", data.S, "m");
+  push("Visina", data.V, "m");
 
-  if (state.flags.pod)        push("Pod",        state.results.pod.toFixed(3),        "m2", "D×Š");
-  if (state.flags.zidovi)     push("Zidovi",     state.results.zidovi.toFixed(3),     "m2", "2×(D+Š)×V");
-  if (state.flags.hidroPod)   push("Hidro pod",  state.results.hidroPod.toFixed(3),   "m2", "D×Š");
-  if (state.flags.hidroTus)   push("Hidro tuš",  state.results.hidroTus.toFixed(3),   "m2", "opseg tuša × visina");
-  if (state.flags.hidroTraka) push("Hidro traka",state.results.hidroTraka.toFixed(3), "m",  "2D+2Š+2V");
-  if (state.flags.silikon)    push("Silikon",    state.results.silikon.toFixed(3),    "m",  "2(D+Š)+4(v1+v2+v3)");
-  if (state.flags.sokl)       push("Sokl",       state.results.sokl.toFixed(3),       "m",  "2(D+Š)±korekcije");
-  if (state.flags.stepenice)  push("Stepenice",  state.stepeniceData.vrijednost.toFixed(3),
-                                           state.stepeniceData.mode === 'duzni' ? "m" : "kom", "širina×kom");
-  if (state.flags.lajsne)     push("Lajsne",     state.lajsneData.ukupno.toFixed(3),  "m",  "ručno");
-  if (state.flags.gerung)     push("Gerung",     state.gerungData.ukupno.toFixed(3),  "m",  "ručno");
-  if (state.flags.dodatne)    push("Dodatne",    state.dodatneData.total.toFixed(3),  "",   "3 dodatna polja");
+  if (r.pod != null)        push("Pod", r.pod.toFixed(3), "m2", "D×Š");
+  if (r.zidoviNeto != null) push("Zidovi neto", r.zidoviNeto.toFixed(3), "m2", "2(DV)+2(SV) - vrata");
+  if (r.hidroPod != null)   push("Hidro pod", r.hidroPod.toFixed(3), "m2", "");
+  if (r.hidroTus != null)   push("Hidro tuš zona", r.hidroTus.toFixed(3), "m2", "");
+  if (r.hidroTraka != null) push("Hidro traka", r.hidroTraka.toFixed(3), "m", "");
+  if (r.silikon != null)    push("Silikon", r.silikon.toFixed(3), "m", "");
+  if (r.sokl != null)       push("Sokl", r.sokl.toFixed(3), "m", "");
+  if (r.stepenice != null)  push("Stepenice", r.stepenice.vrijednost.toFixed(3), (r.stepenice.mode === 'duzni' ? "m" : "kom"), "");
+  if (r.lajsne != null)     push("Lajsne", r.lajsne.toFixed(3), "m", "");
+  if (r.gerung != null)     push("Gerung", r.gerung.toFixed(3), "m", "");
 
-  // Pretvaranje u CSV (odvojen ; da Excel u HR radi ljepše)
+  if (data.openings && data.openings.length) {
+    data.openings.forEach(o => {
+      push(
+        `Otvor - ${o.label}`,
+        (o.w * o.h * o.count).toFixed(3),
+        "m2",
+        `Š=${o.w}, V=${o.h}, kom=${o.count}, odbija=${o.subtract?'DA':'NE'}`
+      );
+    });
+  }
+
   const header = ["Naziv","Vrijednost","Jedinica","Opis"];
   const csv = [header].concat(rows)
     .map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(";"))
@@ -864,3 +935,6 @@ btnCsv.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 </script>
+
+</body>
+</html>
