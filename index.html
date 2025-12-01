@@ -301,6 +301,62 @@
       border-bottom: 1px solid #333;
       font-size: 13px;
     }
+/* HOME HERO */
+
+    .home-hero {
+      text-align: center;
+      padding: 32px 16px 20px;
+    }
+
+    .home-hero-logo {
+      width: 210px;
+      max-width: 70%;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.8);
+      margin-bottom: 18px;
+    }
+
+    .home-hero-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .home-hero-subtitle {
+      font-size: 13px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .home-menu-card {
+      border-radius: 18px;
+      padding: 16px 14px 18px;
+      margin: 0 8px 20px;
+      background: radial-gradient(circle at top left,#1a1a1a,#0b0b0b);
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.7);
+    }
+
+    .home-menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .home-menu-buttons button {
+      margin-top: 0;
+    }
+
+    .home-menu-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.85;
+      margin: 14px 0 6px;
+    }
   </style>
 </head>
 <body>
@@ -339,17 +395,41 @@
       </p>
     </div>
   </section>
-
-  <!-- HOME VIEW -->
+<!-- HOME VIEW -->
   <section id="homeView" class="view">
-    <div class="card">
-      <h2>Što želiš raditi?</h2>
-      <button onclick="if(requireAuth()) showView('autoCalcView')">📐 Automatski obračun prostorije (građevinska knjiga)</button>
-      <button onclick="if(requireAuth()) showView('quickCalcView')">📏 Brzi izračun po kvadraturi</button>
-      <button onclick="if(requireAuth()) showView('pricesView')">💶 Cjenik</button>
-      <button onclick="if(requireAuth()) { loadArchive(); showView('archiveView'); }">📂 Arhiva obračuna (Cloud)</button>
-      <button onclick="if(requireAuth()) { renderCloudFiles(); showView('cloudView'); }">☁ Cloud datoteke (PDF/CSV)</button>
+
+    <div class="home-hero">
+      <img src="logo.png" alt="KOB-Keramika logo" class="home-hero-logo">
+      <div class="home-hero-title">KOB-KERAMIKA</div>
+      <div class="home-hero-subtitle">Interni alat za obračun keramičarskih radova</div>
     </div>
+
+    <div class="home-menu-card">
+      <div class="home-menu-buttons">
+        <!-- GRAĐEVINSKA KNJIGA / MJERE -->
+        <div class="home-menu-section">
+          <div class="home-menu-section-title">Obračun keramičarskih radova</div>
+          <button id="btnOpenAutoCalc">📐 Automatski obračun prostorije</button>
+          <button id="btnOpenMeasures">✏️ Ručni unos mjera (u pripremi)</button>
+          <button id="btnOpenBook">📚 Građevinska knjiga (PDF)</button>
+        </div>
+
+        <!-- TROŠKOVI PO RADNIKU – ODVOJENO OD KNJIGE -->
+        <div class="home-menu-section">
+          <div class="home-menu-section-title">Financije</div>
+          <button id="btnOpenCosts">💰 Troškovi po radniku</button>
+          <button id="btnOpenPrices">💶 Cjenik</button>
+        </div>
+
+        <!-- CLOUD / ARHIVA / ODJAVA -->
+        <div class="home-menu-section">
+          <div class="home-menu-section-title">Cloud i korisnici</div>
+          <button id="btnOpenArchive">📂 Arhiva obračuna (Cloud)</button>
+          <button id="btnLogout" class="secondary">🚪 Odjava</button>
+        </div>
+      </div>
+    </div>
+
   </section>
 
   <!-- BRZI IZRAČUN PO KVADRATURI -->
