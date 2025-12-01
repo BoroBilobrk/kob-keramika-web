@@ -357,6 +357,20 @@
       opacity: 0.85;
       margin: 14px 0 6px;
     }
+.extra-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto auto;
+      gap: 6px;
+      margin-top: 6px;
+      align-items: center;
+      font-size: 12px;
+    }
+    .extra-row button {
+      width: auto;
+      padding: 4px 6px;
+      font-size: 11px;
+      margin-top: 0;
+    }
   </style>
 </head>
 <body>
@@ -572,7 +586,25 @@
             <input type="text" id="dimV" placeholder="npr. 2,65">
           </label>
         </div>
+<div class="card">
+  <div class="section-title">➕ Dodatne dimenzije prostorije</div>
+  <p style="font-size:12px;opacity:0.8;">
+    Ovdje upisuješ dodatne dijelove prostorije (npr. uvučeni dio, proširenje, niša u podu…).
+    Svaki red ima dodatnu dužinu (d), širinu (š) i visinu (v).
+    Primjenjuje se prema pravilima:
+    <br>• Pod: ± (š + d)
+    <br>• Zidovi: + (2×d + š) × v
+    <br>• Hidro pod: isto kao pod
+    <br>• Hidro traka: + (2×d + š)
+    <br>• Silikon: + (2×d + š) + 2×v
+  </p>
 
+  <div id="extraDimsContainer"></div>
+
+  <button type="button" class="btn-small secondary" id="btnAddExtraDim">
+    ➕ Dodaj dodatne dimenzije
+  </button>
+</div>
         <div class="card">
           <div class="section-title">☑ Što se računa?</div>
 
@@ -753,7 +785,36 @@
           <div class="checkbox-row"><input type="checkbox" id="dmTraka"><label for="dmTraka">Hidro traka</label></div>
           <div class="checkbox-row"><input type="checkbox" id="dmSokl"><label for="dmSokl">Sokl</label></div>
         </div>
+// =========================
+//  DODATNE DIMENZIJE PROSTORIJE
+// =========================
 
+const extraDimsContainer = document.getElementById("extraDimsContainer");
+const btnAddExtraDim = document.getElementById("btnAddExtraDim");
+
+function addExtraDimRow(dVal = "", sVal = "", vVal = "", signVal = "+") {
+  const row = document.createElement("div");
+  row.className = "extra-row";
+  row.innerHTML = `
+    <input type="text" class="exD" placeholder="d (m)" value="${dVal}">
+    <input type="text" class="exS" placeholder="š (m)" value="${sVal}">
+    <input type="text" class="exV" placeholder="v (m)" value="${vVal}">
+    <select class="exSign">
+      <option value="+" ${signVal==="+"?"selected":""}>+</option>
+      <option value="-" ${signVal==="-"?"selected":""}>−</option>
+    </select>
+    <button type="button" class="secondary">✕</button>
+  `;
+  const btn = row.querySelector("button");
+  btn.onclick = () => row.remove();
+  extraDimsContainer.appendChild(row);
+}
+
+if (btnAddExtraDim) {
+  btnAddExtraDim.addEventListener("click", () => {
+    addExtraDimRow();
+  });
+}
         <!-- Gumbi za izračun -->
         <div class="card">
           <button id="btnCalcNow">🔍 Izračunaj sve</button>
@@ -1068,10 +1129,23 @@ function newId() {
 }
 
 function openingArea(o) {
-  return o.w * o.h * o.count;
+  // Površina se koristi uglavnom za zidove (odbitak vrata).
+  // Za geberit i vertikal je manje bitna, ali ostavljamo w×h.
+  return (o.w || 0) * (o.h || 0) * (o.count || 1);
 }
+
 function openingPerim(o) {
-  return 2 * (o.w + o.h) * o.count;
+  const count = o.count || 1;
+  if (o.type === "geberit") {
+    // Geberit: 2×visina + širina
+    return ((2 * (o.h || 0)) + (o.w || 0)) * count;
+  }
+  if (o.type === "vert") {
+    // Vertikala: samo visina
+    return (o.h || 0) * count;
+  }
+  // Vrata, prozor, niša i ostalo: klasični obod
+  return 2 * ((o.w || 0) + (o.h || 0)) * count;
 }
 
 function addOpening(type) {
@@ -1249,6 +1323,56 @@ function runAutoCalc(showHtml = true) {
   const S = parseNum(document.getElementById('dimS').value);
   const V = parseNum(document.getElementById('dimV').value);
 
+  // =========================
+  //  DODATNE DIMENZIJE – PRIPREMA
+  // =========================
+  const extraRows = extraDimsContainer
+    ? extraDimsContainer.querySelectorAll(".extra-row")
+    : [];
+  const extraDimDetails = []; // za prikaz u PDF-u kasnije
+
+  let extraPod = 0;      // ± (š + d)
+  let extraHidroPod = 0; // isto kao pod
+  let extraZid = 0;      // + (2×d + š) × v
+  let extraTraka = 0;    // + (2×d + š)
+  let extraSilikon = 0;  // + (2×d + š) + 2×v
+
+  extraRows.forEach((row, idx) => {
+    const dE = parseNum(row.querySelector(".exD")?.value);
+    const sE = parseNum(row.querySelector(".exS")?.value);
+    const vE = parseNum(row.querySelector(".exV")?.value);
+    const sign = (row.querySelector(".exSign")?.value === "-") ? -1 : 1;
+
+    // Pod i hidro pod: ± (š + d)
+    const deltaPod = sign * (sE + dE);
+
+    // Zid: + (2×d + š) × v
+    const deltaZid = (2 * dE + sE) * vE * sign;
+
+    // Traka: + (2×d + š)
+    const deltaTraka = (2 * dE + sE) * sign;
+
+    // Silikon: + (2×d + š) + 2×v
+    const deltaSilikon = ((2 * dE + sE) + 2 * vE) * sign;
+
+    extraPod      += deltaPod;
+    extraHidroPod += deltaPod;
+    extraZid      += deltaZid;
+    extraTraka    += deltaTraka;
+    extraSilikon  += deltaSilikon;
+
+    extraDimDetails.push({
+      index: idx + 1,
+      d: dE,
+      s: sE,
+      v: vE,
+      sign,
+      deltaPod,
+      deltaZid,
+      deltaTraka,
+      deltaSilikon
+    });
+  });
   const tf = document.getElementById('tileFormatSelect').value;
   if (!tf) {
     alert("Molimo odaberi format pločice.");
@@ -1306,19 +1430,50 @@ function runAutoCalc(showHtml = true) {
 
   // POD
   if (chkPod) {
-    const pod = D * S;
+    const podOsnovno = D * S;
+    const pod = podOsnovno + extraPod;
     results.pod = pod;
-    html += `<b>Pod:</b><br>D × Š = ${formatHr(D)} × ${formatHr(S)} = <b>${formatHr(pod)} m²</b><br><br>`;
+    results.podData = { osnovno: podOsnovno, extra: extraPod };
+
+    html += `<b>Pod:</b><br>`;
+    html += `Osnovno: D × Š = ${formatHr(D)} × ${formatHr(S)} = ${formatHr(podOsnovno)} m²<br>`;
+    if (extraPod !== 0) {
+      html += `Dodatne dimenzije: ${extraPod > 0 ? "+" : ""}${formatHr(extraPod)} m²<br>`;
+    }
+    html += `Ukupno pod = <b>${formatHr(pod)} m²</b><br><br>`;
+
     prices.pod = { qty: pod, unit: "m2" };
   }
 
   // ZIDOVI
   if (chkZidovi) {
     const zidoviBruto = 2 * (D * V) + 2 * (S * V);
+
     let areaVrata = 0;
     openings.forEach(o => {
-      if (o.type === 'vrata' && o.subtract) {
+      if (o.type === "vrata" && o.subtract) {
         areaVrata += openingArea(o);
+      }
+    });
+
+    const zidoviNakonVrata = zidoviBruto - areaVrata;
+    const zidoviNeto = zidoviNakonVrata + extraZid;
+
+    results.zidoviBruto = zidoviBruto;
+    results.zidoviNakonVrata = zidoviNakonVrata;
+    results.zidoviNeto = zidoviNeto;
+    results.odbitakVrata = areaVrata;
+    results.extraZid = extraZid;
+
+    html += `<b>Zidovi:</b><br>`;
+    html += `Bruto: 2(D×V) + 2(Š×V) = 2(${formatHr(D)}×${formatHr(V)}) + 2(${formatHr(S)}×${formatHr(V)}) = ${formatHr(zidoviBruto)} m²<br>`;
+    html += `Odbitak vrata: ${formatHr(areaVrata)} m² ⇒ nakon vrata: ${formatHr(zidoviNakonVrata)} m²<br>`;
+    if (extraZid !== 0) {
+      html += `Dodatne dimenzije: ${extraZid > 0 ? "+" : ""}${formatHr(extraZid)} m²<br>`;
+    }
+    html += `Neto zidovi = <b>${formatHr(zidoviNeto)} m²</b><br><br>`;
+
+    prices.zidovi = { qty: zidoviNeto, unit: "m2" };
       }
     });
     const zidoviNeto = zidoviBruto - areaVrata;
@@ -1335,12 +1490,22 @@ function runAutoCalc(showHtml = true) {
   }
 
   // HIDRO POD
-  if (chkHidroPod) {
-    const hidroPod = D * S;
+if (chkHidroPod) {
+    const hidroOsnovno = D * S;
+    const hidroPod = hidroOsnovno + extraHidroPod;
+
     results.hidroPod = hidroPod;
-    html += `<b>Hidro – pod:</b><br>D × Š = ${formatHr(D)} × ${formatHr(S)} = <b>${formatHr(hidroPod)} m²</b><br><br>`;
+    results.hidroPodData = { osnovno: hidroOsnovno, extra: extraHidroPod };
+
+    html += `<b>Hidro – pod:</b><br>`;
+    html += `Osnovno: D × Š = ${formatHr(D)} × ${formatHr(S)} = ${formatHr(hidroOsnovno)} m²<br>`;
+    if (extraHidroPod !== 0) {
+      html += `Dodatne dimenzije: ${extraHidroPod > 0 ? "+" : ""}${formatHr(extraHidroPod)} m²<br>`;
+    }
+    html += `Ukupno hidro pod = <b>${formatHr(hidroPod)} m²</b><br><br>`;
+
     prices.hidroPod = { qty: hidroPod, unit: "m2" };
-  }
+}
 
   // HIDRO TUŠ
   if (chkHidroTus) {
@@ -1364,10 +1529,32 @@ function runAutoCalc(showHtml = true) {
   if (chkHidroTraka) {
     const base = 2 * D + 2 * S + 2 * V;
     let perimProzoriNise = 0;
+
     openings.forEach(o => {
-      if (o.type === 'prozor' || o.type === 'nisa') {
+      if (o.type === "prozor" || o.type === "nisa") {
         perimProzoriNise += openingPerim(o);
       }
+    });
+
+    const hidroTraka = base + perimProzoriNise + extraTraka;
+
+    results.hidroTraka = hidroTraka;
+    results.hidroTrakaData = {
+      base,
+      perimProzoriNise,
+      extraTraka
+    };
+
+    html += `<b>Hidro traka:</b><br>`;
+    html += `Osnovno: 2D + 2Š + 2V = 2×${formatHr(D)} + 2×${formatHr(S)} + 2×${formatHr(V)} = ${formatHr(base)} m<br>`;
+    html += `Rub prozora i niša: ${formatHr(perimProzoriNise)} m<br>`;
+    if (extraTraka !== 0) {
+      html += `Dodatne dimenzije: ${extraTraka > 0 ? "+" : ""}${formatHr(extraTraka)} m<br>`;
+    }
+    html += `Ukupno hidro traka = <b>${formatHr(hidroTraka)} m</b><br><br>`;
+
+    prices.hidroTraka = { qty: hidroTraka, unit: "m" };
+  }
     });
     const hidroTraka = base + perimProzoriNise;
     results.hidroTraka = hidroTraka;
@@ -1388,13 +1575,36 @@ function runAutoCalc(showHtml = true) {
   });
 
   // SILIKON
-  if (chkSilikon) {
+if (chkSilikon) {
     const base = 2 * D + 2 * S + 4 * V;
+
     let extraHeights = 0;
     const heightInputs = silContainer.querySelectorAll('.silHeightVal');
     heightInputs.forEach(inp => {
       extraHeights += parseNum(inp.value);
     });
+
+    const silikon = base + extraHeights + perimSilOpenings + extraSilikon;
+
+    results.silikon = silikon;
+    results.silikonData = {
+      base,
+      extraHeights,
+      perimSilOpenings,
+      extraSilikon
+    };
+
+    html += `<b>Silikon:</b><br>`;
+    html += `Osnovni opseg: 2D + 2Š + 4V = 2×${formatHr(D)} + 2×${formatHr(S)} + 4×${formatHr(V)} = ${formatHr(base)} m<br>`;
+    html += `Zbroj dodatnih visina: ${formatHr(extraHeights)} m<br>`;
+    html += `Rubovi otvora (bez vrata): ${formatHr(perimSilOpenings)} m<br>`;
+    if (extraSilikon !== 0) {
+      html += `Dodatne dimenzije: ${extraSilikon > 0 ? "+" : ""}${formatHr(extraSilikon)} m<br>`;
+    }
+    html += `Ukupno silikon = <b>${formatHr(silikon)} m</b><br><br>`;
+
+    prices.silikon = { qty: silikon, unit: "m" };
+});
 
     const silikon = base + extraHeights + perimSilOpenings;
     results.silikon = silikon;
