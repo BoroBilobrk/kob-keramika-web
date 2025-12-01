@@ -5,7 +5,6 @@ window.kobState = {
   prices: null
 };
 
-// helper za prikaz / skrivanje glavnih viewa
 function showAuthView() {
   document.getElementById("authView").classList.remove("hidden");
   document.getElementById("appView").classList.add("hidden");
@@ -14,37 +13,27 @@ function showAuthView() {
 function showAppView() {
   document.getElementById("authView").classList.add("hidden");
   document.getElementById("appView").classList.remove("hidden");
+  showSection("menu");
 }
 
-// SWITCH TAB
-function switchTab(tabName) {
-  const tabs = ["home", "calc", "projects", "archive", "costs", "prices"];
-  tabs.forEach(t => {
-    const view = document.getElementById("tab" + capitalize(t));
-    if (!view) return;
-    if (t === tabName) view.classList.remove("hidden");
-    else view.classList.add("hidden");
+// prebacivanje sekcija unutar app-a
+function showSection(section) {
+  const ids = ["menu", "calc", "manual", "costs", "prices", "projects", "archive"];
+  ids.forEach(id => {
+    const el = document.getElementById(id + "View");
+    if (!el) return;
+    if (id === section) el.classList.remove("hidden");
+    else el.classList.add("hidden");
   });
 
-  document.querySelectorAll(".nav-btn").forEach(btn => {
-    const tab = btn.getAttribute("data-tab");
-    if (tab === tabName) btn.classList.add("active");
-    else btn.classList.remove("active");
-  });
-
-  // specijalno inicijaliziraj sadržaj
-  if (tabName === "calc") buildCalcView();
-  if (tabName === "projects") buildProjectsView();
-  if (tabName === "archive") buildArchiveView();
-  if (tabName === "costs") buildCostsView();
-  if (tabName === "prices") buildPricesView();
+  if (section === "calc") buildCalcView();
+  if (section === "costs") buildCostsView();
+  if (section === "prices") buildPricesView();
+  if (section === "projects") buildProjectsView();
+  if (section === "archive") buildArchiveView();
 }
 
-function capitalize(s) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-/* ========== AUTH ========== */
+/* ===== AUTH ===== */
 
 function registerUser() {
   const email = document.getElementById("regEmail").value.trim();
@@ -82,16 +71,14 @@ auth.onAuthStateChanged(user => {
     showAppView();
     const label = document.getElementById("userEmailLabel");
     if (label) label.textContent = user.email || "";
-    switchTab("home");
     loadPrices();
   } else {
     showAuthView();
   }
 });
 
-/* ========== PROJECTS & ARCHIVE ========== */
+/* ===== FIRESTORE KOLEKCIJE ===== */
 
-// Firestore kolekcije (root)
 function projectsCollection() {
   return db.collection("projects");
 }
@@ -105,7 +92,8 @@ function costsCollection() {
   return db.collection("costs");
 }
 
-// PROJEKTI
+/* ===== PROJEKTI ===== */
+
 async function buildProjectsView() {
   const container = document.getElementById("projectsContainer");
   if (!container) return;
@@ -123,9 +111,10 @@ async function buildProjectsView() {
       <input id="projPlace" placeholder="Lokacija / grad (opcionalno)">
       <button class="btn-primary" onclick="createProject()">Spremi projekt</button>
     </div>
+    <div class="card">
+      <h3>Postojeći projekti</h3>
   `;
 
-  html += `<div class="card"><h3>Postojeći projekti</h3>`;
   const snap = await projectsCollection()
     .where("userId", "==", user.uid)
     .orderBy("createdAt", "desc")
@@ -154,7 +143,8 @@ async function buildProjectsView() {
           <button onclick="openProject('${doc.id}')">Otvori</button>
           <button onclick="archiveProject('${doc.id}')">Arhiviraj</button>
         </div>
-      </div>`;
+      </div>
+    `;
   });
 
   html += `</div>`;
@@ -185,7 +175,7 @@ async function createProject() {
 }
 
 function openProject(projectId) {
-  alert("Otvaranje projekta (detaljna razrada situacija dolazi u sljedećem koraku).\nID: " + projectId);
+  alert("Otvaranje projekta – detaljna razrada situacija i graðevinske knjige će koristiti trenutni kalkulator.\nID: " + projectId);
 }
 
 async function archiveProject(projectId) {
@@ -209,7 +199,8 @@ async function archiveProject(projectId) {
   buildArchiveView();
 }
 
-// ARHIVA
+/* ===== ARHIVA ===== */
+
 async function buildArchiveView() {
   const container = document.getElementById("archiveContainer");
   if (!container) return;
@@ -218,6 +209,7 @@ async function buildArchiveView() {
     container.innerHTML = "<p>Prijavi se za arhivu.</p>";
     return;
   }
+
   let html = `<div class="card"><h3>Arhivirani projekti</h3>`;
   const snap = await archiveCollection()
     .where("userId", "==", user.uid)
@@ -243,13 +235,15 @@ async function buildArchiveView() {
         </div>
         <div class="small-text">Investitor: ${d.investor || "-"}</div>
         <div class="small-text">Lokacija: ${d.place || "-"}</div>
-      </div>`;
+      </div>
+    `;
   });
+
   html += `</div>`;
   container.innerHTML = html;
 }
 
-/* ========== TROŠKOVI ========== */
+/* ===== TROŠKOVI ===== */
 
 async function buildCostsView() {
   const container = document.getElementById("costsContainer");
@@ -271,7 +265,7 @@ async function buildCostsView() {
     <div class="card">
       <h3>Pregled troškova</h3>
       <input id="costFilter" placeholder="Filter po radniku (prazno = svi)">
-      <button onclick="loadCosts()" class="btn-secondary">Osvježi</button>
+      <button class="btn-secondary" onclick="loadCosts()">Osvježi</button>
       <div id="costsList" style="margin-top:10px;"></div>
     </div>
   `;
@@ -349,14 +343,14 @@ async function loadCosts() {
     html;
 }
 
-/* ========== CJENIK ========== */
+/* ===== CJENIK ===== */
 
 async function buildPricesView() {
   const container = document.getElementById("pricesContainer");
   if (!container) return;
   const user = auth.currentUser;
   if (!user) {
-    container.innerHTML = "<p>Prijavi se za uređivanje cjenika.</p>";
+    container.innerHTML = "<p>Prijavi se za cjenik.</p>";
     return;
   }
 
@@ -366,7 +360,7 @@ async function buildPricesView() {
   container.innerHTML = `
     <div class="card">
       <h3>Cjenik (po jedinici)</h3>
-      <p class="small-text">Ove cijene se koriste u građevinskoj knjizi i obračunu.</p>
+      <p class="small-text">Ove cijene se koriste u obračunu i građevinskoj knjizi.</p>
       <div class="price-row">
         <span>Zidovi (€/m²)</span>
         <input id="priceZidovi" value="${get("zidovi")}">
@@ -449,7 +443,7 @@ async function savePrices() {
   alert("Cjenik spremljen.");
 }
 
-/* ========== INIT ========== */
+/* INIT */
 
 document.addEventListener("DOMContentLoaded", () => {
   showAuthView();
