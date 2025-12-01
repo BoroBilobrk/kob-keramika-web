@@ -1712,38 +1712,36 @@ if (chkSilikon) {
       dmRowsData.push({ name, val, sign, signedVal });
     ;
 
-    // DODATNE MJERE (+/-)
-  const dmPod  = document.getElementById('dmPod').checked;
-  const dmZid  = document.getElementById('dmZid').checked;
-  const dmHid  = document.getElementById('dmHid').checked;
-  const dmSil  = document.getElementById('dmSil').checked;
-  const dmTrak = document.getElementById('dmTraka').checked;
-  const dmSok  = document.getElementById('dmSok').checked;
+// DODATNE MJERE
+html += `<b>Dodatne mjere (+/-):</b><br>`;
 
-  html += `<b>Dodatne mjere (+/-):</b><br>`;
-
-  if (!dmRowsData.length) {
+if (!dmRowsData.length) {
     html += `Nema unesenih dodatnih mjera.<br><br>`;
-  } else {
+} else {
     dmRowsData.forEach((r, idx) => {
-      html += `${idx + 1}. ${r.name || "Mjera"}: ${r.sign}${formatHr(r.val)} m → ${r.targetLabel}<br>`;
+        html += `${idx + 1}. ${r.name || 'Mjera'}: ${r.sign}${formatHr(r.val)} m → ${r.applyTo}<br>`;
     });
     html += `Ukupno dodatne mjere = <b>${formatHr(dmTotal)} m</b><br><br>`;
-  }
+}
 
-  if (dmTotal !== 0) {
-    if (dmPod  && results.pod        != null) results.pod        += dmTotal;
-    if (dmZid  && results.zidoviNeto != null) results.zidoviNeto += dmTotal;
-    if (dmHid  && results.hidroPod   != null) results.hidroPod   += dmTotal;
-    if (dmSil  && results.silikon    != null) results.silikon    += dmTotal;
+if (dmTotal !== 0) {
+    if (dmPod && results.pod != null) results.pod += dmTotal;
+    if (dmZid && results.zidoviNeto != null) results.zidoviNeto += dmTotal;
+    if (dmHid && results.hidroPod != null) results.hidroPod += dmTotal;
+    if (dmSil && results.silikon != null) results.silikon += dmTotal;
     if (dmTrak && results.hidroTraka != null) results.hidroTraka += dmTotal;
-    if (dmSok  && results.sokl       != null) results.sokl       += dmTotal;
-  }
+    if (dmSok && results.sokl != null) results.sokl += dmTotal;
+}
 
-  results.dm = { total: dmTotal, rows: dmRowsData };
-  }
+results.dm = { total: dmTotal, rows: dmRowsData };
 
-  state.lastCalc = {
+state.lastCalc = {
+    D, S, V,
+    meta,
+    openings: JSON.parse(JSON.stringify(openings)),
+    results,
+    prices
+};
     D, S, V,
     meta,
     openings: JSON.parse(JSON.stringify(openings)),
