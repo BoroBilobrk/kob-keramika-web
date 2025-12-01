@@ -238,7 +238,30 @@ button:hover {
     padding: 4px 0;
     font-size: 13px;
 }
+.calc-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #111;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #333;
+}
 
+.option-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  padding: 6px 4px;
+  color: #eee;
+}
+
+.option-row input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: #4caf50; /* zelena kvačica */
+}
 .cost-row strong {
     display: inline-block;
     min-width: 70px;
