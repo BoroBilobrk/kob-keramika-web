@@ -2,83 +2,76 @@
 <html lang="hr">
 <head>
     <meta charset="UTF-8" />
+    <title>KOB-Keramika</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KOB-Keramika - Obračun radova</title>
 
     <!-- CSS -->
     <link rel="stylesheet" href="CSS/main.css">
 
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"></script>
+    <!-- Firebase COMPAT -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
     <script>
         const firebaseConfig = {
-          apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
-          authDomain: "kob-keramika.firebaseapp.com",
-          projectId: "kob-keramika",
-          storageBucket: "kob-keramika.firebasestorage.app",
-          messagingSenderId: "604488601212",
-          appId: "1:604488601212:web:70552af260d9e5a283c3f9",
-          measurementId: "G-KDTBSP3H39"
+            apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
+            authDomain: "kob-keramika.firebaseapp.com",
+            projectId: "kob-keramika",
+            storageBucket: "kob-keramika.firebasestorage.app",
+            messagingSenderId: "604488601212",
+            appId: "1:604488601212:web:70552af260d9e5a283c3f9",
+            measurementId: "G-KDTBSP3H39"
         };
+        firebase.initializeApp(firebaseConfig);
 
-        const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.getAuth();
+        // Firestore instance (za kasnije)
+        const db = firebase.firestore();
     </script>
 </head>
 
 <body>
 
-    <!-- HEADER S LOGOM -->
-    <header class="header">
-        <img src="logo.png" class="logo">
+    <!-- HEADER -->
+    <div class="header">
+        <img src="logo.png" class="logo" alt="Logo">
         <h1>KOB-Keramika</h1>
-        <h2>Interni obračun keramičarskih radova</h2>
-    </header>
+        <h2>Profesionalni sustav za obračun keramičarskih radova</h2>
+    </div>
 
-    <!-- LOGIN / REGISTER BOX -->
-    <section id="authBox" class="auth-box">
-
+    <!-- LOGIN/REGISTER BOX -->
+    <div id="authBox" class="auth-box">
         <div class="auth-section">
             <h3>Prijava</h3>
-
-            <input type="email" id="loginEmail" placeholder="E-mail">
-            <input type="password" id="loginPass" placeholder="Lozinka">
-
-            <button onclick="loginUser()">Prijava</button>
+            <input id="loginEmail" type="email" placeholder="Email">
+            <input id="loginPass" type="password" placeholder="Lozinka">
+            <button onclick="loginUser()">Prijavi se</button>
         </div>
 
-        <div class="divider">ili</div>
+        <div class="divider">— ili —</div>
 
         <div class="auth-section">
             <h3>Registracija</h3>
-
-            <input type="email" id="regEmail" placeholder="E-mail">
-            <input type="password" id="regPass" placeholder="Lozinka (min. 6 znakova)">
-
-            <button onclick="registerUser()">Registracija</button>
+            <input id="regEmail" type="email" placeholder="Email">
+            <input id="regPass" type="password" placeholder="Lozinka (min. 6 znakova)">
+            <button onclick="registerUser()">Registriraj me</button>
         </div>
-    </section>
+    </div>
 
-    <!-- GLAVNI SADRŽAJ (POJAVLJUJE SE NAKON LOGIN-A) -->
-    <section id="mainApp" class="hidden">
-
-        <button class="logout-btn" onclick="logoutUser()">Odjava</button>
-
-        <h2>Obračun radova</h2>
-
-        <div id="calcContainer">
-
-            <!-- ovdje će JS generirati sve module (podovi, zidovi, tuš, podloge, hidro, sokl, silikon itd.) -->
-            <div id="calcContent"></div>
-
+    <!-- MAIN APP -->
+    <div id="mainApp" class="hidden">
+        <div class="card">
+            <h2>Obračun radova</h2>
+            <button class="logout-btn" onclick="logoutUser()">Odjava</button>
         </div>
-    </section>
 
-    <!-- APLIKACIJSKI JS -->
-<script src="JS/calc.js"></script>
-<script src="JS/app.js"></script>
+        <!-- Auto Calculator generated UI -->
+        <div id="calcContent"></div>
+    </div>
+
+    <!-- JS -->
+    <script src="JS/calc.js"></script>
+    <script src="JS/app.js"></script>
+
 </body>
 </html>
