@@ -1603,14 +1603,6 @@ if (chkSilikon) {
       perimSilOpenings
     };
 
-    html += `<b>Silikon:</b><br>`;
-    html += `Osnovni opseg = 2×D + 2×Š + 4×V = 2×${formatHr(D)} + 2×${formatHr(S)} + 4×${formatHr(V)} = ${formatHr(base)} m<br>`;
-    html += `Zbroj dodatnih visina = ${formatHr(extraHeights)} m<br>`;
-    html += `Rubovi svih otvora osim vrata = ${formatHr(perimSilOpenings)} m<br>`;
-    html += `Ukupno silikon = <b>${formatHr(silikon)} m</b><br><br>`;
-
-    prices.silikon = { qty: silikon, unit: "m" };
-  }
 
   // SOKL
   if (chkSokl) {
