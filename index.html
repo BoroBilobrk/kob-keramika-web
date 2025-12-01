@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="hr">
 <head>
     <meta charset="UTF-8" />
@@ -13,6 +13,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
+    <!-- jsPDF za PDF (za kasnije) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
@@ -24,8 +27,6 @@
             measurementId: "G-KDTBSP3H39"
         };
         firebase.initializeApp(firebaseConfig);
-
-        // Firestore instance (za kasnije)
         const db = firebase.firestore();
     </script>
 </head>
@@ -60,18 +61,33 @@
 
     <!-- MAIN APP -->
     <div id="mainApp" class="hidden">
-        <div class="card">
-            <h2>Obračun radova</h2>
+
+        <div class="top-bar-app card">
+            <div>
+                <h2>Obračun radova</h2>
+                <div id="kobUserEmail" class="user-email"></div>
+            </div>
             <button class="logout-btn" onclick="logoutUser()">Odjava</button>
         </div>
 
-        <!-- Auto Calculator generated UI -->
-        <div id="calcContent"></div>
+        <!-- NAVIGACIJA MODULA -->
+        <div class="card nav-tabs">
+            <button class="nav-btn active" data-view="calc">Prostorija</button>
+            <button class="nav-btn" data-view="tiles">Pločice</button>
+            <button class="nav-btn" data-view="book">Građevinska knjiga</button>
+            <button class="nav-btn" data-view="costs">Troškovi</button>
+        </div>
+
+        <!-- SADRŽAJ MODULA -->
+        <div id="viewCalc" class="view-inner"></div>
+        <div id="viewTiles" class="view-inner hidden"></div>
+        <div id="viewBook" class="view-inner hidden"></div>
+        <div id="viewCosts" class="view-inner hidden"></div>
     </div>
 
     <!-- JS -->
-    <script src="Js/calc.js"></script>
-    <script src="Js/app.js"></script>
+    <script src="JS/calc.js"></script>
+    <script src="JS/app.js"></script>
 
 </body>
 </html>
