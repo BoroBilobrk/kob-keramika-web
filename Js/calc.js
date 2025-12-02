@@ -1,5 +1,7 @@
 // JS/calc.js
 
+/* ===== POMOĆNE FUNKCIJE ===== */
+
 function kobParseNum(v) {
   if (v == null) return 0;
   const s = String(v).trim().replace(",", ".");
@@ -11,11 +13,26 @@ function kobFmt(n) {
   return (Math.round(n * 1000) / 1000).toString().replace(".", ",");
 }
 
+/* ===== GLOBAL STATE ZA OTVORE ===== */
+
+window.kobOpenings = []; // {id,type,label,w,h,count,subtractWalls,forSilicone,forTape,forLajsne,forGerung}
+
+/* ===== GLAVNI UI ZA OBRAČUN ===== */
+
 function buildCalcView() {
   const root = document.getElementById("calcContainer");
   if (!root) return;
 
+  window.kobOpenings = [];
+
   root.innerHTML = `
+    <div class="calc-section">
+      <button class="btn-primary" onclick="runCalc()">🔍 Izračunaj sve</button>
+      <p class="small-text" style="margin-top:4px;">
+        Nakon izračuna će se prikazati detaljan pregled mjera i količina. PDF / CSV može se nadograditi na temelju rezultata.
+      </p>
+    </div>
+
     <div class="calc-section">
       <div class="section-title">📏 Osnovne dimenzije prostorije</div>
       <div class="calc-grid">
@@ -62,43 +79,36 @@ function buildCalcView() {
       </div>
     </div>
 
-    <div class="calc-section">
-      <div class="section-title">🪟 Otvori i elementi (silikon / lajsne / gerung)</div>
-      <p class="small-text">
-        Vrata se ne računaju u silikon. Prozori, geberiti i vertikale ulaze u silikon i po želji u lajsne / gerung.
-      </p>
-
-      <h4>Prozori</h4>
-      <div class="checkbox-row">
-        <span>Broj prozora</span>
-        <input id="brProzora" value="0">
+    <div class="openings-section">
+      <div class="openings-header">
+        <div class="openings-title">🪟 Otvori (vrata, prozori, niše, geberit, vertikale)</div>
+        <div class="openings-subtitle">
+          Dodaj otvore i odaberi da li odbijaju zidove, ulaze u silikon, hidro traku, lajsne i gerung.
+        </div>
       </div>
-      <div id="prozoriRows"></div>
 
-      <h4>Geberit</h4>
-      <div class="checkbox-row">
-        <span>Broj geberita</span>
-        <input id="brGeberita" value="0">
+      <div class="openings-toolbar">
+        <button onclick="addOpening('vrata')">
+          <span class="icon">🚪</span><span>Vrata</span>
+        </button>
+        <button onclick="addOpening('prozor')">
+          <span class="icon">🪟</span><span>Prozor</span>
+        </button>
+        <button onclick="addOpening('nisa')">
+          <span class="icon">🧱</span><span>Niša</span>
+        </button>
+        <button onclick="addOpening('geberit')">
+          <span class="icon">🚽</span><span>Geberit</span>
+        </button>
+        <button onclick="addOpening('vertikala')">
+          <span class="icon">↕️</span><span>Vertikala</span>
+        </button>
+        <button onclick="addOpening('custom')">
+          <span class="icon">✏️</span><span>Custom</span>
+        </button>
       </div>
-      <div id="geberitRows"></div>
 
-      <h4>Vertikale</h4>
-      <div class="checkbox-row">
-        <span>Broj vertikala</span>
-        <input id="brVertikala" value="0">
-      </div>
-      <div id="vertikalaRows"></div>
-
-      <h4>Vrata (info)</h4>
-      <p class="small-text">Vrata se ne računaju u silikon (samo informativno):</p>
-      <div class="checkbox-row">
-        <span>Broj vrata</span>
-        <input id="brVrata" value="0">
-      </div>
-    </div>
-
-    <div class="calc-section">
-      <button class="btn-primary" onclick="runCalc()">🔍 Izračunaj</button>
+      <div id="openingsList" class="openings-list"></div>
     </div>
 
     <div id="calcResultCard" class="result-card hidden">
@@ -108,10 +118,9 @@ function buildCalcView() {
   `;
 
   addExtraDimRow();
-  document.getElementById("brProzora").addEventListener("input", rebuildProzoriRows);
-  document.getElementById("brGeberita").addEventListener("input", rebuildGeberitRows);
-  document.getElementById("brVertikala").addEventListener("input", rebuildVertikalaRows);
 }
+
+/* ===== DODATNE DIMENZIJE ===== */
 
 function addExtraDimRow() {
   const c = document.getElementById("extraDims");
@@ -131,71 +140,186 @@ function addExtraDimRow() {
   c.appendChild(row);
 }
 
-/* PROZORI / GEBERIT / VERTIKALE */
+/* ===== OTVORI – DODAVANJE / RENDER ===== */
 
-function rebuildProzoriRows() {
-  const n = Math.max(0, parseInt(kobParseNum(document.getElementById("brProzora").value)));
-  const c = document.getElementById("prozoriRows");
-  c.innerHTML = "";
-  for (let i = 1; i <= n; i++) {
-    const div = document.createElement("div");
-    div.className = "extra-row";
-    div.innerHTML = `
-      <input id="prozorV${i}" placeholder="visina (m)">
-      <input id="prozorS${i}" placeholder="širina (m)">
-      <label class="small-text" style="grid-column:span 2;">
-        <input type="checkbox" id="prozorLajsna${i}"> Lajsna
-      </label>
-      <label class="small-text" style="grid-column:span 2;">
-        <input type="checkbox" id="prozorGerung${i}"> Gerung
-      </label>
-    `;
-    c.appendChild(div);
+function addOpening(type) {
+  const id = "op_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+  let label = "";
+  let defaults = {};
+
+  switch (type) {
+    case "vrata":
+      label = "Vrata";
+      defaults = {
+        subtractWalls: true,
+        forSilicone: false,
+        forTape: false,
+        forLajsne: false,
+        forGerung: false
+      };
+      break;
+    case "prozor":
+      label = "Prozor";
+      defaults = {
+        subtractWalls: true,
+        forSilicone: true,
+        forTape: true,
+        forLajsne: true,
+        forGerung: true
+      };
+      break;
+    case "nisa":
+      label = "Niša";
+      defaults = {
+        subtractWalls: true,
+        forSilicone: true,
+        forTape: true,
+        forLajsne: true,
+        forGerung: true
+      };
+      break;
+    case "geberit":
+      label = "Geberit";
+      defaults = {
+        subtractWalls: true,
+        forSilicone: true,
+        forTape: true,
+        forLajsne: true,
+        forGerung: true
+      };
+      break;
+    case "vertikala":
+      label = "Vertikala";
+      defaults = {
+        subtractWalls: false,
+        forSilicone: true,
+        forTape: false,
+        forLajsne: true,
+        forGerung: true
+      };
+      break;
+    default:
+      label = "Custom";
+      defaults = {
+        subtractWalls: false,
+        forSilicone: false,
+        forTape: false,
+        forLajsne: false,
+        forGerung: false
+      };
   }
+
+  window.kobOpenings.push({
+    id,
+    type,
+    label,
+    w: 0,
+    h: 0,
+    count: 1,
+    subtractWalls: defaults.subtractWalls,
+    forSilicone: defaults.forSilicone,
+    forTape: defaults.forTape,
+    forLajsne: defaults.forLajsne,
+    forGerung: defaults.forGerung
+  });
+
+  renderOpeningsList();
 }
 
-function rebuildGeberitRows() {
-  const n = Math.max(0, parseInt(kobParseNum(document.getElementById("brGeberita").value)));
-  const c = document.getElementById("geberitRows");
-  c.innerHTML = "";
-  for (let i = 1; i <= n; i++) {
-    const div = document.createElement("div");
-    div.className = "extra-row";
-    div.innerHTML = `
-      <input id="geberitV${i}" placeholder="visina (m)">
-      <input id="geberitS${i}" placeholder="širina (m)">
-      <label class="small-text" style="grid-column:span 2;">
-        <input type="checkbox" id="geberitLajsna${i}"> Lajsna
-      </label>
-      <label class="small-text" style="grid-column:span 2;">
-        <input type="checkbox" id="geberitGerung${i}"> Gerung
-      </label>
-    `;
-    c.appendChild(div);
+function renderOpeningsList() {
+  const list = document.getElementById("openingsList");
+  if (!list) return;
+
+  if (!window.kobOpenings.length) {
+    list.innerHTML = `<p class="small-text">Nema unesenih otvora.</p>`;
+    return;
   }
+
+  let html = "";
+  window.kobOpenings.forEach(op => {
+    const area = op.w * op.h * (op.count || 1);
+    const perim = 2 * (op.w + op.h) * (op.count || 1);
+    html += `
+      <div class="opening-card">
+        <div class="opening-header">
+          <div>
+            <div class="opening-type">${op.label}</div>
+            <div class="opening-dims">${op.w ? kobFmt(op.w) : "?"} × ${op.h ? kobFmt(op.h) : "?"} m, kom: ${op.count}</div>
+          </div>
+          <button class="opening-delete-btn" onclick="deleteOpening('${op.id}')">Obriši</button>
+        </div>
+        <div class="opening-body">
+          <input placeholder="š (m)" value="${op.w || ""}" 
+                 oninput="updateOpeningField('${op.id}','w',this.value)">
+          <input placeholder="v (m)" value="${op.h || ""}" 
+                 oninput="updateOpeningField('${op.id}','h',this.value)">
+          <input placeholder="kom" value="${op.count || ""}" 
+                 oninput="updateOpeningField('${op.id}','count',this.value)">
+        </div>
+        <div class="opening-flags">
+          <label class="opening-flag">
+            <input type="checkbox" ${op.subtractWalls ? "checked" : ""} 
+                   onchange="toggleOpeningFlag('${op.id}','subtractWalls',this.checked)">
+            <span>Odbija zid</span>
+          </label>
+          <label class="opening-flag">
+            <input type="checkbox" ${op.forSilicone ? "checked" : ""} 
+                   onchange="toggleOpeningFlag('${op.id}','forSilicone',this.checked)">
+            <span>Silikon</span>
+          </label>
+          <label class="opening-flag">
+            <input type="checkbox" ${op.forTape ? "checked" : ""} 
+                   onchange="toggleOpeningFlag('${op.id}','forTape',this.checked)">
+            <span>Hidro traka</span>
+          </label>
+          <label class="opening-flag">
+            <input type="checkbox" ${op.forLajsne ? "checked" : ""} 
+                   onchange="toggleOpeningFlag('${op.id}','forLajsne',this.checked)">
+            <span>Lajsne</span>
+          </label>
+          <label class="opening-flag">
+            <input type="checkbox" ${op.forGerung ? "checked" : ""} 
+                   onchange="toggleOpeningFlag('${op.id}','forGerung',this.checked)">
+            <span>Gerung</span>
+          </label>
+        </div>
+        <div class="opening-footer">
+          <div>
+            <span class="badge-pill">Površina: ${area ? kobFmt(area) : "0"} m²</span>
+            <span class="badge-pill">Obod: ${perim ? kobFmt(perim) : "0"} m</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  list.innerHTML = html;
 }
 
-function rebuildVertikalaRows() {
-  const n = Math.max(0, parseInt(kobParseNum(document.getElementById("brVertikala").value)));
-  const c = document.getElementById("vertikalaRows");
-  c.innerHTML = "";
-  for (let i = 1; i <= n; i++) {
-    const div = document.createElement("div");
-    div.className = "extra-row";
-    div.innerHTML = `
-      <input id="vertikalaV${i}" placeholder="visina (m)">
-      <label class="small-text" style="grid-column:span 2;">
-        <input type="checkbox" id="vertikalaLajsna${i}"> Lajsna
-      </label>
-      <label class="small-text" style="grid-column:span 2;">
-        <input type="checkbox" id="vertikalaGerung${i}"> Gerung
-      </label>
-    `;
-    c.appendChild(div);
-  }
+function deleteOpening(id) {
+  window.kobOpenings = window.kobOpenings.filter(o => o.id !== id);
+  renderOpeningsList();
 }
 
-/* GLAVNI IZRAČUN */
+function updateOpeningField(id, field, val) {
+  const op = window.kobOpenings.find(o => o.id === id);
+  if (!op) return;
+  if (field === "count") {
+    const n = parseInt(kobParseNum(val));
+    op.count = isNaN(n) || n < 1 ? 1 : n;
+  } else {
+    op[field] = kobParseNum(val);
+  }
+  renderOpeningsList();
+}
+
+function toggleOpeningFlag(id, flag, checked) {
+  const op = window.kobOpenings.find(o => o.id === id);
+  if (!op) return;
+  op[flag] = !!checked;
+}
+
+/* ===== GLAVNI IZRAČUN ===== */
 
 function runCalc() {
   const D = kobParseNum(document.getElementById("dimD").value);
@@ -213,6 +337,7 @@ function runCalc() {
   const chkTraka = document.getElementById("chkHidroTraka").checked;
   const chkSil = document.getElementById("chkSilikon").checked;
 
+  // DODATNE DIMENZIJE
   const rows = document.querySelectorAll("#extraDims .extra-row");
   let extraPod = 0;
   let extraZid = 0;
@@ -227,16 +352,67 @@ function runCalc() {
     if (!dE && !sE && !vE) return;
     const sign = (r.querySelector(".exSign").value === "-") ? -1 : 1;
 
-    const deltaPod = sign * (dE + sE);                // +/− (d+š)
-    const deltaZid = sign * ((2 * dE + sE) * vE);     // +/− (2d+š)*v
-    const deltaTraka = sign * (2 * dE + sE);          // +/− (2d+š)
-    const deltaSil = sign * ((2 * dE + sE) + 2 * vE); // +/− (2d+š+2v)
+    const deltaPod   = sign * (dE + sE);                // +/− (d+š)
+    const deltaZid   = sign * ((2 * dE + sE) * vE);     // +/− (2d+š)*v
+    const deltaTraka = sign * (2 * dE + sE);            // +/− (2d+š)
+    const deltaSil   = sign * ((2 * dE + sE) + 2 * vE); // +/− (2d+š+2v)
 
-    extraPod += deltaPod;
-    extraZid += deltaZid;
+    extraPod   += deltaPod;
+    extraZid   += deltaZid;
     extraHidro += deltaPod;
     extraTraka += deltaTraka;
-    extraSil += deltaSil;
+    extraSil   += deltaSil;
+  });
+
+  // DOPRINOS OTVORA
+  let openingsAreaWalls = 0;
+  let openingsSilicone = 0;
+  let openingsTape = 0;
+  let openingsLajsne = 0;
+  let openingsGerung = 0;
+
+  (window.kobOpenings || []).forEach(op => {
+    const w = op.w || 0;
+    const h = op.h || 0;
+    const count = op.count || 1;
+
+    if (!w || !h || !count) return;
+
+    const area = w * h * count;
+    const perim = 2 * (w + h) * count;
+
+    // zidovi – odbijanje
+    if (op.subtractWalls) {
+      openingsAreaWalls += area;
+    }
+
+    // silikon
+    if (op.forSilicone) {
+      let silLen = perim;
+      if (op.type === "geberit") {
+        silLen = (2 * h + w) * count;
+      } else if (op.type === "vertikala") {
+        silLen = h * count;
+      } else if (op.type === "vrata") {
+        silLen = 0; // vrata ne ulaze u silikon
+      }
+      openingsSilicone += silLen;
+    }
+
+    // hidro traka
+    if (op.forTape) {
+      openingsTape += perim;
+    }
+
+    // lajsne
+    if (op.forLajsne) {
+      openingsLajsne += perim;
+    }
+
+    // gerung
+    if (op.forGerung) {
+      openingsGerung += perim;
+    }
   });
 
   let html = "";
@@ -256,11 +432,12 @@ function runCalc() {
   // ZIDOVI
   if (chkZid) {
     const base = 2 * (D * V) + 2 * (S * V);
-    const total = base + extraZid;
+    const total = base + extraZid - openingsAreaWalls;
     results.zidovi = total;
     html += `<b>Zidovi:</b><br>`;
     html += `Bruto: 2(D×V)+2(Š×V) = 2(${kobFmt(D)}×${kobFmt(V)}) + 2(${kobFmt(S)}×${kobFmt(V)}) = ${kobFmt(base)} m²<br>`;
     if (extraZid !== 0) html += `Dodatne dimenzije: ${extraZid > 0 ? "+" : ""}${kobFmt(extraZid)} m²<br>`;
+    if (openingsAreaWalls !== 0) html += `Oduzeti otvori: −${kobFmt(openingsAreaWalls)} m²<br>`;
     html += `Neto zidovi = <b>${kobFmt(total)} m²</b><br><br>`;
   }
 
@@ -278,35 +455,34 @@ function runCalc() {
   // HIDRO TRAKA
   if (chkTraka) {
     const base = 2 * D + 2 * S + 2 * V;
-    const total = base + extraTraka;
+    const total = base + extraTraka + openingsTape;
     results.hidroTraka = total;
     html += `<b>Hidro traka:</b><br>`;
     html += `Osnovno: 2D+2Š+2V = 2${kobFmt(D)} + 2${kobFmt(S)} + 2${kobFmt(V)} = ${kobFmt(base)} m<br>`;
     if (extraTraka !== 0) html += `Dodatne dimenzije: ${extraTraka > 0 ? "+" : ""}${kobFmt(extraTraka)} m<br>`;
-    html += `Ukupno traka = <b>${kobFmt(total)} m</b><br><br>`;
+    if (openingsTape !== 0) html += `Otvori (traka): +${kobFmt(openingsTape)} m<br>`;
+    html += `Ukupno hidro traka = <b>${kobFmt(total)} m</b><br><br>`;
   }
 
   // SILIKON + LAJSNE + GERUNG
   if (chkSil) {
     const base = 2 * D + 2 * S + 4 * V;
     const silikonBase = base + extraSil;
-    const parts = izracunSilikonLajsneGerung();
-    const silikonOtvor = parts.silOpenings;
-    const lajsne = parts.lajsneUkupno;
-    const gerung = parts.gerungUkupno;
-    const silikonTotal = silikonBase + silikonOtvor;
+    const silikonTotal = silikonBase + openingsSilicone;
 
     results.silikon = silikonTotal;
-    results.lajsne = lajsne;
-    results.gerung = gerung;
+    results.lajsne = openingsLajsne;
+    results.gerung = openingsGerung;
 
     html += `<b>Silikon:</b><br>`;
     html += `Osnovni opseg (2D+2Š+4V) + dodatne dimenzije = ${kobFmt(silikonBase)} m<br>`;
-    html += `Otvori (prozori / geberiti / vertikale) = ${kobFmt(silikonOtvor)} m<br>`;
+    if (openingsSilicone !== 0) {
+      html += `Otvori (prozori / geberiti / vertikale / niše): +${kobFmt(openingsSilicone)} m<br>`;
+    }
     html += `Ukupno silikon = <b>${kobFmt(silikonTotal)} m</b><br><br>`;
 
-    html += `<b>Lajsne:</b> ${kobFmt(lajsne)} m<br>`;
-    html += `<b>Gerung:</b> ${kobFmt(gerung)} m<br><br>`;
+    html += `<b>Lajsne:</b> ${kobFmt(openingsLajsne)} m<br>`;
+    html += `<b>Gerung:</b> ${kobFmt(openingsGerung)} m<br><br>`;
   }
 
   const resEl = document.getElementById("calcResultHtml");
@@ -317,59 +493,8 @@ function runCalc() {
   window.lastCalc = {
     dimensions: { D, S, V },
     extras: { extraPod, extraZid, extraHidro, extraTraka, extraSil },
+    openings: window.kobOpenings,
+    openingsContrib: { openingsAreaWalls, openingsSilicone, openingsTape, openingsLajsne, openingsGerung },
     results
   };
-}
-
-/* izračun silikona / lajsni / gerunga za otvore */
-
-function izracunSilikonLajsneGerung() {
-  let silOpenings = 0;
-  let lajsneUkupno = 0;
-  let gerungUkupno = 0;
-
-  // PROZORI
-  const brProzora = Math.max(0, parseInt(kobParseNum(document.getElementById("brProzora").value)));
-  for (let i = 1; i <= brProzora; i++) {
-    const v = kobParseNum(document.getElementById(`prozorV${i}`)?.value);
-    const s = kobParseNum(document.getElementById(`prozorS${i}`)?.value);
-    if (!v && !s) continue;
-    const duljina = 2 * v + s;
-    silOpenings += duljina;
-    const chkLajsna = document.getElementById(`prozorLajsna${i}`)?.checked;
-    const chkGerung = document.getElementById(`prozorGerung${i}`)?.checked;
-    if (chkLajsna) lajsneUkupno += duljina;
-    if (chkGerung) gerungUkupno += duljina;
-  }
-
-  // GEBERIT
-  const brGeberita = Math.max(0, parseInt(kobParseNum(document.getElementById("brGeberita").value)));
-  for (let i = 1; i <= brGeberita; i++) {
-    const v = kobParseNum(document.getElementById(`geberitV${i}`)?.value);
-    const s = kobParseNum(document.getElementById(`geberitS${i}`)?.value);
-    if (!v && !s) continue;
-    const duljina = 2 * v + s; // 2x visina + širina
-    silOpenings += duljina;
-    const chkLajsna = document.getElementById(`geberitLajsna${i}`)?.checked;
-    const chkGerung = document.getElementById(`geberitGerung${i}`)?.checked;
-    if (chkLajsna) lajsneUkupno += duljina;
-    if (chkGerung) gerungUkupno += duljina;
-  }
-
-  // VERTIKALE
-  const brVertikala = Math.max(0, parseInt(kobParseNum(document.getElementById("brVertikala").value)));
-  for (let i = 1; i <= brVertikala; i++) {
-    const v = kobParseNum(document.getElementById(`vertikalaV${i}`)?.value);
-    if (!v) continue;
-    const duljina = v; // samo visina
-    silOpenings += duljina;
-    const chkLajsna = document.getElementById(`vertikalaLajsna${i}`)?.checked;
-    const chkGerung = document.getElementById(`vertikalaGerung${i}`)?.checked;
-    if (chkLajsna) lajsneUkupno += duljina;
-    if (chkGerung) gerungUkupno += duljina;
-  }
-
-  // VRATA namjerno ignoriramo za silikon / lajsne / gerung
-
-  return { silOpenings, lajsneUkupno, gerungUkupno };
     }
