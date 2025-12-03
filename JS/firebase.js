@@ -1,6 +1,3 @@
-// js/firebase.js
-
-// Firebase config – tvoj
 const firebaseConfig = {
   apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
   authDomain: "kob-keramika.firebaseapp.com",
@@ -14,7 +11,4 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-
-// izvezemo globalno (nije nužno ali pomaže)
-window.__kobAuth = auth;
-window.__kobDb = db;
+const storage = firebase.storage();
