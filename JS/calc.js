@@ -1,500 +1,369 @@
-// JS/calc.js
-
-/* ===== POMOĆNE FUNKCIJE ===== */
-
-function kobParseNum(v) {
-  if (v == null) return 0;
-  const s = String(v).trim().replace(",", ".");
-  const n = parseFloat(s);
-  return isNaN(n) ? 0 : n;
+// Helper za parsiranje brojeva s hrvatskim zarezom
+function parseHr(numStr) {
+  if (!numStr) return 0;
+  if (typeof numStr === "number") return numStr;
+  return parseFloat(String(numStr).replace(",", ".").replace(/\s+/g, "")) || 0;
 }
 
-function kobFmt(n) {
-  return (Math.round(n * 1000) / 1000).toString().replace(".", ",");
+// Formatiranje na 2 decimale s zarezom
+function formatHr(num, decimals = 2) {
+  if (!isFinite(num)) num = 0;
+  return num.toFixed(decimals).replace(".", ",");
 }
 
-/* ===== GLOBAL STATE ZA OTVORE ===== */
+// Glavna struktura – sve dodane prostorije u situaciji
+const situationRooms = [];
 
-window.kobOpenings = []; // {id,type,label,w,h,count,subtractWalls,forSilicone,forTape,forLajsne,forGerung}
+// Izračun jedne prostorije na temelju DOM-a. Vraća objekt.
+function calcCurrentRoom() {
+  const name = document.getElementById("roomName").value.trim() || "Prostorija";
+  const itemNo = document.getElementById("roomItemNo").value.trim() || (situationRooms.length + 1).toString();
 
-/* ===== GLAVNI UI ZA OBRAČUN ===== */
-
-function buildCalcView() {
-  const root = document.getElementById("calcContainer");
-  if (!root) return;
-
-  window.kobOpenings = [];
-
-  root.innerHTML = `
-    <div class="calc-section">
-      <button class="btn-primary" onclick="runCalc()">🔍 Izračunaj sve</button>
-      <p class="small-text" style="margin-top:4px;">
-        Nakon izračuna će se prikazati detaljan pregled mjera i količina. PDF / CSV može se nadograditi na temelju rezultata.
-      </p>
-    </div>
-
-    <div class="calc-section">
-      <div class="section-title">📏 Osnovne dimenzije prostorije</div>
-      <div class="calc-grid">
-        <div class="calc-field">
-          <div class="calc-label">Duljina D (m)</div>
-          <input id="dimD" placeholder="npr. 4,20">
-        </div>
-        <div class="calc-field">
-          <div class="calc-label">Širina Š (m)</div>
-          <input id="dimS" placeholder="npr. 3,10">
-        </div>
-        <div class="calc-field">
-          <div class="calc-label">Visina V (m)</div>
-          <input id="dimV" placeholder="npr. 2,65">
-        </div>
-      </div>
-    </div>
-
-    <div class="calc-section">
-      <div class="section-title">➕ Dodatne dimenzije (izbočine, niše...)</div>
-      <p class="small-text">
-        Svaki red je dodatni dio prostorije. Pozitivan (+) dodaje površinu/opseg, negativan (−) oduzima.
-      </p>
-      <div id="extraDims"></div>
-      <button class="btn-secondary" onclick="addExtraDimRow()">➕ Dodaj red dodatnih dimenzija</button>
-    </div>
-
-    <div class="calc-section">
-      <div class="section-title">✅ Što se računa?</div>
-      <div class="checkbox-row">
-        <span>Pod (m²)</span><input type="checkbox" id="chkPod" checked>
-      </div>
-      <div class="checkbox-row">
-        <span>Zidovi (m²)</span><input type="checkbox" id="chkZidovi" checked>
-      </div>
-      <div class="checkbox-row">
-        <span>Hidroizolacija poda (m²)</span><input type="checkbox" id="chkHidroPod">
-      </div>
-      <div class="checkbox-row">
-        <span>Hidro traka (m)</span><input type="checkbox" id="chkHidroTraka">
-      </div>
-      <div class="checkbox-row">
-        <span>Silikon (m)</span><input type="checkbox" id="chkSilikon">
-      </div>
-    </div>
-
-    <div class="openings-section">
-      <div class="openings-header">
-        <div class="openings-title">🪟 Otvori (vrata, prozori, niše, geberit, vertikale)</div>
-        <div class="openings-subtitle">
-          Dodaj otvore i odaberi da li odbijaju zidove, ulaze u silikon, hidro traku, lajsne i gerung.
-        </div>
-      </div>
-
-      <div class="openings-toolbar">
-        <button onclick="addOpening('vrata')">
-          <span class="icon">🚪</span><span>Vrata</span>
-        </button>
-        <button onclick="addOpening('prozor')">
-          <span class="icon">🪟</span><span>Prozor</span>
-        </button>
-        <button onclick="addOpening('nisa')">
-          <span class="icon">🧱</span><span>Niša</span>
-        </button>
-        <button onclick="addOpening('geberit')">
-          <span class="icon">🚽</span><span>Geberit</span>
-        </button>
-        <button onclick="addOpening('vertikala')">
-          <span class="icon">↕️</span><span>Vertikala</span>
-        </button>
-        <button onclick="addOpening('custom')">
-          <span class="icon">✏️</span><span>Custom</span>
-        </button>
-      </div>
-
-      <div id="openingsList" class="openings-list"></div>
-    </div>
-
-    <div id="calcResultCard" class="result-card hidden">
-      <h3>Rezultat obračuna</h3>
-      <div id="calcResultHtml"></div>
-    </div>
-  `;
-
-  addExtraDimRow();
-}
-
-/* ===== DODATNE DIMENZIJE ===== */
-
-function addExtraDimRow() {
-  const c = document.getElementById("extraDims");
-  if (!c) return;
-  const row = document.createElement("div");
-  row.className = "extra-row";
-  row.innerHTML = `
-    <input class="exD" placeholder="d (m)">
-    <input class="exS" placeholder="š (m)">
-    <input class="exV" placeholder="v (m)">
-    <select class="exSign">
-      <option value="+">+</option>
-      <option value="-">−</option>
-    </select>
-    <button onclick="this.parentNode.remove()">✕</button>
-  `;
-  c.appendChild(row);
-}
-
-/* ===== OTVORI – DODAVANJE / RENDER ===== */
-
-function addOpening(type) {
-  const id = "op_" + Date.now() + "_" + Math.random().toString(36).slice(2);
-  let label = "";
-  let defaults = {};
-
-  switch (type) {
-    case "vrata":
-      label = "Vrata";
-      defaults = {
-        subtractWalls: true,
-        forSilicone: false,
-        forTape: false,
-        forLajsne: false,
-        forGerung: false
-      };
-      break;
-    case "prozor":
-      label = "Prozor";
-      defaults = {
-        subtractWalls: true,
-        forSilicone: true,
-        forTape: true,
-        forLajsne: true,
-        forGerung: true
-      };
-      break;
-    case "nisa":
-      label = "Niša";
-      defaults = {
-        subtractWalls: true,
-        forSilicone: true,
-        forTape: true,
-        forLajsne: true,
-        forGerung: true
-      };
-      break;
-    case "geberit":
-      label = "Geberit";
-      defaults = {
-        subtractWalls: true,
-        forSilicone: true,
-        forTape: true,
-        forLajsne: true,
-        forGerung: true
-      };
-      break;
-    case "vertikala":
-      label = "Vertikala";
-      defaults = {
-        subtractWalls: false,
-        forSilicone: true,
-        forTape: false,
-        forLajsne: true,
-        forGerung: true
-      };
-      break;
-    default:
-      label = "Custom";
-      defaults = {
-        subtractWalls: false,
-        forSilicone: false,
-        forTape: false,
-        forLajsne: false,
-        forGerung: false
-      };
-  }
-
-  window.kobOpenings.push({
-    id,
-    type,
-    label,
-    w: 0,
-    h: 0,
-    count: 1,
-    subtractWalls: defaults.subtractWalls,
-    forSilicone: defaults.forSilicone,
-    forTape: defaults.forTape,
-    forLajsne: defaults.forLajsne,
-    forGerung: defaults.forGerung
-  });
-
-  renderOpeningsList();
-}
-
-function renderOpeningsList() {
-  const list = document.getElementById("openingsList");
-  if (!list) return;
-
-  if (!window.kobOpenings.length) {
-    list.innerHTML = `<p class="small-text">Nema unesenih otvora.</p>`;
-    return;
-  }
-
-  let html = "";
-  window.kobOpenings.forEach(op => {
-    const area = op.w * op.h * (op.count || 1);
-    const perim = 2 * (op.w + op.h) * (op.count || 1);
-    html += `
-      <div class="opening-card">
-        <div class="opening-header">
-          <div>
-            <div class="opening-type">${op.label}</div>
-            <div class="opening-dims">${op.w ? kobFmt(op.w) : "?"} × ${op.h ? kobFmt(op.h) : "?"} m, kom: ${op.count}</div>
-          </div>
-          <button class="opening-delete-btn" onclick="deleteOpening('${op.id}')">Obriši</button>
-        </div>
-        <div class="opening-body">
-          <input placeholder="š (m)" value="${op.w || ""}" 
-                 oninput="updateOpeningField('${op.id}','w',this.value)">
-          <input placeholder="v (m)" value="${op.h || ""}" 
-                 oninput="updateOpeningField('${op.id}','h',this.value)">
-          <input placeholder="kom" value="${op.count || ""}" 
-                 oninput="updateOpeningField('${op.id}','count',this.value)">
-        </div>
-        <div class="opening-flags">
-          <label class="opening-flag">
-            <input type="checkbox" ${op.subtractWalls ? "checked" : ""} 
-                   onchange="toggleOpeningFlag('${op.id}','subtractWalls',this.checked)">
-            <span>Odbija zid</span>
-          </label>
-          <label class="opening-flag">
-            <input type="checkbox" ${op.forSilicone ? "checked" : ""} 
-                   onchange="toggleOpeningFlag('${op.id}','forSilicone',this.checked)">
-            <span>Silikon</span>
-          </label>
-          <label class="opening-flag">
-            <input type="checkbox" ${op.forTape ? "checked" : ""} 
-                   onchange="toggleOpeningFlag('${op.id}','forTape',this.checked)">
-            <span>Hidro traka</span>
-          </label>
-          <label class="opening-flag">
-            <input type="checkbox" ${op.forLajsne ? "checked" : ""} 
-                   onchange="toggleOpeningFlag('${op.id}','forLajsne',this.checked)">
-            <span>Lajsne</span>
-          </label>
-          <label class="opening-flag">
-            <input type="checkbox" ${op.forGerung ? "checked" : ""} 
-                   onchange="toggleOpeningFlag('${op.id}','forGerung',this.checked)">
-            <span>Gerung</span>
-          </label>
-        </div>
-        <div class="opening-footer">
-          <div>
-            <span class="badge-pill">Površina: ${area ? kobFmt(area) : "0"} m²</span>
-            <span class="badge-pill">Obod: ${perim ? kobFmt(perim) : "0"} m</span>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-
-  list.innerHTML = html;
-}
-
-function deleteOpening(id) {
-  window.kobOpenings = window.kobOpenings.filter(o => o.id !== id);
-  renderOpeningsList();
-}
-
-function updateOpeningField(id, field, val) {
-  const op = window.kobOpenings.find(o => o.id === id);
-  if (!op) return;
-  if (field === "count") {
-    const n = parseInt(kobParseNum(val));
-    op.count = isNaN(n) || n < 1 ? 1 : n;
-  } else {
-    op[field] = kobParseNum(val);
-  }
-  renderOpeningsList();
-}
-
-function toggleOpeningFlag(id, flag, checked) {
-  const op = window.kobOpenings.find(o => o.id === id);
-  if (!op) return;
-  op[flag] = !!checked;
-}
-
-/* ===== GLAVNI IZRAČUN ===== */
-
-function runCalc() {
-  const D = kobParseNum(document.getElementById("dimD").value);
-  const S = kobParseNum(document.getElementById("dimS").value);
-  const V = kobParseNum(document.getElementById("dimV").value);
-
-  if (!D || !S || !V) {
-    alert("Unesi D, Š i V.");
-    return;
-  }
+  const D = parseHr(document.getElementById("dimD").value);
+  const S = parseHr(document.getElementById("dimS").value);
+  const V = parseHr(document.getElementById("dimV").value);
 
   const chkPod = document.getElementById("chkPod").checked;
-  const chkZid = document.getElementById("chkZidovi").checked;
-  const chkHidro = document.getElementById("chkHidroPod").checked;
-  const chkTraka = document.getElementById("chkHidroTraka").checked;
-  const chkSil = document.getElementById("chkSilikon").checked;
+  const chkZidovi = document.getElementById("chkZidovi").checked;
+  const chkHidroPod = document.getElementById("chkHidroPod").checked;
+  const chkHidroTraka = document.getElementById("chkHidroTraka").checked;
+  const chkSilikon = document.getElementById("chkSilikon").checked;
+  const chkSokl = document.getElementById("chkSokl").checked;
 
-  // DODATNE DIMENZIJE
-  const rows = document.querySelectorAll("#extraDims .extra-row");
-  let extraPod = 0;
-  let extraZid = 0;
-  let extraHidro = 0;
-  let extraTraka = 0;
-  let extraSil = 0;
+  // Osnovni izračun
+  let pod = 0, zidovi = 0, hidroPod = 0, hidroTraka = 0, silikon = 0, sokl = 0;
 
-  rows.forEach(r => {
-    const dE = kobParseNum(r.querySelector(".exD").value);
-    const sE = kobParseNum(r.querySelector(".exS").value);
-    const vE = kobParseNum(r.querySelector(".exV").value);
-    if (!dE && !sE && !vE) return;
-    const sign = (r.querySelector(".exSign").value === "-") ? -1 : 1;
+  if (chkPod) pod = D * S;
+  if (chkZidovi) zidovi = 2 * D * V + 2 * S * V;
+  if (chkHidroPod) hidroPod = D * S;
+  if (chkHidroTraka) hidroTraka = 2 * (D + S);
+  if (chkSilikon) silikon = 2 * D + 2 * S + 4 * V;
+  if (chkSokl) sokl = 2 * (D + S);
 
-    const deltaPod   = sign * (dE + sE);                // +/− (d+š)
-    const deltaZid   = sign * ((2 * dE + sE) * vE);     // +/− (2d+š)*v
-    const deltaTraka = sign * (2 * dE + sE);            // +/− (2d+š)
-    const deltaSil   = sign * ((2 * dE + sE) + 2 * vE); // +/− (2d+š+2v)
+  // Dodatne dimenzije prostorije
+  const extraDimsContainer = document.getElementById("extraDimsContainer");
+  extraDimsContainer.querySelectorAll(".extra-row").forEach(row => {
+    const d = parseHr(row.querySelector(".exD").value);
+    const s = parseHr(row.querySelector(".exS").value);
+    const v = parseHr(row.querySelector(".exV").value);
+    const sign = row.querySelector(".exSign").value === "-" ? -1 : 1;
 
-    extraPod   += deltaPod;
-    extraZid   += deltaZid;
-    extraHidro += deltaPod;
-    extraTraka += deltaTraka;
-    extraSil   += deltaSil;
+    const podDelta = (s + d) * sign;
+    const zidDelta = (2 * d + s) * v * sign;
+    const hidroTrakaDelta = (2 * d + s) * sign;
+    const silikonDelta = ((2 * d + s) + 2 * v) * sign;
+
+    if (chkPod) pod += podDelta;
+    if (chkZidovi) zidovi += zidDelta;
+    if (chkHidroPod) hidroPod += podDelta;
+    if (chkHidroTraka) hidroTraka += hidroTrakaDelta;
+    if (chkSilikon) silikon += silikonDelta;
   });
 
-  // DOPRINOS OTVORA
-  let openingsAreaWalls = 0;
-  let openingsSilicone = 0;
-  let openingsTape = 0;
-  let openingsLajsne = 0;
-  let openingsGerung = 0;
+  // Otvori
+  const openingsList = document.getElementById("openingsList");
+  let doorArea = 0;
+  let windowArea = 0;
+  let windowPerim = 0;
+  let nicheArea = 0;
+  let nichePerim = 0;
+  let otherPerim = 0; // geberit + vertikale
 
-  (window.kobOpenings || []).forEach(op => {
-    const w = op.w || 0;
-    const h = op.h || 0;
-    const count = op.count || 1;
+  openingsList.querySelectorAll(".opening-card").forEach(card => {
+    const type = card.getAttribute("data-type");
+    const w = parseHr(card.querySelector(".opW").value);
+    const h = parseHr(card.querySelector(".opH").value);
+    const n = parseHr(card.querySelector(".opN").value) || 1;
 
-    if (!w || !h || !count) return;
+    const area = w * h * n;
+    const perim = 2 * (w + h) * n;
 
-    const area = w * h * count;
-    const perim = 2 * (w + h) * count;
-
-    // zidovi – odbijanje
-    if (op.subtractWalls) {
-      openingsAreaWalls += area;
-    }
-
-    // silikon
-    if (op.forSilicone) {
-      let silLen = perim;
-      if (op.type === "geberit") {
-        silLen = (2 * h + w) * count;
-      } else if (op.type === "vertikala") {
-        silLen = h * count;
-      } else if (op.type === "vrata") {
-        silLen = 0; // vrata ne ulaze u silikon
-      }
-      openingsSilicone += silLen;
-    }
-
-    // hidro traka
-    if (op.forTape) {
-      openingsTape += perim;
-    }
-
-    // lajsne
-    if (op.forLajsne) {
-      openingsLajsne += perim;
-    }
-
-    // gerung
-    if (op.forGerung) {
-      openingsGerung += perim;
+    if (type === "door") {
+      doorArea += area;
+    } else if (type === "window") {
+      windowArea += area;
+      windowPerim += perim;
+    } else if (type === "niche") {
+      nicheArea += area;
+      nichePerim += perim;
+    } else {
+      otherPerim += perim;
     }
   });
 
-  let html = "";
-  const results = {};
-
-  // POD
-  if (chkPod) {
-    const base = D * S;
-    const total = base + extraPod;
-    results.pod = total;
-    html += `<b>Pod:</b><br>`;
-    html += `Osnovno: D×Š = ${kobFmt(D)}×${kobFmt(S)} = ${kobFmt(base)} m²<br>`;
-    if (extraPod !== 0) html += `Dodatne dimenzije: ${extraPod > 0 ? "+" : ""}${kobFmt(extraPod)} m²<br>`;
-    html += `Ukupno pod = <b>${kobFmt(total)} m²</b><br><br>`;
+  // Pravila:
+  // - vrata: oduzimaju od zidova, ne ulaze u silikon ni hidro traku
+  // - prozori + niše: oduzimaju od zidova, ulaze u hidro traku i silikon (perimetar)
+  if (chkZidovi) {
+    zidovi -= doorArea;
+    zidovi -= windowArea;
+    zidovi -= nicheArea;
+  }
+  if (chkHidroTraka) {
+    hidroTraka += windowPerim + nichePerim;
+  }
+  if (chkSilikon) {
+    silikon += windowPerim + nichePerim + otherPerim;
   }
 
-  // ZIDOVI
-  if (chkZid) {
-    const base = 2 * (D * V) + 2 * (S * V);
-    const total = base + extraZid - openingsAreaWalls;
-    results.zidovi = total;
-    html += `<b>Zidovi:</b><br>`;
-    html += `Bruto: 2(D×V)+2(Š×V) = 2(${kobFmt(D)}×${kobFmt(V)}) + 2(${kobFmt(S)}×${kobFmt(V)}) = ${kobFmt(base)} m²<br>`;
-    if (extraZid !== 0) html += `Dodatne dimenzije: ${extraZid > 0 ? "+" : ""}${kobFmt(extraZid)} m²<br>`;
-    if (openingsAreaWalls !== 0) html += `Oduzeti otvori: −${kobFmt(openingsAreaWalls)} m²<br>`;
-    html += `Neto zidovi = <b>${kobFmt(total)} m²</b><br><br>`;
-  }
+  // Dodatne mjere (+/-)
+  const dmContainer = document.getElementById("dmContainer");
+  let dmTotal = 0;
+  const dmRows = [];
+  dmContainer.querySelectorAll(".dm-row").forEach(row => {
+    const name = row.querySelector(".dmName").value.trim() || "Mjera";
+    const val = parseHr(row.querySelector(".dmVal").value);
+    const sign = row.querySelector(".dmSign").value;
+    const signedVal = sign === "-" ? -val : val;
+    dmTotal += signedVal;
+    dmRows.push({ name, val, sign, signedVal });
+  });
 
-  // HIDRO POD
-  if (chkHidro) {
-    const base = D * S;
-    const total = base + extraHidro;
-    results.hidroPod = total;
-    html += `<b>Hidroizolacija poda:</b><br>`;
-    html += `Osnovno: ${kobFmt(base)} m²<br>`;
-    if (extraHidro !== 0) html += `Dodatne dimenzije: ${extraHidro > 0 ? "+" : ""}${kobFmt(extraHidro)} m²<br>`;
-    html += `Ukupno hidro pod = <b>${kobFmt(total)} m²</b><br><br>`;
-  }
-
-  // HIDRO TRAKA
-  if (chkTraka) {
-    const base = 2 * D + 2 * S + 2 * V;
-    const total = base + extraTraka + openingsTape;
-    results.hidroTraka = total;
-    html += `<b>Hidro traka:</b><br>`;
-    html += `Osnovno: 2D+2Š+2V = 2${kobFmt(D)} + 2${kobFmt(S)} + 2${kobFmt(V)} = ${kobFmt(base)} m<br>`;
-    if (extraTraka !== 0) html += `Dodatne dimenzije: ${extraTraka > 0 ? "+" : ""}${kobFmt(extraTraka)} m<br>`;
-    if (openingsTape !== 0) html += `Otvori (traka): +${kobFmt(openingsTape)} m<br>`;
-    html += `Ukupno hidro traka = <b>${kobFmt(total)} m</b><br><br>`;
-  }
-
-  // SILIKON + LAJSNE + GERUNG
-  if (chkSil) {
-    const base = 2 * D + 2 * S + 4 * V;
-    const silikonBase = base + extraSil;
-    const silikonTotal = silikonBase + openingsSilicone;
-
-    results.silikon = silikonTotal;
-    results.lajsne = openingsLajsne;
-    results.gerung = openingsGerung;
-
-    html += `<b>Silikon:</b><br>`;
-    html += `Osnovni opseg (2D+2Š+4V) + dodatne dimenzije = ${kobFmt(silikonBase)} m<br>`;
-    if (openingsSilicone !== 0) {
-      html += `Otvori (prozori / geberiti / vertikale / niše): +${kobFmt(openingsSilicone)} m<br>`;
-    }
-    html += `Ukupno silikon = <b>${kobFmt(silikonTotal)} m</b><br><br>`;
-
-    html += `<b>Lajsne:</b> ${kobFmt(openingsLajsne)} m<br>`;
-    html += `<b>Gerung:</b> ${kobFmt(openingsGerung)} m<br><br>`;
-  }
-
-  const resEl = document.getElementById("calcResultHtml");
-  const card = document.getElementById("calcResultCard");
-  resEl.innerHTML = html || "Nema rezultata.";
-  card.classList.remove("hidden");
-
-  window.lastCalc = {
-    dimensions: { D, S, V },
-    extras: { extraPod, extraZid, extraHidro, extraTraka, extraSil },
-    openings: window.kobOpenings,
-    openingsContrib: { openingsAreaWalls, openingsSilicone, openingsTape, openingsLajsne, openingsGerung },
-    results
+  const dmTargets = {
+    pod: document.getElementById("dmPod")?.checked,
+    zidovi: document.getElementById("dmZidovi")?.checked,
+    hidro: document.getElementById("dmHidro")?.checked,
+    silikon: document.getElementById("dmSil")?.checked,
+    traka: document.getElementById("dmTraka")?.checked,
+    sokl: document.getElementById("dmSokl")?.checked,
   };
+
+  if (dmTotal !== 0) {
+    if (dmTargets.pod) pod += dmTotal;
+    if (dmTargets.zidovi) zidovi += dmTotal;
+    if (dmTargets.hidro) hidroPod += dmTotal;
+    if (dmTargets.silikon) silikon += dmTotal;
+    if (dmTargets.traka) hidroTraka += dmTotal;
+    if (dmTargets.sokl) sokl += dmTotal;
+  }
+
+  // Rezultat za prostoriju
+  const roomResult = {
+    itemNo,
+    name,
+    D, S, V,
+    pod: pod > 0.0001 ? pod : 0,
+    zidovi: zidovi > 0.0001 ? zidovi : 0,
+    hidroPod: hidroPod > 0.0001 ? hidroPod : 0,
+    hidroTraka: hidroTraka > 0.0001 ? hidroTraka : 0,
+    silikon: silikon > 0.0001 ? silikon : 0,
+    sokl: sokl > 0.0001 ? sokl : 0,
+    doorArea,
+    windowArea,
+    nicheArea,
+    windowPerim,
+    nichePerim,
+    otherPerim,
+    dmTotal,
+    dmRows
+  };
+
+  return roomResult;
+}
+
+// Generiranje teksta za prikaz rezultata jedne prostorije
+function renderRoomResultText(r) {
+  let html = "";
+  html += `<b>${r.itemNo}. ${r.name}</b><br>`;
+  html += `D=${formatHr(r.D)} m, Š=${formatHr(r.S)} m, V=${formatHr(r.V)} m<br>`;
+
+  if (r.pod) html += `Pod: <b>${formatHr(r.pod)}</b> m²<br>`;
+  if (r.zidovi) html += `Zidovi: <b>${formatHr(r.zidovi)}</b> m²<br>`;
+  if (r.hidroPod) html += `Hidro pod: <b>${formatHr(r.hidroPod)}</b> m²<br>`;
+  if (r.hidroTraka) html += `Hidro traka: <b>${formatHr(r.hidroTraka)}</b> m<br>`;
+  if (r.silikon) html += `Silikon: <b>${formatHr(r.silikon)}</b> m<br>`;
+  if (r.sokl) html += `Sokl: <b>${formatHr(r.sokl)}</b> m<br>`;
+
+  if (r.doorArea || r.windowArea || r.nicheArea) {
+    html += `<br><b>Otvori:</b><br>`;
+    if (r.doorArea) html += `Vrata (površina): −${formatHr(r.doorArea)} m² (odbijeno sa zidova)<br>`;
+    if (r.windowArea) html += `Prozori (površina): −${formatHr(r.windowArea)} m²<br>`;
+    if (r.nicheArea) html += `Niše (površina): −${formatHr(r.nicheArea)} m²<br>`;
+    if (r.windowPerim || r.nichePerim || r.otherPerim) {
+      html += `Perimetri za hidro traku / silikon: ${formatHr(r.windowPerim + r.nichePerim + r.otherPerim)} m<br>`;
     }
+  }
+
+  if (r.dmRows && r.dmRows.length) {
+    html += `<br><b>Dodatne mjere (+/−):</b><br>`;
+    r.dmRows.forEach((row, idx) => {
+      html += `${idx + 1}. ${row.name}: ${row.sign}${formatHr(row.val)} ⇒ ${formatHr(row.signedVal)}<br>`;
+    });
+    html += `Ukupno dodatne mjere: <b>${formatHr(r.dmTotal)}</b><br>`;
+  }
+
+  return html;
+}
+
+// Izračun ukupnih količina za situaciju
+function calcSituationTotals() {
+  const totals = {
+    pod: 0,
+    zidovi: 0,
+    hidroPod: 0,
+    hidroTraka: 0,
+    silikon: 0,
+    sokl: 0
+  };
+  situationRooms.forEach(r => {
+    totals.pod += r.pod;
+    totals.zidovi += r.zidovi;
+    totals.hidroPod += r.hidroPod;
+    totals.hidroTraka += r.hidroTraka;
+    totals.silikon += r.silikon;
+    totals.sokl += r.sokl;
+  });
+  return totals;
+}
+
+// CSV export u "troškovnik" formatu
+function exportCsv() {
+  if (!situationRooms.length) {
+    alert("Nema dodanih prostorija u situaciju.");
+    return;
+  }
+
+  const siteName = document.getElementById("siteName").value.trim();
+  const workDesc = document.getElementById("workDesc").value.trim();
+  const sitNo = document.getElementById("situationNo").value.trim();
+  const unit = document.getElementById("defaultUnit").value.trim() || "m2";
+  const price = parseHr(document.getElementById("defaultPrice").value);
+
+  const lines = [];
+
+  // zaglavlje kao u Excel primjeru
+  lines.push(`"GRAĐEVINA:";"${siteName}";"";"stranica:";""`);
+  lines.push(`"OPIS RADOVA:";"${workDesc}"`);
+  lines.push(""); // prazni red
+  lines.push(`"Redni broj";"Opis";"jed.mj.";"";"ukupna količina ugovorena";"jedinična cijena €";"Izvršena količina radova"`);
+
+  situationRooms.forEach((r, idx) => {
+    const desc = `${r.name} (pod, zidovi, hidro, silikon, sokl)`;
+    const totals = r.pod + r.zidovi + r.hidroPod; // samo orijentacijski
+    lines.push(`"${r.itemNo}";"${desc}";"${unit}";"";"${formatHr(totals)}";"${formatHr(price)}";""`);
+  });
+
+  const csvContent = "\ufeff" + lines.join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "gradjevinska_knjiga.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// PDF export – jednostavan layout po uzoru na troškovnik
+async function exportPdf() {
+  if (!situationRooms.length) {
+    alert("Nema dodanih prostorija u situaciju.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+  const siteName = document.getElementById("siteName").value.trim();
+  const workDesc = document.getElementById("workDesc").value.trim();
+  const sitNo = document.getElementById("situationNo").value.trim();
+  const unit = document.getElementById("defaultUnit").value.trim() || "m2";
+  const price = parseHr(document.getElementById("defaultPrice").value);
+
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginLeft = 10;
+  const marginTop = 10;
+  const lineHeight = 6;
+
+  let y = marginTop;
+
+  function addHeader(pageNo) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("KOB-KERAMIKA", marginLeft, y);
+    doc.setFontSize(9);
+    doc.text("Građevinska knjiga – situacija " + (sitNo || ""), marginLeft, y + 5);
+    doc.text("Stranica " + pageNo, 200 - marginLeft, y + 5, { align: "right" });
+
+    y += 12;
+    doc.setFont("helvetica", "normal");
+    doc.setLineWidth(0.2);
+    doc.line(marginLeft, y, 200 - marginLeft, y);
+    y += 4;
+
+    doc.setFontSize(9);
+    doc.text("GRAĐEVINA:", marginLeft, y);
+    doc.text(siteName || "-", marginLeft + 25, y);
+    y += lineHeight;
+    doc.text("OPIS RADOVA:", marginLeft, y);
+    doc.text(workDesc || "-", marginLeft + 25, y);
+    y += lineHeight;
+    doc.text("Broj predr./sit.: " + (sitNo || "-"), marginLeft, y);
+    y += lineHeight;
+    doc.line(marginLeft, y, 200 - marginLeft, y);
+    y += 4;
+
+    // zaglavlje tablice
+    doc.setFont("helvetica", "bold");
+    doc.text("R.br", marginLeft, y);
+    doc.text("Opis radova", marginLeft + 15, y);
+    doc.text("jed.mj.", 120, y);
+    doc.text("ukupna kol.", 140, y);
+    doc.text("jed.cijena €", 165, y);
+    doc.text("izv.kol.", 190, y, { align: "right" });
+    y += 3;
+    doc.setLineWidth(0.15);
+    doc.line(marginLeft, y, 200 - marginLeft, y);
+    y += 4;
+    doc.setFont("helvetica", "normal");
+  }
+
+  let pageNo = 1;
+  addHeader(pageNo);
+
+  situationRooms.forEach((r, idx) => {
+    const totals = r.pod + r.zidovi + r.hidroPod;
+    const descLines = doc.splitTextToSize(r.name + " – pod/zidovi/hidro/silikon/sokl", 100);
+
+    // provjera prelaska na novu stranicu
+    const neededHeight = descLines.length * lineHeight + lineHeight;
+    if (y + neededHeight > pageHeight - 20) {
+      doc.addPage();
+      y = marginTop;
+      pageNo++;
+      addHeader(pageNo);
+    }
+
+    doc.text(String(r.itemNo), marginLeft, y);
+
+    descLines.forEach((line, i) => {
+      doc.text(line, marginLeft + 15, y + i * lineHeight);
+    });
+
+    doc.text(unit, 120, y);
+    doc.text(formatHr(totals), 140, y);
+    if (price) doc.text(formatHr(price), 165, y);
+    doc.text("", 190, y, { align: "right" });
+
+    y += descLines.length * lineHeight;
+    y += 1;
+  });
+
+  const note = document.getElementById("globalNote").value.trim();
+  if (note) {
+    if (y + 10 > pageHeight - 10) {
+      doc.addPage();
+      y = marginTop;
+      pageNo++;
+      addHeader(pageNo);
+    }
+    y += 4;
+    doc.setFont("helvetica", "italic");
+    doc.text("Napomena: " + note, marginLeft, y);
+  }
+
+  doc.save("gradjevinska_knjiga.pdf");
+}
+
