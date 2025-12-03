@@ -1,7 +1,9 @@
-// DOM shortcuts
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+let currentUserName = "";
+
+// Extra dimenzije
 function initExtraDims() {
   const container = document.getElementById("extraDimsContainer");
   const btn = document.getElementById("btnAddExtraDim");
@@ -27,6 +29,7 @@ function initExtraDims() {
   btn.addEventListener("click", () => addRow());
 }
 
+// Otvori
 function initOpenings() {
   const list = document.getElementById("openingsList");
   if (!list) return;
@@ -41,8 +44,7 @@ function initOpenings() {
       window: "Prozor",
       niche: "Niša",
       geberit: "Geberit",
-      vert: "Vertikala",
-      custom: "Custom otvor"
+      vert: "Vertikala"
     };
     const title = titleMap[type] || "Otvor";
 
@@ -53,19 +55,14 @@ function initOpenings() {
       </div>
       <div class="grid-3" style="margin-top:4px;">
         <label>Širina (m)
-          <input type="text" class="opW" placeholder="npr. 0,80">
+          <input type="text" class="opW" placeholder="0,80">
         </label>
         <label>Visina (m)
-          <input type="text" class="opH" placeholder="npr. 2,00">
+          <input type="text" class="opH" placeholder="2,00">
         </label>
         <label>Količina (kom)
           <input type="text" class="opN" value="1">
         </label>
-      </div>
-      <div class="opening-flags">
-        <span class="flag flag-on">Odbija zidove</span>
-        ${type === "door" ? "" : '<span class="flag flag-on">Za silikon</span>'}
-        ${type === "door" ? "" : '<span class="flag flag-on">Za hidro traku</span>'}
       </div>
     `;
 
@@ -81,6 +78,7 @@ function initOpenings() {
   });
 }
 
+// Dodatne mjere
 function initDmRows() {
   const container = document.getElementById("dmContainer");
   const btn = document.getElementById("btnAddDmRow");
@@ -90,8 +88,8 @@ function initDmRows() {
     const row = document.createElement("div");
     row.className = "dm-row";
     row.innerHTML = `
-      <input type="text" class="dmName" placeholder="npr. Balkon">
-      <input type="text" class="dmVal" placeholder="npr. 3,50">
+      <input type="text" class="dmName" placeholder="Opis">
+      <input type="text" class="dmVal" placeholder="3,50">
       <select class="dmSign">
         <option value="+">+</option>
         <option value="-">−</option>
@@ -105,50 +103,7 @@ function initDmRows() {
   btn.addEventListener("click", addRow);
 }
 
-function renderRoomsTable() {
-  const wrapper = document.getElementById("roomsTableWrapper");
-  const totalDiv = document.getElementById("totalSummary");
-  if (!wrapper || !totalDiv) return;
-
-  if (!situationRooms.length) {
-    wrapper.innerHTML = "<p style='font-size:12px;opacity:0.8;'>Još nema dodanih prostorija.</p>";
-    totalDiv.innerHTML = "";
-    return;
-  }
-
-  let html = '<div class="table-scroll"><table><thead><tr>';
-  html += "<th>R.br</th><th>Prostorija</th><th>Pod m²</th><th>Zidovi m²</th><th>Hidro pod m²</th><th>Hidro traka m</th><th>Silikon m</th><th>Sokl m</th>";
-  html += "</tr></thead><tbody>";
-
-  situationRooms.forEach(r => {
-    html += "<tr>";
-    html += `<td>${r.itemNo}</td>`;
-    html += `<td>${r.name}</td>`;
-    html += `<td class="num">${r.pod ? formatHr(r.pod) : ""}</td>`;
-    html += `<td class="num">${r.zidovi ? formatHr(r.zidovi) : ""}</td>`;
-    html += `<td class="num">${r.hidroPod ? formatHr(r.hidroPod) : ""}</td>`;
-    html += `<td class="num">${r.hidroTraka ? formatHr(r.hidroTraka) : ""}</td>`;
-    html += `<td class="num">${r.silikon ? formatHr(r.silikon) : ""}</td>`;
-    html += `<td class="num">${r.sokl ? formatHr(r.sokl) : ""}</td>`;
-    html += "</tr>";
-  });
-
-  html += "</tbody></table></div>";
-  wrapper.innerHTML = html;
-
-  const totals = calcSituationTotals();
-  totalDiv.innerHTML = `
-    <div class="total-summary">
-      Ukupno pod: <b>${formatHr(totals.pod)}</b> m² ·
-      zidovi: <b>${formatHr(totals.zidovi)}</b> m² ·
-      hidro pod: <b>${formatHr(totals.hidroPod)}</b> m² ·
-      hidro traka: <b>${formatHr(totals.hidroTraka)}</b> m ·
-      silikon: <b>${formatHr(totals.silikon)}</b> m ·
-      sokl: <b>${formatHr(totals.sokl)}</b> m
-    </div>
-  `;
-}
-
+// Očisti polja trenutne prostorije
 function clearCurrentRoom() {
   ["roomName","roomItemNo","dimD","dimS","dimV"].forEach(id => {
     const el = document.getElementById(id);
@@ -164,16 +119,78 @@ function clearCurrentRoom() {
   $("#roomCalcOutput").innerHTML = "";
 }
 
+// Očisti cijelu situaciju
 function clearAll() {
-  situationRooms.length = 0;
-  renderRoomsTable();
+  window.situationRooms.splice(0, window.situationRooms.length);
+  window.situationItems.splice(0, window.situationItems.length);
   clearCurrentRoom();
+  if (typeof renderRoomsTable === "function") renderRoomsTable();
+}
+
+// User name handling
+function initUserName() {
+  const input = document.getElementById("userNameInput");
+  const badge = document.getElementById("userBadge");
+  if (!input || !badge) return;
+
+  function updateName() {
+    currentUserName = input.value.trim();
+    badge.textContent = currentUserName || "nema korisnika";
+  }
+
+  input.addEventListener("change", updateName);
+  input.addEventListener("keyup", (e) => {
+    if (e.key === "Enter") updateName();
+  });
+}
+
+// Cloud arhiva – prikaz
+async function reloadCloudArchive() {
+  if (!currentUserName) {
+    alert("Unesi ime korisnika (gore desno) prije učitavanja arhive.");
+    return;
+  }
+  if (!window.firebaseLoadSituationsForUser) {
+    alert("Firebase nije inicijaliziran.");
+    return;
+  }
+  const container = document.getElementById("cloudArchiveList");
+  container.innerHTML = "<div style='font-size:12px;opacity:0.8;'>Učitavanje...</div>";
+  try {
+    const docs = await window.firebaseLoadSituationsForUser(currentUserName);
+    if (!docs.length) {
+      container.innerHTML = "<div style='font-size:12px;opacity:0.8;'>Nema situacija u arhivi za ovog korisnika.</div>";
+      return;
+    }
+    let html = "";
+    docs.forEach(doc => {
+      const meta = doc.meta || {};
+      html += `
+        <div class="cloud-item">
+          <div class="cloud-item-header">
+            <div><b>${meta.situationNo || ""}</b> – ${meta.siteName || ""}</div>
+            <div class="cloud-item-meta">
+              ${meta.workDesc || ""} · ${doc.createdAt || ""}
+            </div>
+          </div>
+          <div class="cloud-item-actions">
+            ${doc.pdfUrl ? `<a href="${doc.pdfUrl}" target="_blank" class="btn-outline btn-small" style="text-decoration:none;">📄 PDF</a>` : ""}
+          </div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = "<div style='font-size:12px;color:#ff5c5c;'>Greška pri učitavanju arhive.</div>";
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   initExtraDims();
   initOpenings();
   initDmRows();
+  initUserName();
 
   const now = new Date();
   const dt = now.toLocaleDateString("hr-HR", {
@@ -193,21 +210,96 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnExportPdf = document.getElementById("btnExportPdf");
   const btnExportCsv = document.getElementById("btnExportCsv");
   const btnClearAll = document.getElementById("btnClearAll");
+  const btnSaveCloud = document.getElementById("btnSaveCloud");
+  const btnLoadArchive = document.getElementById("btnLoadArchive");
 
   if (btnCalcRoom) {
     btnCalcRoom.addEventListener("click", () => {
-      const res = calcCurrentRoom();
+      const res = window.calcCurrentRoom();
       const out = document.getElementById("roomCalcOutput");
-      out.innerHTML = renderRoomResultText(res);
+      out.innerHTML = window.renderRoomResultText(res);
 
-      // dodaj u situaciju
-      situationRooms.push(res);
-      renderRoomsTable();
+      // Dodaj prostoriju u situaciju
+      window.situationRooms.push(res);
+
+      // Kreiraj stavke (po kategorijama) za PDF
+      const siteName = document.getElementById("siteName").value.trim();
+      const workDesc = document.getElementById("workDesc").value.trim();
+      const baseRb = res.itemNo || (window.situationItems.length + 1).toString();
+
+      function pushItem(suffix, desc, qty, unitKey) {
+        if (!qty) return;
+        const rb = baseRb + suffix;
+        const unit = document.getElementById("defaultUnit").value.trim() || (unitKey === "m" ? "m" : "m2");
+        window.situationItems.push({
+          rb,
+          desc: `${res.name} – ${desc}`,
+          unit,
+          qty,
+          price: parseHr(document.getElementById("defaultPrice").value) || 0
+        });
+      }
+
+      pushItem(".1", "Pod", res.pod, "m2");
+      pushItem(".2", "Zidovi", res.zidovi, "m2");
+      pushItem(".3", "Hidro pod", res.hidroPod, "m2");
+      pushItem(".4", "Hidro traka", res.hidroTraka, "m");
+      pushItem(".5", "Silikon", res.silikon, "m");
+      pushItem(".6", "Sokl", res.sokl, "m");
+
+      if (typeof renderRoomsTable === "function") renderRoomsTable();
     });
   }
 
   if (btnClearRoom) btnClearRoom.addEventListener("click", clearCurrentRoom);
   if (btnClearAll) btnClearAll.addEventListener("click", clearAll);
-  if (btnExportPdf) btnExportPdf.addEventListener("click", exportPdf);
-  if (btnExportCsv) btnExportCsv.addEventListener("click", exportCsv);
+  if (btnExportPdf) btnExportPdf.addEventListener("click", () => window.exportPdf && window.exportPdf());
+  if (btnExportCsv) btnExportCsv.addEventListener("click", () => window.exportCsv && window.exportCsv());
+  if (btnLoadArchive) btnLoadArchive.addEventListener("click", reloadCloudArchive);
+
+  if (btnSaveCloud) {
+    btnSaveCloud.addEventListener("click", async () => {
+      if (!currentUserName) {
+        alert("Unesi ime korisnika (gore desno) prije spremanja u Cloud.");
+        return;
+      }
+      if (!window.situationRooms.length) {
+        alert("Nema dodanih prostorija u situaciju.");
+        return;
+      }
+      if (!window.firebaseSaveSituation) {
+        alert("Firebase nije inicijaliziran.");
+        return;
+      }
+
+      const meta = {
+        siteName: document.getElementById("siteName").value.trim(),
+        workDesc: document.getElementById("workDesc").value.trim(),
+        situationNo: document.getElementById("situationNo").value.trim(),
+        unit: document.getElementById("defaultUnit").value.trim() || "m2",
+        price: parseHr(document.getElementById("defaultPrice").value),
+        note: document.getElementById("globalNote").value.trim()
+      };
+      const totals = window.calcSituationTotals();
+
+      const situation = {
+        meta,
+        rooms: window.situationRooms.slice(),
+        items: window.situationItems.slice(),
+        totals
+      };
+
+      const doc = window.buildPdfFromSituation(situation);
+      if (!doc) return;
+      const pdfBlob = doc.output("blob");
+
+      try {
+        await window.firebaseSaveSituation(currentUserName, situation, pdfBlob);
+        alert("Situacija je spremljena u Cloud.");
+      } catch (err) {
+        console.error(err);
+        alert("Greška pri spremanju u Cloud.");
+      }
+    });
+  }
 });
