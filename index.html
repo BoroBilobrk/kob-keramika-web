@@ -1,1 +1,179 @@
-<!-- Placeholder index.html -->
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8" />
+  <title>KOB-Keramika – Građevinska knjiga</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- jsPDF za PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+
+  <link rel="stylesheet" href="CSS/main.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <img src="logo.png" alt="KOB-Keramika logo" class="logo">
+      <div class="header-text">
+        <div class="app-title">KOB-KERAMIKA</div>
+        <div class="app-subtitle">Interni alat za obračun keramičarskih radova</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <label class="user-label">
+        Korisnik:
+        <input type="text" id="userNameInput" placeholder="npr. Boro">
+      </label>
+      <span id="userBadge" class="user-badge">nema korisnika</span>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <!-- META PODACI SITUACIJE -->
+    <section class="card">
+      <h2>📄 Podaci situacije</h2>
+      <div class="grid-2">
+        <label>Gradilište
+          <input type="text" id="siteName" placeholder="npr. Log Expert Two Logistik Park DC2/b Zdenčina">
+        </label>
+        <label>Opis radova
+          <input type="text" id="workDesc" placeholder="npr. postavljanje keramike pod">
+        </label>
+      </div>
+      <div class="grid-3">
+        <label>Broj situacije / predr.
+          <input type="text" id="situationNo" placeholder="npr. 424.1">
+        </label>
+        <label>Jedinica mjere (default)
+          <input type="text" id="defaultUnit" value="m2">
+        </label>
+        <label>Jedinična cijena (€ – default)
+          <input type="text" id="defaultPrice" placeholder="npr. 18,50">
+        </label>
+      </div>
+      <label>Napomena (opcionalno)
+        <input type="text" id="globalNote" placeholder="npr. cijene bez PDV-a; podloga pripremljena od investitora">
+      </label>
+    </section>
+
+    <!-- OBRAČUN PROSTORIJE -->
+    <section class="card">
+      <h2>📐 Obračun prostorije</h2>
+
+      <div class="grid-2">
+        <label>Naziv prostorije
+          <input type="text" id="roomName" placeholder="npr. Kupaonica 1">
+        </label>
+        <label>Redni broj stavke (R.br)
+          <input type="text" id="roomItemNo" placeholder="npr. 4.2.1">
+        </label>
+      </div>
+
+      <div class="section-title">Osnovne dimenzije (unutarnji gabarit)</div>
+      <div class="grid-3">
+        <label>Duljina D (m)
+          <input type="text" id="dimD" placeholder="4,20">
+        </label>
+        <label>Širina Š (m)
+          <input type="text" id="dimS" placeholder="3,10">
+        </label>
+        <label>Visina V (m)
+          <input type="text" id="dimV" placeholder="2,65">
+        </label>
+      </div>
+
+      <div class="section-title">Što se računa?</div>
+      <div class="grid-3 check-grid">
+        <label class="check"><input type="checkbox" id="chkPod"> Pod</label>
+        <label class="check"><input type="checkbox" id="chkZidovi"> Zidovi</label>
+        <label class="check"><input type="checkbox" id="chkHidroPod"> Hidro pod</label>
+        <label class="check"><input type="checkbox" id="chkHidroTraka"> Hidro traka</label>
+        <label class="check"><input type="checkbox" id="chkSilikon"> Silikon</label>
+        <label class="check"><input type="checkbox" id="chkSokl"> Sokl</label>
+      </div>
+
+      <div class="section-title with-button">
+        <span>Dodatne dimenzije prostorije</span>
+        <button type="button" id="btnAddExtraDim" class="btn-outline btn-small">➕ Dodaj red</button>
+      </div>
+      <p class="section-help">
+        Svaki red predstavlja dodatni dio prostorije (npr. uvučeni zid, produžetak, niša u podu).
+        Pravila:
+        Pod: ± (š + d) · Zidovi: + (2×d + š) × v · Hidro pod: kao pod · Hidro traka: + (2×d + š) ·
+        Silikon: + (2×d + š + 2×v).
+      </p>
+      <div id="extraDimsContainer"></div>
+
+      <div class="section-title with-button">
+        <span>Otvori (vrata, prozori, niše, geberit, vertikale)</span>
+        <div class="openings-buttons">
+          <button type="button" class="btn-chip" data-open-type="door">+ Vrata</button>
+          <button type="button" class="btn-chip" data-open-type="window">+ Prozor</button>
+          <button type="button" class="btn-chip" data-open-type="niche">+ Niša</button>
+          <button type="button" class="btn-chip" data-open-type="geberit">+ Geberit</button>
+          <button type="button" class="btn-chip" data-open-type="vert">+ Vertikala</button>
+        </div>
+      </div>
+      <p class="section-help">
+        Vrata se odbijaju sa zidova, ali ne ulaze u silikon. Prozori i niše ulaze u hidro traku i silikon.
+        Geberit i vertikala mogu služiti za silikon/lajsne/gerung (u ovoj verziji samo silikon).
+      </p>
+      <div id="openingsList"></div>
+
+      <div class="section-title">Dodatne mjere (+/−)</div>
+      <p class="section-help">
+        Ručne korekcije – korisno kod nepravilnih prostora. Primjena na označene kategorije.
+      </p>
+      <div id="dmContainer"></div>
+      <button type="button" id="btnAddDmRow" class="btn-outline btn-small">➕ Dodaj mjeru</button>
+
+      <div class="section-title">Izračun prostorije</div>
+      <div class="actions-row">
+        <button type="button" id="btnCalcRoom" class="btn-primary">🔍 Izračunaj & dodaj u situaciju</button>
+        <button type="button" id="btnClearRoom" class="btn-secondary">🧹 Očisti prostoriju</button>
+      </div>
+
+      <div id="roomCalcOutput" class="calc-output"></div>
+    </section>
+
+    <!-- PREGLED CIJELE SITUACIJE -->
+    <section class="card">
+      <h2>📊 Pregled situacije</h2>
+      <div id="roomsTableWrapper"></div>
+      <div id="totalSummary"></div>
+
+      <div class="actions-row">
+        <button type="button" id="btnExportPdf" class="btn-primary">📄 Građevinska knjiga (PDF)</button>
+        <button type="button" id="btnExportCsv" class="btn-secondary">📑 CSV za Excel</button>
+        <button type="button" id="btnSaveCloud" class="btn-secondary">☁ Spremi situaciju u Cloud</button>
+        <button type="button" id="btnClearAll" class="btn-outline">🗑 Očisti sve stavke</button>
+      </div>
+    </section>
+
+    <!-- ARHIVA IZ CLOUDA -->
+    <section class="card">
+      <h2>📂 Arhiva iz Clouda (po korisniku)</h2>
+      <p class="section-help">
+        Arhiva se filtrira po korisniku kojeg upišeš gore desno (Korisnik:).
+      </p>
+      <div class="actions-row">
+        <button type="button" id="btnLoadArchive" class="btn-secondary">🔄 Učitaj arhivu</button>
+      </div>
+      <div id="cloudArchiveList"></div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    KOB-Keramika · Interni alat · Generirano: <span id="generatedAt"></span>
+  </footer>
+
+  <script src="JS/firebase.js"></script>
+  <script src="JS/calc.js"></script>
+  <script src="JS/app.js"></script>
+</body>
+</html>
