@@ -61,6 +61,39 @@ body {
   opacity: 0.8;
 }
 
+.header-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.user-label {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-label input {
+  width: 120px;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: #050505;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: #fff;
+}
+
+.user-badge {
+  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  background: #111;
+}
+
+/* Main layout */
+
 .app-main {
   max-width: 1100px;
   margin: 10px auto 40px auto;
@@ -106,6 +139,8 @@ select:focus {
   box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
 }
 
+/* Grids */
+
 .grid-2,
 .grid-3 {
   display: grid;
@@ -127,6 +162,8 @@ select:focus {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Sections */
 
 .section-title {
   margin-top: 4px;
@@ -153,8 +190,10 @@ select:focus {
   margin-bottom: 6px;
 }
 
+/* Checkboxes */
+
 .check-grid {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .check {
@@ -218,7 +257,13 @@ button:active {
   font-size: 11px;
 }
 
-/* Extra dimensions rows */
+.openings-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Extra dimensions */
 
 .extra-row {
   display: grid;
@@ -266,6 +311,7 @@ button:active {
 
 .opening-meta {
   opacity: 0.8;
+  font-size: 11px;
 }
 
 .opening-flags {
@@ -285,12 +331,6 @@ button:active {
 .flag-on {
   background: #1f7a3b;
   border-color: #35c46c;
-}
-
-.opening-card button {
-  margin-top: 4px;
-  font-size: 11px;
-  padding: 3px 8px;
 }
 
 /* Dodatne mjere */
@@ -364,6 +404,47 @@ td.num {
 .total-summary {
   font-size: 13px;
   margin-bottom: 6px;
+}
+
+/* Actions row */
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Cloud archive */
+
+#cloudArchiveList {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.cloud-item {
+  border-bottom: 1px solid #2a2a2a;
+  padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cloud-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cloud-item-meta {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.cloud-item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 /* Footer */
