@@ -941,7 +941,7 @@ function updateGkRoomsInfo() {
   const el = document.getElementById('gkRoomsInfo');
   if (!el) return;
   if (!gkRooms.length) {
-    el.textContent = "Građevinska knjiga trenutno sadrži 0 prostorija. Nakon mjerenja klikni "Dodaj prostoriju u građevinsku knjigu".";
+    el.textContent = 'Građevinska knjiga trenutno sadrži 0 prostorija. Nakon mjerenja klikni "Dodaj prostoriju u građevinsku knjigu".';
   } else {
     const names = gkRooms.map((r, idx) => (r.meta && r.meta.roomName) ? r.meta.roomName : `Prostorija ${idx + 1}`);
     el.textContent = `U građevinskoj knjizi: ${gkRooms.length} prostorija – ${names.join(", ")}.`;
