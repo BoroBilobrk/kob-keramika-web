@@ -104,3 +104,8 @@ window.loginUser = loginUser;
 window.registerUser = registerUser;
 window.logoutUser = logoutUser;
 window.showView = showView;
+// Globalno izvoz funkcija za HTML
+window.showView = showView;
+window.loginUser = loginUser;
+window.registerUser = registerUser;
+window.logoutUser = logoutUser;
