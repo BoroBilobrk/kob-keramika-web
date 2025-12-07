@@ -380,3 +380,4 @@ window.loginUser = loginUser;
 window.registerUser = registerUser;
 window.logoutUser = logoutUser;
 window.showView = showView;
+    }
