@@ -300,6 +300,80 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error(err);
         alert("Greška pri spremanju u Cloud.");
       }
+      //-----------------------------------------------------
+// LOGIN / AUTH / VIEW SWITCHER
+//-----------------------------------------------------
+
+function showView(id) {
+  document.querySelectorAll(".view").forEach(v => v.style.display = "none");
+  const el = document.getElementById(id);
+  if (el) el.style.display = "block";
+}
+
+async function loginUser() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const pass = document.getElementById("loginPass").value.trim();
+  if (!email || !pass) {
+    alert("Unesi email i lozinku.");
+    return;
+  }
+  try {
+    await firebase.auth().signInWithEmailAndPassword(email, pass);
+  } catch (err) {
+    alert("Neispravni podaci ili korisnik ne postoji.");
+    console.error(err);
+  }
+}
+
+async function registerUser() {
+  const email = document.getElementById("regEmail").value.trim();
+  const pass = document.getElementById("regPass").value.trim();
+  if (!email || !pass) {
+    alert("Unesi email i lozinku.");
+    return;
+  }
+  try {
+    await firebase.auth().createUserWithEmailAndPassword(email, pass);
+    alert("Registracija uspješna. Možeš se prijaviti.");
+  } catch (err) {
+    alert("Greška pri registraciji.");
+    console.error(err);
+  }
+}
+
+async function logoutUser() {
+  try {
+    await firebase.auth().signOut();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function initAuthListener() {
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      // Kad je user prijavljen:
+      showView("homeView");
+      document.getElementById("loginView").style.display = "none";
+      document.getElementById("logoutBtn").style.display = "inline-block";
+    } else {
+      // Kada NIJE prijavljen:
+      showView("loginView");
+      document.getElementById("logoutBtn").style.display = "none";
+    }
+  });
+}
+
+function initApp() {
+  // Pokreni Auth Listener
+  initAuthListener();
+
+  // Prikaži login ekran na startu
+  showView("loginView");
+}
+
+// Pokreni aplikaciju kada se stranica učita
+document.addEventListener("DOMContentLoaded", initApp);
     });
   }
 });
