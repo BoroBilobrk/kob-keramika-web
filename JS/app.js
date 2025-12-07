@@ -382,3 +382,8 @@ window.logoutUser = logoutUser;
 window.showView = showView;
   }
 });
+// Daj funkcije na globalni scope da ih HTML onclick može vidjeti
+window.loginUser = loginUser;
+window.registerUser = registerUser;
+window.logoutUser = logoutUser;
+window.showView = showView;
