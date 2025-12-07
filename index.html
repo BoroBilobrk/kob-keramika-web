@@ -605,9 +605,11 @@
         <!-- Gumbi za izračun -->
         <div class="card">
           <button id="btnCalcNow">🔍 Izračunaj sve</button>
+          <button id="btnAddRoomToBook" class="secondary">➕ Dodaj prostoriju u građevinsku knjigu</button>
           <button id="btnExportPdfAuto" class="secondary">📄 PDF – građevinska knjiga</button>
           <button id="btnExportCsvAuto" class="secondary">📑 CSV – Excel export</button>
           <button id="btnSaveCloud" class="secondary">☁️ Spremi u Cloud (podatci + PDF)</button>
+          <p id="gkRoomsInfo" style="margin-top:8px;font-size:11px;opacity:0.85;"></p>
         </div>
 
       </div>
@@ -933,6 +935,19 @@ document.getElementById('btnAddVert').onclick    = () => addOpening('vert');
 document.getElementById('btnAddCustom').onclick  = () => addOpening('custom');
 
 let lastCalc = null;
+let gkRooms = [];
+
+function updateGkRoomsInfo() {
+  const el = document.getElementById('gkRoomsInfo');
+  if (!el) return;
+  if (!gkRooms.length) {
+    el.textContent = "Građevinska knjiga trenutno sadrži 0 prostorija. Nakon mjerenja klikni "Dodaj prostoriju u građevinsku knjigu".";
+  } else {
+    const names = gkRooms.map((r, idx) => (r.meta && r.meta.roomName) ? r.meta.roomName : `Prostorija ${idx + 1}`);
+    el.textContent = `U građevinskoj knjizi: ${gkRooms.length} prostorija – ${names.join(", ")}.`;
+  }
+}
+
 
 // GLAVNI IZRAČUN
 function runAutoCalc(showHtml = true) {
@@ -1268,275 +1283,223 @@ document.getElementById('btnCalcNow').addEventListener('click', () => {
 });
 
 /* -------- PDF BUILDER (koristimo ga i za download i za Cloud) -------- */
-function buildPdfDocument(data) {
+
+function buildPdfDocument(rooms) {
   const { jsPDF } = window.jspdf || {};
   if (!jsPDF) {
     alert("PDF modul nije učitan.");
     return null;
   }
-  const doc = new jsPDF();
-  let y = 15;
 
-  function newPage() {
+  // prihvati i stari format (jedan objekt)
+  if (!Array.isArray(rooms)) {
+    rooms = [rooms];
+  }
+
+  const doc = new jsPDF("p", "mm", "a4");
+
+  // font – standardni helvetica podržava većinu hrvatskih znakova;
+  // po potrebi se može dodati vlastiti .ttf preko window.KOB_CUSTOM_PDF_FONT
+  if (doc.addFileToVFS && doc.addFont && window.KOB_CUSTOM_PDF_FONT && window.KOB_CUSTOM_PDF_FONT.data) {
+    try {
+      doc.addFileToVFS(window.KOB_CUSTOM_PDF_FONT.file, window.KOB_CUSTOM_PDF_FONT.data);
+      doc.addFont(window.KOB_CUSTOM_PDF_FONT.file, window.KOB_CUSTOM_PDF_FONT.name, "normal");
+      doc.setFont(window.KOB_CUSTOM_PDF_FONT.name, "normal");
+    } catch (e) {
+      doc.setFont("helvetica", "normal");
+    }
+  } else {
+    doc.setFont("helvetica", "normal");
+  }
+
+  let y = 14;
+  let page = 1;
+
+  function newPage(isContinuation = true) {
     doc.addPage();
-    y = 15;
+    page++;
+    y = 14;
+    if (isContinuation) {
+      doc.setFontSize(9);
+      doc.text("Nastavak s prethodne stranice", 105, y, { align: "center" });
+      y += 6;
+    }
   }
 
-  function w(text, extra = 0) {
-    const lines = doc.splitTextToSize(text, 190);
-    lines.forEach(line => {
-      if (y > 280) newPage();
-      doc.text(line, 10, y);
-      y += 5;
-    });
-    y += extra;
+  function ensureSpace(delta) {
+    if (y + delta > 280) {
+      newPage(true);
+    }
   }
 
-  // HEADER
-  doc.setFontSize(14);
-  doc.text("KOB-Keramika – Gradevinska knjiga (keramicarski radovi)", 10, y);
-  y += 8;
-
-  doc.setFontSize(11);
-  const m = data.meta;
+  const meta0 = (rooms[0] && rooms[0].meta) || {};
   const today = new Date();
   const dStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}.`;
 
-  w(`Gradiliste: ${m.siteName || "-"}`);
-  w(`Prostorija: ${m.roomName || "-"}`);
-  w(`Situacija: ${m.situationNo || "-"}`);
-  w(`Investitor: ${m.investorName || "-"}`);
-  w(`Format plocice: ${m.tileFormat.label}`);
-  w(`Datum izrade: ${dStr}`, 4);
-
-  const r = data.results;
-
-  function tableRow(c1, c2, c3) {
-    if (y > 280) newPage();
-    doc.text(String(c1), 10, y);
-    doc.text(String(c2), 80, y);
-    doc.text(String(c3), 140, y);
-    y += 5;
-  }
-
-  // 1. Dimenzije
+  // HEADER
   doc.setFontSize(12);
-  w("1. Osnovne dimenzije", 2);
+  doc.text("GRAĐEVINSKA KNJIGA", 105, y, { align: "center" });
+  y += 6;
+
   doc.setFontSize(11);
-  w(`Duljina (D): ${formatHr(data.D)} m`);
-  w(`Sirina (S): ${formatHr(data.S)} m`);
-  w(`Visina (V): ${formatHr(data.V)} m`, 4);
-
-  // 2. Pod
-  if (r.pod != null) {
-    doc.setFontSize(12);
-    w("2. Pod – oblaganje keramikom", 2);
-    doc.setFontSize(11);
-    tableRow("Opis", "Formula", "Rezultat");
-    tableRow("Povrsina poda", "D × S", `${formatHr(r.pod)} m2`);
-    y += 4;
-  }
-
-  // 3. Zidovi
-  if (r.zidoviNeto != null) {
-    doc.setFontSize(12);
-    w("3. Zidovi – oblaganje keramikom", 2);
-    doc.setFontSize(11);
-    tableRow("Opis", "Formula", "Rezultat");
-    tableRow("Bruto zidovi", "2(D×V)+2(S×V)", `${formatHr(r.zidoviBruto || 0)} m2`);
-    tableRow("Vrata (odbitak)", "povrsina vrata", `-${formatHr(r.odbitakVrata || 0)} m2`);
-    tableRow("Neto zidovi", "Bruto - vrata", `${formatHr(r.zidoviNeto)} m2`);
-    y += 4;
-  }
-
-  // 4. Hidro pod
-  if (r.hidroPod != null) {
-    doc.setFontSize(12);
-    w("4. Hidroizolacija – pod", 2);
-    doc.setFontSize(11);
-    tableRow("Hidro pod", "D × S", `${formatHr(r.hidroPod)} m2`);
-    y += 4;
-  }
-
-  // 5. Hidro tuš
-  if (r.hidroTus != null) {
-    doc.setFontSize(12);
-    w("5. Hidroizolacija – tus zona", 2);
-    doc.setFontSize(11);
-    const t = r.tus;
-    tableRow("Opseg tusa", "2d + s", `${formatHr(t.opseg)} m`);
-    tableRow("Povrsina tusa", "(2d + s) × v", `${formatHr(r.hidroTus)} m2`);
-    y += 4;
-  }
-
-  // 6. Hidro traka
-  if (r.hidroTraka != null) {
-    doc.setFontSize(12);
-    w("6. Hidro traka", 2);
-    doc.setFontSize(11);
-    const d = r.hidroTrakaData || { base:0, perimProzoriNise:0 };
-    tableRow("Osnovno", "2D + 2S + 2V", `${formatHr(d.base)} m`);
-    tableRow("Rub prozora i nisa", "∑ obod", `${formatHr(d.perimProzoriNise)} m`);
-    tableRow("Ukupno", "osnovno + rubovi", `${formatHr(r.hidroTraka)} m`);
-    y += 4;
-  }
-
-  // 7. Silikon
-  if (r.silikon != null) {
-    doc.setFontSize(12);
-    w("7. Silikon", 2);
-    doc.setFontSize(11);
-    const d = r.silikonData || { base:0, extraHeights:0, perimSilOpenings:0 };
-    tableRow("Osnovni opseg", "2D + 2S + 4V", `${formatHr(d.base)} m`);
-    tableRow("Dodatne visine", "∑ visine", `${formatHr(d.extraHeights)} m`);
-    tableRow("Rubovi otvora (bez vrata)", "∑ obod", `${formatHr(d.perimSilOpenings)} m`);
-    tableRow("Ukupno", "zbroj svega", `${formatHr(r.silikon)} m`);
-    y += 4;
-  }
-
-  // 8. Sokl
-  if (r.sokl != null) {
-    doc.setFontSize(12);
-    w("8. Sokl", 2);
-    doc.setFontSize(11);
-    const d = r.soklData || { osnovni:0, minus:0, plus:0 };
-    tableRow("Osnovni opseg", "2(D+S)", `${formatHr(d.osnovni)} m`);
-    tableRow("Odbijanje", "-", `-${formatHr(d.minus)} m`);
-    tableRow("Dodatno", "+", `${formatHr(d.plus)} m`);
-    tableRow("Ukupno sokl", "", `${formatHr(r.sokl)} m`);
-    y += 4;
-  }
-
-  // 9. Stepenice
-  if (r.stepenice != null) {
-    doc.setFontSize(12);
-    w("9. Stepenice", 2);
-    doc.setFontSize(11);
-    const st = r.stepenice;
-    tableRow("Sirina × kom", `${formatHr(st.sw)} × ${st.sc}`, `${formatHr(st.vrijednost)} ${st.mode === 'duzni' ? 'm' : 'kom'}`);
-    y += 4;
-  }
-
-  // 10. Lajsne
-  if (r.lajsne != null) {
-    doc.setFontSize(12);
-    w("10. Lajsne", 2);
-    doc.setFontSize(11);
-    const d = r.lajsneData || { baseL:0, perimLajsne:0 };
-    tableRow("Rucno lajsne", "", `${formatHr(d.baseL)} m`);
-    tableRow("Rubovi elemenata", "", `${formatHr(d.perimLajsne)} m`);
-    tableRow("Ukupno lajsne", "", `${formatHr(r.lajsne)} m`);
-    y += 4;
-  }
-
-  // 11. Gerung
-  if (r.gerung != null) {
-    doc.setFontSize(12);
-    w("11. Gerung", 2);
-    doc.setFontSize(11);
-    const d = r.gerungData || { baseG:0, perimGerung:0 };
-    tableRow("Rucno gerung", "", `${formatHr(d.baseG)} m`);
-    tableRow("Rubovi elemenata", "", `${formatHr(d.perimGerung)} m`);
-    tableRow("Ukupno gerung", "", `${formatHr(r.gerung)} m`);
-    y += 4;
-  }
-
-  // 12. Dodatne mjere
-  if (r.dm && r.dm.rows && r.dm.rows.length) {
-    doc.setFontSize(12);
-    w("12. Dodatne mjere", 2);
-    doc.setFontSize(11);
-    r.dm.rows.forEach((row, idx) => {
-      w(`${idx+1}. ${row.name || 'Mjera'}: ${row.sign}${formatHr(row.val)} ⇒ ${formatHr(row.signedVal)}`);
-    });
-    w(`Ukupno dodatne mjere: ${formatHr(r.dm.total)}`, 4);
-  }
-
-  // 13. Otvori
-  if (data.openings && data.openings.length) {
-    doc.setFontSize(12);
-    w("13. Otvori – specifikacija", 2);
-    doc.setFontSize(11);
-    data.openings.forEach(o => {
-      w(`- ${o.label}: tip=${o.type}, S=${formatHr(o.w)} m, V=${formatHr(o.h)} m, kom=${o.count}, povrsina=${formatHr(openingArea(o))} m2, obod=${formatHr(openingPerim(o))} m, odbija zidove=${o.subtract ? 'DA':'NE'}`);
-    });
-    y += 4;
-  }
-
-  // 14. Financijski
-  const p = data.prices || {};
-  const priceRows = [];
-  function addPriceRow(name, key) {
-    const item = p[key];
-    if (!item || !item.qty || !UNIT_PRICES[key]) return;
-    const qty = item.qty;
-    const unit = item.unit;
-    const pr  = UNIT_PRICES[key];
-    const total = qty * pr;
-    priceRows.push({ name, qty, unit, pr, total });
-  }
-
-  addPriceRow("Pod", "pod");
-  addPriceRow("Zidovi", "zidovi");
-  addPriceRow("Hidro pod", "hidroPod");
-  addPriceRow("Hidro tus", "hidroTus");
-  addPriceRow("Hidro traka", "hidroTraka");
-  addPriceRow("Silikon", "silikon");
-  addPriceRow("Sokl", "sokl");
-  addPriceRow("Stepenice (m)", "stepeniceM");
-  addPriceRow("Stepenice (kom)", "stepeniceKom");
-  addPriceRow("Lajsne", "lajsne");
-  addPriceRow("Gerung", "gerung");
-
-  if (priceRows.length) {
-    let ukupno = 0;
-    priceRows.forEach(rp => ukupno += rp.total);
-
-    if (y > 260) newPage();
-    doc.setFontSize(12);
-    w("14. Financijski obracun", 2);
-    doc.setFontSize(11);
-    if (y > 280) newPage();
-    doc.text("Stavka", 10, y);
-    doc.text("Kolicina", 70, y);
-    doc.text("Jed.", 100, y);
-    doc.text("Cijena", 120, y);
-    doc.text("Ukupno", 160, y);
+  if (meta0.siteName) {
+    doc.text(`Građevina: ${meta0.siteName}`, 10, y);
     y += 5;
+  }
+  doc.text(`Opis radova: ${meta0.workDescription || "Keramičarski radovi – postavljanje keramike"}`, 10, y);
+  y += 5;
+  if (meta0.investorName) {
+    doc.text(`Investitor: ${meta0.investorName}`, 10, y);
+    y += 5;
+  }
+  doc.text(`Datum: ${dStr}`, 10, y);
+  y += 8;
 
-    priceRows.forEach(rp => {
-      if (y > 280) newPage();
-      doc.text(rp.name, 10, y);
-      doc.text(formatHr(rp.qty), 70, y);
-      doc.text(rp.unit, 100, y);
-      doc.text(formatHr(rp.pr, 2), 120, y);
-      doc.text(formatHr(rp.total, 2), 160, y);
-      y += 5;
+  // TABLICA – HEADER
+  function drawTableHeader() {
+    doc.setFontSize(10);
+    const headerY = y;
+    const cols = [
+      { label: "Rb.", x: 10,  w: 10 },
+      { label: "Opis prostorije i mjera", x: 20,  w: 80 },
+      { label: "jed.mj.", x: 100, w: 15 },
+      { label: "Ugov.kol.", x: 115, w: 25 },
+      { label: "Jed.cijena", x: 140, w: 25 },
+      { label: "Izvršena količina", x: 165, w: 35 }
+    ];
+    cols.forEach(c => {
+      doc.rect(c.x, headerY - 4, c.w, 8);
+      doc.text(c.label, c.x + 1, headerY + 1);
     });
-    y += 4;
-    w(`UKUPNO: ${formatHr(ukupno, 2)} EUR`, 4);
+    y += 8;
   }
 
-  if (y > 270) newPage();
+  drawTableHeader();
+
+  let rb = 1;
+  let ukupno = 0;
+
+  rooms.forEach((r, idx) => {
+    if (!r) return;
+    const m = r.meta || {};
+    const res = r.results || {};
+    const prices = r.prices || {};
+
+    const roomLabel = m.roomName || `Prostorija ${idx + 1}`;
+    const workDesc = m.workDescription || "postavljanje keramike pod";
+
+    // količine
+    const qty = (typeof res.pod === "number" && res.pod) ? res.pod :
+                (typeof res.zidoviNeto === "number" && res.zidoviNeto) ? res.zidoviNeto :
+                (typeof m.ugovorenaKolicina === "number" && m.ugovorenaKolicina) ? m.ugovorenaKolicina : 0;
+    const unit = m.jedinicaMjere || "m2";
+    const unitPrice = (typeof prices.pod === "number" && prices.pod) ? prices.pod :
+                      (typeof prices.zidovi === "number" && prices.zidovi) ? prices.zidovi :
+                      (typeof prices.ukupno === "number" && prices.ukupno) ? prices.ukupno : 0;
+
+    ukupno += qty * unitPrice;
+
+    // OPIS MJERA – stvarne mjere, bez formula
+    const lines = [];
+    const dims = [];
+    if (typeof r.D === "number" && r.D) dims.push(`Dužina: ${formatHr(r.D)} m`);
+    if (typeof r.S === "number" && r.S) dims.push(`Širina: ${formatHr(r.S)} m`);
+    if (typeof r.V === "number" && r.V) dims.push(`Visina: ${formatHr(r.V)} m`);
+    if (dims.length) lines.push(dims.join("   "));
+
+    if (Array.isArray(r.openings) && r.openings.length) {
+      const otv = r.openings.map(o => {
+        const ozn = o.label || o.type || "otvor";
+        const wcm = o.w || o.width || 0;
+        const hcm = o.h || o.height || 0;
+        const w = wcm / 100;
+        const h = hcm / 100;
+        return `${ozn}: ${formatHr(w, 2)} × ${formatHr(h, 2)} m`;
+      }).join("; ");
+      lines.push(`Otvori: ${otv}`);
+    }
+
+    if (res.dmSoklTotal) {
+      lines.push(`Sokl: ${formatHr(res.dmSoklTotal)} m`);
+    }
+    if (res.dmDodatneMjereTotal) {
+      lines.push(`Dodatne mjere: ${formatHr(res.dmDodatneMjereTotal)} m`);
+    }
+
+    const opisNaslov = `${roomLabel} – ${workDesc}`;
+    const allText = [opisNaslov, ...lines];
+    const wrapped = [];
+    allText.forEach(t => {
+      const arr = doc.splitTextToSize(t, 78);
+      wrapped.push(...arr);
+    });
+    const rowHeight = 4 + wrapped.length * 4;
+
+    ensureSpace(rowHeight + 4);
+
+    // okviri ćelija
+    doc.rect(10, y - 3, 10, rowHeight);
+    doc.rect(20, y - 3, 80, rowHeight);
+    doc.rect(100, y - 3, 15, rowHeight);
+    doc.rect(115, y - 3, 25, rowHeight);
+    doc.rect(140, y - 3, 25, rowHeight);
+    doc.rect(165, y - 3, 35, rowHeight);
+
+    doc.setFontSize(10);
+    doc.text(String(rb), 12, y);
+    doc.text(wrapped, 22, y);
+    doc.text(unit, 102, y);
+    if (qty) doc.text(formatHr(qty, 2), 117, y);
+    if (unitPrice) doc.text(formatHr(unitPrice, 2), 142, y);
+    if (qty) doc.text(formatHr(qty, 2), 167, y); // izvršena količina = izmjerena količina
+
+    y += rowHeight + 1;
+    rb++;
+  });
+
+  // UKUPNO
+  ensureSpace(12);
   doc.setFontSize(11);
-  w("Napomena: izracun je informativan – konacna faktura moze imati dodatne stavke (priprema podloge, prijevoz, materijal itd.).");
+  doc.text(`UKUPNO: ${formatHr(ukupno, 2)} EUR`, 200 - 10, y, { align: "right" });
 
   return doc;
 }
+/* ---------------- GRAĐEVINSKA KNJIGA – PROSTORIJE ---------------- */
+document.getElementById('btnAddRoomToBook').addEventListener('click', () => {
+  const data = runAutoCalc(true);
+  if (!data) return;
+  gkRooms.push(data);
+  updateGkRoomsInfo();
+  alert("Prostorija je dodana u građevinsku knjigu. Pri izradi PDF-a sve dodane prostorije ulaze u građevinsku knjigu.");
+});
+
+// inicijalni tekst
+updateGkRoomsInfo();
 
 /* ---------------- PDF DOWNLOAD ---------------- */
 document.getElementById('btnExportPdfAuto').addEventListener('click', () => {
   const data = runAutoCalc(true);
   if (!data) return;
-  const doc = buildPdfDocument(data);
+
+  // ako je dodano više prostorija u građevinsku knjigu, uzmi sve + zadnju izmjerenu
+  const rooms = gkRooms.length ? [...gkRooms, data] : [data];
+
+  const doc = buildPdfDocument(rooms);
   if (!doc) return;
-  const m = data.meta;
+  const m = data.meta || {};
   const today = new Date();
   const dStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   const safeSite = (m.siteName || "gradiliste").replace(/\s+/g,'_');
-  const safeRoom = (m.roomName || "prostorija").replace(/\s+/g,'_');
+  let roomLabel = "";
+  if (rooms.length === 1) {
+    roomLabel = m.roomName || "prostorija";
+  } else {
+    roomLabel = "vise_prostorija";
+  }
+  const safeRoom = roomLabel.replace(/\s+/g,'_');
   doc.save(`GK_${safeSite}_${safeRoom}_${dStr}.pdf`);
 });
+
 
 /* ---------------- CSV EXPORT ---------------- */
 document.getElementById('btnExportCsvAuto').addEventListener('click', () => {
@@ -1602,6 +1565,9 @@ document.getElementById('btnSaveCloud').addEventListener('click', async () => {
   const data = runAutoCalc(true);
   if (!data) return;
 
+  // pripremi sve prostorije koje ulaze u građevinsku knjigu
+  const rooms = gkRooms.length ? [...gkRooms, data] : [data];
+
   try {
     // prvo spremimo dokument u Firestore (bez pdfURL)
     const docRef = await db.collection('obracuni').add({
@@ -1614,8 +1580,35 @@ document.getElementById('btnSaveCloud').addEventListener('click', async () => {
       V: data.V,
       openings: data.openings,
       results: data.results,
-      prices: data.prices || {}
+      prices: data.prices || {},
+      roomsAll: rooms.map(r => ({
+        meta: r.meta,
+        D: r.D,
+        S: r.S,
+        V: r.V,
+        openings: r.openings,
+        results: r.results,
+        prices: r.prices || {}
+      }))
     });
+
+    // generiraj PDF i uploadaj u Storage
+    const pdfDoc = buildPdfDocument(rooms);
+    const blob = pdfDoc.output('blob');
+    const filePath = `pdfs/${docRef.id}.pdf`;
+    const storageRef = storage.ref().child(filePath);
+    await storageRef.put(blob);
+    const pdfURL = await storageRef.getDownloadURL();
+
+    await docRef.update({ pdfURL, pdfPath: filePath });
+
+    alert("Obračun i PDF spremljeni u Cloud.");
+  } catch (e) {
+    console.error(e);
+    alert("Greška pri spremanju u Cloud.");
+  }
+});
+
 
     // generiraj PDF i uploadaj u Storage
     const pdfDoc = buildPdfDocument(data);
