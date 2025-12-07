@@ -481,3 +481,7 @@ window.exportCsv = exportCsv;
 window.situationRooms = situationRooms;
 window.situationItems = situationItems;
 window.getLastSituation = () => lastSituation;
+window.startAutoCalc = startAutoCalc;
+window.calculateRoom = calculateRoom;
+window.addRoom = addRoom;
+window.removeRoom = removeRoom;
