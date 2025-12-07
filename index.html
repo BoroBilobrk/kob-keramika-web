@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8" />
+  <title>KOB-Keramika – Pro obračun</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- PWA manifest (ako ga koristiš) -->
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <!-- jsPDF za PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #050505;
+      --card: #121212;
+      --border: #333;
+      --accent: #ffffff;
+      --accent-soft: #888;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI";
+      background: radial-gradient(circle at top, #202020 0, #000 55%);
+      color: #fff;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      background: rgba(0,0,0,0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    header .left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header img.logo {
+      height: 42px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    main {
+      padding: 12px;
+      max-width: 1100px;
+      margin: 0 auto 40px auto;
+    }
+
+    .card {
+      border-radius: 16px;
+      padding: 14px 12px;
+      margin-bottom: 12px;
+      background: radial-gradient(circle at top left, #1c1c1c, #101010);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    h2 { margin-top: 0; }
+
+    label {
+      font-size: 13px;
+      display: block;
+      margin-top: 8px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 3px;
+      background: #000;
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 12px;
+      background: #fff;
+      color: #000;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    button.secondary {
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .btn-small {
+      width: auto;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 999px;
+      margin-top: 4px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      font-size: 13px;
+    }
+
+    .checkbox-row input {
+      width: auto;
+      margin-top: 0;
+    }
+
+    .section-title {
+      margin-top: 4px;
+      font-size: 15px;
+      font-weight: 700;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .layout-split {
+      display: block;
+    }
+
+    @media (min-width: 900px) {
+      .layout-split {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 12px;
+      }
+    }
+
+    .openings-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+      margin-bottom: 8px;
+    }
+
+    .opening-card {
+      border-radius: 12px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      background: #141414;
+      border: 1px solid #333;
+      font-size: 12px;
+    }
+
+    .opening-title {
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .opening-meta {
+      opacity: 0.85;
+    }
+
+    .opening-actions {
+      margin-top: 6px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #444;
+      margin-right: 4px;
+      margin-top: 2px;
+    }
+
+    #calcOutput {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .dm-row {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 0.7fr auto;
+      gap: 6px;
+      margin-top: 6px;
+      align-items: center;
+    }
+
+    .dm-row button {
+      width: auto;
+      padding: 4px 8px;
+      font-size: 11px;
+      margin-top: 0;
+    }
+
+    .height-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+      margin-top: 6px;
+      align-items: center;
+    }
+
+    .height-row button {
+      width: auto;
+      padding: 4px 8px;
+      font-size: 11px;
+      margin-top: 0;
+    }
+
+    .archive-list-item {
+      border-bottom: 1px solid #333;
+      padding: 8px 0;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .archive-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #444;
+      font-size: 11px;
+      margin-right: 4px;
+    }
+
+    table.basic {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    table.basic th, table.basic td {
+      border-bottom: 1px solid #333;
+      padding: 4px;
+      text-align: left;
+    }
+
+    table.basic th:nth-child(2),
+    table.basic td:nth-child(2) {
+      text-align: right;
+    }
+
+    .centered {
+      max-width: 420px;
+      margin: 30px auto;
+    }
+
+    .fileRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #333;
+      font-size: 13px;
+    }
+/* HOME HERO */
+
+    .home-hero {
+      text-align: center;
+      padding: 32px 16px 20px;
+    }
+
+    .home-hero-logo {
+      width: 210px;
+      max-width: 70%;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.8);
+      margin-bottom: 18px;
+    }
+
+    .home-hero-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .home-hero-subtitle {
+      font-size: 13px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .home-menu-card {
+      border-radius: 18px;
+      padding: 16px 14px 18px;
+      margin: 0 8px 20px;
+      background: radial-gradient(circle at top left,#1a1a1a,#0b0b0b);
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.7);
+    }
+
+    .home-menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .home-menu-buttons button {
+      margin-top: 0;
+    }
+
+    .home-menu-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.85;
+      margin: 14px 0 6px;
+    }
+.extra-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto auto;
+      gap: 6px;
+      margin-top: 6px;
+      align-items: center;
+      font-size: 12px;
+    }
+    .extra-row button {
+      width: auto;
+      padding: 4px 6px;
+      font-size: 11px;
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="left">
+    <img src="logo.png" class="logo" alt="Logo KOB-Keramika">
+    <div>
+      <div style="font-weight:bold;">KOB-Keramika</div>
+      <div style="font-size:12px;opacity:0.8">Pro obračun keramičarskih radova</div>
+    </div>
+  </div>
+  <div style="font-size:11px;text-align:right">
+    <div id="userBadge">Nije prijavljen</div>
+    <button style="width:auto;padding:4px 8px;font-size:11px;margin-top:4px"
+            onclick="logoutUser()">Odjava</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- LOGIN VIEW -->
+  <section id="loginView" class="view active">
+    <div class="card centered">
+      <h2>Prijava u KOB-Keramika</h2>
+      <label>E-mail
+        <input type="email" id="loginEmail" placeholder="you@example.com">
+      </label>
+      <label>Lozinka
+        <input type="password" id="loginPass" placeholder="******">
+      </label>
+      <button onclick="loginUser()">🔐 Prijava</button>
+      <button onclick="registerUser()" class="secondary">➕ Registracija</button>
+      <p style="font-size:11px;opacity:0.7;margin-top:6px;">
+        Pristup je interni. Svaki korisnik ima svoj cjenik i svoje Cloud datoteke.
+      </p>
+    </div>
+  </section>
+<!-- HOME VIEW -->
+  <section id="homeView" class="view">
+
+    <div class="home-hero">
+      <img src="logo.png" alt="KOB-Keramika logo" class="home-hero-logo">
+      <div class="home-hero-title">KOB-KERAMIKA</div>
+      <div class="home-hero-subtitle">Interni alat za obračun keramičarskih radova</div>
+    </div>
+
+    <div class="home-menu-card">
+      <div class="home-menu-buttons">
+        <!-- GRAĐEVINSKA KNJIGA / MJERE -->
+        <div class="home-menu-section">
+          <div class="home-menu-section-title">Obračun keramičarskih radova</div>
+          <button id="btnOpenAutoCalc">📐 Automatski obračun prostorije</button>
+          <button id="btnOpenMeasures">✏️ Ručni unos mjera (u pripremi)</button>
+          <button id="btnOpenBook">📚 Građevinska knjiga (PDF)</button>
+        </div>
+
+        <!-- TROŠKOVI PO RADNIKU – ODVOJENO OD KNJIGE -->
+        <div class="home-menu-section">
+          <div class="home-menu-section-title">Financije</div>
+          <button id="btnOpenCosts">💰 Troškovi po radniku</button>
+          <button id="btnOpenPrices">💶 Cjenik</button>
+        </div>
+
+        <!-- CLOUD / ARHIVA / ODJAVA -->
+        <div class="home-menu-section">
+          <div class="home-menu-section-title">Cloud i korisnici</div>
+          <button id="btnOpenArchive">📂 Arhiva obračuna (Cloud)</button>
+          <button id="btnLogout" class="secondary">🚪 Odjava</button>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- BRZI IZRAČUN PO KVADRATURI -->
+  <section id="quickCalcView" class="view">
+    <div class="card">
+      <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+      <h2>📏 Brzi izračun po kvadraturi</h2>
+      <p style="font-size:13px;opacity:0.8;">
+        Jednostavan izračun iznosa na temelju kvadrature ili dužnih metara, nevezano za građevinsku knjigu.
+      </p>
+      <label>Opis radova
+        <input id="qcOpis" placeholder="npr. 60x120 zid – kupaonica 1">
+      </label>
+      <div class="two-col">
+        <label>Količina
+          <input id="qcKolicina" placeholder="npr. 12,50">
+        </label>
+        <label>Jedinica (m2, m, kom)
+          <input id="qcJedinica" placeholder="m2">
+        </label>
+      </div>
+      <label>Jedinična cijena (€)
+        <input id="qcCijena" placeholder="npr. 18,50">
+      </label>
+      <button onclick="runQuickCalc()">Izračunaj</button>
+      <div id="qcRezultat" style="margin-top:10px;font-size:13px;"></div>
+    </div>
+  </section>
+
+  <!-- AUTOMATSKI OBRAČUN PROSTORIJE -->
+  <section id="autoCalcView" class="view">
+
+    <div class="card">
+      <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+      <h2>📐 Automatski obračun prostorije</h2>
+      <p style="font-size:13px;opacity:0.8;">
+        Dimenzije prostorije + otvori → automatski obračun poda, zidova, hidroizolacije, traka, silikona, sokla,
+        stepenica, lajsni, gerunga i dodatnih mjera. Na kraju se generira profesionalna građevinska knjiga (PDF),
+        CSV za Excel i sve se može spremiti u Cloud.
+      </p>
+    </div>
+
+    <!-- PODACI O GRADILIŠTU -->
+    <div class="card">
+      <div class="section-title">🏗 Podaci o gradilištu</div>
+      <label>Gradilište
+        <input type="text" id="siteName" placeholder="npr. Stan Novak – Maksimir">
+      </label>
+      <label>Prostorija
+        <input type="text" id="roomName" placeholder="npr. Kupaonica 1">
+      </label>
+      <div class="two-col">
+        <label>Situcija / redni broj
+          <input type="text" id="situationNo" placeholder="npr. Situacija 1">
+        </label>
+        <label>Investitor
+          <input type="text" id="investorName" placeholder="npr. Novak Ivan">
+        </label>
+      </div>
+      <label>Napomena (opcionalno)
+        <textarea id="gkNapomena" placeholder="npr. Lijepljenje na ravnu podlogu, fuga 2mm, bijeli silikon..."></textarea>
+      </label>
+    </div>
+
+    <!-- FORMAT PLOČICE -->
+    <div class="card">
+      <div class="section-title">🧱 Format pločice (obavezno)</div>
+      <label>Odaberi format
+        <select id="tileFormatSelect">
+          <option value="">-- Odaberi format --</option>
+          <!-- mali -->
+          <option value="10x10">10 × 10 cm</option>
+          <option value="15x15">15 × 15 cm</option>
+          <option value="20x20">20 × 20 cm</option>
+          <option value="20x25">20 × 25 cm</option>
+          <option value="20x30">20 × 30 cm</option>
+          <option value="25x33">25 × 33 cm</option>
+          <option value="25x40">25 × 40 cm</option>
+          <option value="25x50">25 × 50 cm</option>
+          <!-- srednji -->
+          <option value="30x30">30 × 30 cm</option>
+          <option value="30x45">30 × 45 cm</option>
+          <option value="30x60">30 × 60 cm</option>
+          <option value="40x40">40 × 40 cm</option>
+          <option value="45x45">45 × 45 cm</option>
+          <option value="50x50">50 × 50 cm</option>
+          <option value="50x100">50 × 100 cm</option>
+          <!-- veliki -->
+          <option value="60x60">60 × 60 cm</option>
+          <option value="60x120">60 × 120 cm</option>
+          <option value="75x75">75 × 75 cm</option>
+          <option value="80x80">80 × 80 cm</option>
+          <option value="90x90">90 × 90 cm</option>
+          <option value="100x100">100 × 100 cm</option>
+          <!-- XXL -->
+          <option value="100x300">100 × 300 cm</option>
+          <option value="120x240">120 × 240 cm</option>
+          <option value="120x260">120 × 260 cm</option>
+          <option value="120x270">120 × 270 cm</option>
+          <option value="120x280">120 × 280 cm</option>
+          <option value="120x300">120 × 300 cm</option>
+          <option value="160x320">160 × 320 cm</option>
+          <option value="162x324">162 × 324 cm</option>
+          <!-- ručni -->
+          <option value="custom">Ručni unos</option>
+        </select>
+      </label>
+      <div id="tileCustomFields" style="display:none;">
+        <div class="two-col">
+          <label>Širina pločice (cm)
+            <input type="text" id="tileW" placeholder="npr. 60">
+          </label>
+          <label>Duljina pločice (cm)
+            <input type="text" id="tileH" placeholder="npr. 120">
+          </label>
+        </div>
+      </div>
+      <p style="font-size:11px;opacity:0.7;margin-top:4px;">
+        Bez odabranog formata pločice obračun se neće pokrenuti.
+      </p>
+    </div>
+
+    <div class="layout-split">
+
+      <!-- LIJEVA STRANA – UNOS -->
+      <div>
+
+        <div class="card">
+          <div class="section-title">📏 Osnovne dimenzije prostorije</div>
+
+          <label>Duljina D (m)
+            <input type="text" id="dimD" placeholder="npr. 4,20">
+          </label>
+
+          <label>Širina Š (m)
+            <input type="text" id="dimS" placeholder="npr. 3,10">
+          </label>
+
+          <label>Visina V (m)
+            <input type="text" id="dimV" placeholder="npr. 2,65">
+          </label>
+        </div>
+<div class="card">
+  <div class="section-title">➕ Dodatne dimenzije prostorije</div>
+  <p style="font-size:12px;opacity:0.8;">
+    Ovdje upisuješ dodatne dijelove prostorije (npr. uvučeni dio, proširenje, niša u podu…).
+    Svaki red ima dodatnu dužinu (d), širinu (š) i visinu (v).
+    Primjenjuje se prema pravilima:
+    <br>• Pod: ± (š + d)
+    <br>• Zidovi: + (2×d + š) × v
+    <br>• Hidro pod: isto kao pod
+    <br>• Hidro traka: + (2×d + š)
+    <br>• Silikon: + (2×d + š) + 2×v
+  </p>
+
+  <div id="extraDimsContainer"></div>
+
+  <button type="button" class="btn-small secondary" id="btnAddExtraDim">
+    ➕ Dodaj dodatne dimenzije
+  </button>
+</div>
+        <div class="card">
+          <div class="section-title">☑ Što se računa?</div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkPod">
+            <label for="chkPod">Pod (m²)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkZidovi">
+            <label for="chkZidovi">Zidovi (bruto – vrata se odbijaju)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkHidroPod">
+            <label for="chkHidroPod">Hidroizolacija – pod</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkHidroTus">
+            <label for="chkHidroTus">Hidroizolacija – tuš zona</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkHidroTraka">
+            <label for="chkHidroTraka">Hidro traka (pod + prozor + niša)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkSilikon">
+            <label for="chkSilikon">Silikon (bez vrata)</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkSokl">
+            <label for="chkSokl">Sokl</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkStepenice">
+            <label for="chkStepenice">Stepenice</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkLajsne">
+            <label for="chkLajsne">Lajsne</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkGerung">
+            <label for="chkGerung">Gerung</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="chkDodatne">
+            <label for="chkDodatne">Dodatne mjere (+/−)</label>
+          </div>
+        </div>
+
+        <!-- Tuš zona -->
+        <div class="card" id="cardTus" style="display:none;">
+          <div class="section-title">🚿 Tuš zona</div>
+          <div class="two-col">
+            <label>Duljina tuša d (m)
+              <input type="text" id="tusD" placeholder="npr. 0,90">
+            </label>
+            <label>Širina tuša š (m)
+              <input type="text" id="tusS" placeholder="npr. 1,45">
+            </label>
+          </div>
+          <label>Visina tuša v (m) – po defaultu glavna visina
+            <input type="text" id="tusV" placeholder="prazno = visina prostorije">
+          </label>
+          <p style="font-size:11px;opacity:0.7;margin-top:4px;">
+            Hidro tuš = (2×d + š) × v
+          </p>
+        </div>
+
+        <!-- Silikon – višestruke visine -->
+        <div class="card" id="cardSilikon" style="display:none;">
+          <div class="section-title">🧼 Silikon</div>
+          <p style="font-size:12px;opacity:0.8;">
+            Formula: (2×D + 2×Š + 4×V) + ∑(dodatne visine) + rubovi svih otvora osim vrata.
+          </p>
+          <div id="silHeightsContainer"></div>
+          <button type="button" class="btn-small secondary" id="btnAddHeight">➕ Dodaj visinu</button>
+        </div>
+
+        <!-- Sokl -->
+        <div class="card" id="cardSokl" style="display:none;">
+          <div class="section-title">📏 Sokl – korekcije</div>
+          <label>Odbijanje sokla (m)
+            <input type="text" id="soklMinus" placeholder="0">
+          </label>
+          <label>Dodatno sokla (m)
+            <input type="text" id="soklPlus" placeholder="0">
+          </label>
+          <p style="font-size:11px;opacity:0.7;margin-top:4px;">
+            Sokl = 2×(D+Š) − odbijanje + dodatno
+          </p>
+        </div>
+
+        <!-- Stepenice -->
+        <div class="card" id="cardStepenice" style="display:none;">
+          <div class="section-title">🪜 Stepenice</div>
+          <label>Širina stepenice (m)
+            <input type="text" id="stepWidth" placeholder="npr. 1,00">
+          </label>
+          <label>Broj stepenica (kom)
+            <input type="text" id="stepCount" placeholder="npr. 5">
+          </label>
+          <label>Vrsta obračuna
+            <select id="stepMode">
+              <option value="duzni">Dužni metri (Š × kom)</option>
+              <option value="komada">Broj komada</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Lajsne -->
+        <div class="card" id="cardLajsne" style="display:none;">
+          <div class="section-title">🔹 Lajsne</div>
+          <p style="font-size:12px;opacity:0.8;">
+            Ukupno lajsni = ručni metri + rubovi označenih elemenata.
+          </p>
+          <label>Lajsna 1 (m)
+            <input type="text" id="l1" placeholder="0">
+          </label>
+          <label>Lajsna 2 (m)
+            <input type="text" id="l2" placeholder="0">
+          </label>
+          <label>Lajsna 3 (m)
+            <input type="text" id="l3" placeholder="0">
+          </label>
+          <div class="section-title">Lajsne na elementima</div>
+          <div class="checkbox-row"><input type="checkbox" id="lProzor"><label for="lProzor">Prozori</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="lNisa"><label for="lNisa">Niše</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="lGeberit"><label for="lGeberit">Geberit</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="lVert"><label for="lVert">Vertikale</label></div>
+        </div>
+
+        <!-- Gerung -->
+        <div class="card" id="cardGerung" style="display:none;">
+          <div class="section-title">🔪 Gerung</div>
+          <p style="font-size:12px;opacity:0.8;">
+            Ukupno gerunga = ručni metri + rubovi označenih elemenata.
+          </p>
+          <label>Gerung 1 (m)
+            <input type="text" id="g1" placeholder="0">
+          </label>
+          <label>Gerung 2 (m)
+            <input type="text" id="g2" placeholder="0">
+          </label>
+          <label>Gerung 3 (m)
+            <input type="text" id="g3" placeholder="0">
+          </label>
+          <div class="section-title">Gerung na elementima</div>
+          <div class="checkbox-row"><input type="checkbox" id="gProzor"><label for="gProzor">Prozori</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="gNisa"><label for="gNisa">Niše</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="gGeberit"><label for="gGeberit">Geberit</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="gVert"><label for="gVert">Vertikale</label></div>
+        </div>
+
+        <!-- Dodatne mjere -->
+        <div class="card" id="cardDodatne" style="display:none;">
+          <div class="section-title">➕➖ Dodatne mjere</div>
+          <p style="font-size:12px;opacity:0.8;">
+            Možeš dodati do 10 polja kao + ili − mjera. Ukupno se zatim dodaje/oduzima od označenih kategorija.
+          </p>
+          <div id="dmContainer"></div>
+          <button type="button" class="btn-small secondary" id="btnAddDmRow">➕ Dodaj mjeru</button>
+
+          <div class="section-title">Gdje se primjenjuje?</div>
+          <div class="checkbox-row"><input type="checkbox" id="dmPod"><label for="dmPod">Pod</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmZidovi"><label for="dmZidovi">Zidovi</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmHidro"><label for="dmHidro">Hidro pod</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmSil"><label for="dmSil">Silikon</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmTraka"><label for="dmTraka">Hidro traka</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="dmSokl"><label for="dmSokl">Sokl</label></div>
+        </div>
+// =========================
+//  DODATNE DIMENZIJE PROSTORIJE
+// =========================
+
+const extraDimsContainer = document.getElementById("extraDimsContainer");
+const btnAddExtraDim = document.getElementById("btnAddExtraDim");
+
+function addExtraDimRow(dVal = "", sVal = "", vVal = "", signVal = "+") {
+  const row = document.createElement("div");
+  row.className = "extra-row";
+  row.innerHTML = `
+    <input type="text" class="exD" placeholder="d (m)" value="${dVal}">
+    <input type="text" class="exS" placeholder="š (m)" value="${sVal}">
+    <input type="text" class="exV" placeholder="v (m)" value="${vVal}">
+    <select class="exSign">
+      <option value="+" ${signVal==="+"?"selected":""}>+</option>
+      <option value="-" ${signVal==="-"?"selected":""}>−</option>
+    </select>
+    <button type="button" class="secondary">✕</button>
+  `;
+  const btn = row.querySelector("button");
+  btn.onclick = () => row.remove();
+  extraDimsContainer.appendChild(row);
+}
+
+if (btnAddExtraDim) {
+  btnAddExtraDim.addEventListener("click", () => {
+    addExtraDimRow();
+  });
+}
+        <!-- Gumbi za izračun -->
+        <div class="card">
+          <button id="btnCalcNow">🔍 Izračunaj sve</button>
+          <button id="btnExportPdfAuto" class="secondary">📄 PDF – građevinska knjiga</button>
+          <button id="btnExportCsvAuto" class="secondary">📑 CSV – Excel export</button>
+          <button id="btnSaveCloud" class="secondary">☁️ Spremi obračun + PDF u Cloud</button>
+        </div>
+
+      </div>
+
+      <!-- DESNA STRANA – OTVORI + REZULTATI -->
+      <div>
+
+        <!-- Otvori kao kartice -->
+        <div class="card">
+          <div class="section-title">🧱 Otvori (vrata, prozori, niše, geberit, vertikale)</div>
+          <p style="font-size:12px;opacity:0.8;">
+            Vrata se odbijaju od zidova ali ne ulaze u silikon. Prozori i niše ulaze u hidro traku i silikon.
+            Geberit i vertikale služe za lajsne i gerung.
+          </p>
+          <div class="openings-header">
+            <button id="btnAddDoor"     class="btn-small">➕ Vrata</button>
+            <button id="btnAddWindow"   class="btn-small">➕ Prozor</button>
+            <button id="btnAddNiche"    class="btn-small">➕ Niša</button>
+            <button id="btnAddGeberit"  class="btn-small">➕ Geberit</button>
+            <button id="btnAddVert"     class="btn-small">➕ Vertikala</button>
+            <button id="btnAddCustom"   class="btn-small">➕ Custom otvor</button>
+          </div>
+          <div id="openingsList"></div>
+        </div>
+
+        <!-- Rezultati -->
+        <div class="card" id="calcResult" style="display:none;">
+          <h3>📊 Rezultati obračuna</h3>
+          <div id="calcOutput"></div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CJENIK -->
+  <section id="pricesView" class="view">
+    <div class="card">
+      <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+      <h2>💶 Cjenik keramičarskih radova</h2>
+      <p style="font-size:13px;opacity:0.8;">
+        Ovdje unosiš cijene po stavkama. Preporučeni nazivi (ako želiš da se automatski povuku u građevinsku knjigu):
+        <br>Pod, Zidovi, Hidro pod, Hidro tuš, Hidro traka, Silikon, Sokl, Stepenice m, Stepenice kom, Lajsne, Gerung.
+      </p>
+    </div>
+
+    <div class="card">
+      <label>Naziv stavke
+        <input id="cjenikNaziv" placeholder="npr. Pod, Zidovi, Hidro pod...">
+      </label>
+      <label>Cijena (€ po jedinici)
+        <input id="cjenikCijena" placeholder="npr. 18,50">
+      </label>
+      <button onclick="addPriceItem()">➕ Dodaj u cjenik</button>
+      <button onclick="savePricelistToCloud()" class="secondary">☁ Spremi cjenik u Cloud</button>
+    </div>
+
+    <div class="card">
+      <h3>Pregled cjenika</h3>
+      <table class="basic">
+        <thead>
+          <tr>
+            <th>Naziv stavke</th>
+            <th>Cijena (€)</th>
+          </tr>
+        </thead>
+        <tbody id="cjenikBody">
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ARHIVA OBRAČUNA (FIRESTORE + PDF URL) -->
+  <section id="archiveView" class="view">
+    <div class="card">
+      <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+      <h2>📂 Arhiva obračuna (Cloud)</h2>
+      <p style="font-size:12px;opacity:0.8;">
+        Popis svih spremljenih obračuna. Svi prijavljeni korisnici vide sve zapise.
+      </p>
+    </div>
+    <div class="card">
+      <div id="archiveList"></div>
+    </div>
+  </section>
+
+  <!-- CLOUD DATOTEKE (STORAGE LIST) -->
+  <section id="cloudView" class="view">
+    <div class="card">
+      <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+      <h2>☁ Cloud datoteke</h2>
+      <p style="font-size:12px;opacity:0.8;">
+        Datoteke (PDF/CSV) spremljene u Storage za trenutnog korisnika.
+      </p>
+      <button onclick="renderCloudFiles()" class="secondary" style="width:auto;">🔄 Osvježi</button>
+    </div>
+    <div class="card" id="cloudFileList">
+      Učitavanje...
+    </div>
+  </section>
+
+</main>
+
+
+
+
+  <!-- Aplikacijski skripte -->
+  <script src="./JS/firebase.js"></script>
+  <script src="./JS/calc.js"></script>
+  <script src="./JS/app.js"></script>
+  <script src="./JS/cloud.js"></script>
+  <script src="./JS/ocr.js"></script>
+
+</body>
+</html>
