@@ -375,11 +375,6 @@ function initApp() {
 // Pokreni aplikaciju kada se stranica učita
 document.addEventListener("DOMContentLoaded", initApp);
     });
-    // GLOBAL EXPORTS FOR HTML BUTTONS
-window.loginUser = loginUser;
-window.registerUser = registerUser;
-window.logoutUser = logoutUser;
-window.showView = showView;
   }
 });
 // Daj funkcije na globalni scope da ih HTML onclick može vidjeti
