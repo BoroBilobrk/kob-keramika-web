@@ -374,9 +374,7 @@ function initApp() {
 
 // Pokreni aplikaciju kada se stranica učita
 document.addEventListener("DOMContentLoaded", initApp);
-    });
-  }
-});
+    }
 // Daj funkcije na globalni scope da ih HTML onclick može vidjeti
 window.loginUser = loginUser;
 window.registerUser = registerUser;
