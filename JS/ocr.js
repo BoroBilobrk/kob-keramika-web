@@ -1,1 +1,1 @@
-// Placeholder ocr
+window.startOCR = startOCR;// Placeholder ocr
