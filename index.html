@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <title>KOB-Keramika – Pro obračun prostorije</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      background:#111;
+      color:#eee;
+      font-family: Arial, sans-serif;
+      margin:0;
+      padding:0;
+    }
+    header {
+      background:#222;
+      padding:10px 14px;
+      border-bottom:1px solid #333;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    header .left {
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .logo {
+      width:42px;
+      height:auto;
+    }
+    main {
+      padding:14px;
+      max-width:1100px;
+      margin:auto;
+    }
+    .view {
+      display:none;
+    }
+    .card {
+      background:#1b1b1b;
+      border:1px solid #333;
+      border-radius:6px;
+      padding:12px;
+      margin-bottom:12px;
+    }
+    button {
+      background:#444;
+      color:#eee;
+      border:none;
+      padding:10px;
+      width:100%;
+      border-radius:6px;
+      margin-top:10px;
+      font-size:14px;
+    }
+    button.secondary {
+      background:#333;
+      border:1px solid #555;
+    }
+    label {
+      display:block;
+      margin-top:8px;
+      font-size:13px;
+    }
+    input, select {
+      width:100%;
+      margin-top:4px;
+      background:#222;
+      color:#eee;
+      border:1px solid #444;
+      padding:8px;
+      border-radius:4px;
+      font-size:13px;
+    }
+    .section-title {
+      font-size:16px;
+      margin-bottom:6px;
+      font-weight:bold;
+    }
+    .opening-card {
+      background:#232323;
+      border:1px solid #333;
+      border-radius:6px;
+      padding:8px;
+      margin-top:8px;
+    }
+    .opening-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .opening-title {
+      font-weight:700;
+      font-size:13px;
+      margin-bottom:4px;
+    }
+    .opening-meta {
+      opacity:0.85;
+      font-size:12px;
+    }
+    .opening-actions {
+      margin-top:6px;
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .btn-small {
+      padding:6px 8px;
+      width:auto;
+      font-size:12px;
+      border-radius:4px;
+    }
+    .layout-split {
+      display:block;
+    }
+    @media (min-width:800px) {
+      .layout-split {
+        display:grid;
+        grid-template-columns:1.2fr 0.8fr;
+        gap:12px;
+      }
+    }
+    /* Otvori i rezultat */
+    .openings-header {
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-bottom:8px;
+    }
+    #calcOutput {
+      font-size:13px;
+      line-height:1.35;
+    }
+    .dm-row {
+      display:grid;
+      grid-template-columns:1.5fr 1fr 0.7fr auto;
+      gap:6px;
+      margin-top:6px;
+      align-items:center;
+    }
+    .dm-row button {
+      width:auto;
+      padding:4px 8px;
+      font-size:11px;
+      margin-top:0;
+    }
+    .height-row {
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:6px;
+      margin-top:6px;
+      align-items:center;
+    }
+    .height-row button {
+      width:auto;
+      padding:4px 8px;
+      font-size:11px;
+      margin-top:0;
+    }
+    .centered {
+      max-width:420px;
+      margin:30px auto;
+    }
+    .archive-list-item {
+      border-bottom:1px solid #333;
+      padding:8px 0;
+      font-size:13px;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .archive-actions {
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .pill {
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid #444;
+      font-size:11px;
+      margin-right:4px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="left">
+    <img src="logo.png" class="logo" alt="Logo">
+    <div>
+      <div style="font-weight:bold">KOB-Keramika</div>
+      <div style="font-size:12px;opacity:0.8">Pro obračun prostorije</div>
+    </div>
+  </div>
+  <div style="font-size:11px;opacity:0.7;" id="userInfo">Nije prijavljen</div>
+</header>
+
+<main>
+
+<!-- ===================== POČETNI IZBORNIK ===================== -->
+<section id="homeView" class="view" style="display:block;">
+  <div class="card">
+    <h2>Što želiš raditi?</h2>
+    <button id="btnOpenAutoCalc">🧮 Automatski obračun prostorije</button>
+    <button id="btnOpenMeasures" class="secondary">✏️ Ručni unos mjera</button>
+    <button id="btnOpenCosts" class="secondary">💰 Troškovi</button>
+    <button id="btnOpenPrices" class="secondary">💶 Cjenik</button>
+    <button id="btnOpenArchive" class="secondary">📂 Arhiva obračuna</button>
+  </div>
+</section>
+
+<!-- ===================== AUTO CALC VIEW ===================== -->
+<section id="autoCalcView" class="view">
+  <div class="card">
+    <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+    <h2>🧮 Automatski obračun prostorije</h2>
+  </div>
+
+  <div class="card">
+    <div class="section-title">🏗 Podaci o gradilištu</div>
+
+    <label>Naziv gradilišta
+      <input id="siteName" placeholder="npr. Hotel Aurora">
+    </label>
+
+    <label>Naziv prostorije
+      <input id="roomName" placeholder="npr. Kupaonica 101">
+    </label>
+
+    <label>Broj situacije
+      <input id="situationNo" placeholder="npr. S-12">
+    </label>
+
+    <label>Investitor
+      <input id="investorName" placeholder="npr. Jadranka d.d.">
+    </label>
+  </div>
+  <!-- ===================== PROSTORIJE NA GRADILIŠTU ===================== -->
+  <div class="card">
+    <div class="section-title">📋 Prostorije na gradilištu</div>
+    <p style="font-size:12px;opacity:0.8;">
+      Dodaj više prostorija za isto gradilište. Sve će biti uključene u PDF građevinske knjige
+      i ukupni obračun gradilišta.
+    </p>
+
+    <div class="opening-actions">
+      <button type="button" class="btn-small" id="btnAddRoomToSite">
+        ➕ Dodaj / ažuriraj ovu prostoriju u listu
+      </button>
+      <button type="button" class="btn-small secondary" id="btnClearRooms">
+        🗑 Očisti listu prostorija
+      </button>
+    </div>
+
+    <div id="roomsList" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- ===================== FORMAT PLOČICA ===================== -->
+  <div class="card">
+    <div class="section-title">🧱 Format pločica</div>
+
+    <label>Odaberi format
+      <select id="tileFormatSelect">
+        <option value="">-- odaberi --</option>
+        <option value="60x60">60 × 60 cm</option>
+        <option value="75x75">75 × 75 cm</option>
+        <option value="100x100">100 × 100 cm</option>
+        <option value="120x120">120 × 120 cm</option>
+        <!-- XXL -->
+        <option value="100x300">100 × 300 cm</option>
+        <option value="60x120">60 × 120 cm</option>
+        <option value="custom">Prilagođeno…</option>
+      </select>
+    </label>
+
+    <div id="tileCustomFields" style="display:none;">
+      <label>Širina (cm)
+        <input id="tileW" placeholder="npr. 30">
+      </label>
+      <label>Visina (cm)
+        <input id="tileH" placeholder="npr. 60">
+      </label>
+    </div>
+  </div>
+
+  <!-- ===================== DIMENZIJE PROSTORIJE ===================== -->
+  <div class="layout-split">
+
+    <!-- Lijeva strana -->
+    <div>
+      <div class="card">
+        <div class="section-title">📐 Dimenzije prostorije</div>
+
+        <label>Dužina (m)
+          <input id="dimD" placeholder="npr. 3,20">
+        </label>
+
+        <label>Širina (m)
+          <input id="dimS" placeholder="npr. 2,40">
+        </label>
+
+        <label>Visina (m)
+          <input id="dimV" placeholder="npr. 2,60">
+        </label>
+      </div>
+
+      <!-- ===================== STEPS / HIDRO / SOKL / SILIKON ===================== -->
+      <div class="card">
+        <div class="section-title">🔧 Pomoćne stavke</div>
+
+        <label><input type="checkbox" id="chkPod"> Računaj pod</label>
+        <label><input type="checkbox" id="chkZidovi"> Računaj zidove</label>
+        <label><input type="checkbox" id="chkHidro"> Hidroizolacija</label>
+        <label><input type="checkbox" id="chkSilikon"> Silikon</label>
+        <label><input type="checkbox" id="chkSokl"> Sokl</label>
+        <label><input type="checkbox" id="chkGerung"> Gerung</label>
+      </div>
+
+      <!-- ===================== DODATNE MJERE ===================== -->
+      <div class="card">
+        <div class="section-title">➕ Dodatne mjere</div>
+        <label><input type="checkbox" id="chkDodatne"> Uključi dodatne mjere (+/−)</label>
+
+        <div id="dmContainer"></div>
+
+        <button class="btn-small secondary" id="btnAddDm">➕ Dodaj mjeru</button>
+      </div>
+
+      <!-- ===================== GUMBI ZA IZRAČUN ===================== -->
+      <div class="card">
+        <button id="btnCalcNow">🔍 Izračunaj sve</button>
+        <button id="btnExportPdfAuto" class="secondary">📄 PDF – građevinska knjiga</button>
+        <button id="btnExportCsvAuto" class="secondary">📑 CSV – Excel export</button>
+        <button id="btnSaveCloud" class="secondary">☁️ Spremi u Cloud (podatci + PDF)</button>
+      </div>
+    </div>
+
+    <!-- DESNA STRANA -->
+    <div>
+      <div class="card">
+        <div class="section-title">🧱 Otvori (vrata, prozori, niše, geberit, vertikale)</div>
+
+        <p style="font-size:12px;opacity:0.8;">
+          Vrata se odbijaju od zidova, ali ne ulaze u silikon.  
+          Prozori i niše ulaze u hidro traku i silikon.  
+          Geberit i vertikale služe za lajsne i gerung.
+        </p>
+
+        <div class="openings-header">
+          <button id="btnAddDoor" class="btn-small">➕ Vrata</button>
+          <button id="btnAddWindow" class="btn-small">➕ Prozor</button>
+          <button id="btnAddNiche" class="btn-small">➕ Niša</button>
+          <button id="btnAddGeberit" class="btn-small">➕ Geberit</button>
+          <button id="btnAddVert" class="btn-small">➕ Vertikala</button>
+          <button id="btnAddCustom" class="btn-small">➕ Custom otvor</button>
+        </div>
+
+        <div id="openingsList"></div>
+      </div>
+
+      <div class="card" id="calcResult" style="display:none;">
+        <h3>📊 Rezultati obračuna</h3>
+        <div id="calcOutput"></div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+<!-- ===================== RUČNI UNOS MJERA VIEW ===================== -->
+<section id="measuresView" class="view">
+  <div class="card">
+    <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+    <h2>✏️ Ručni unos mjera</h2>
+    <p style="font-size:12px;opacity:0.8;">
+      Jednostavna tablica za ručni unos mjera. Slobodno koristi za zapis ili kopiranje u Excel.
+    </p>
+  </div>
+
+  <div class="card">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr>
+          <th style="border-bottom:1px solid #444;text-align:left;padding:4px;">Naziv</th>
+          <th style="border-bottom:1px solid #444;text-align:left;padding:4px;">Mjera</th>
+          <th style="border-bottom:1px solid #444;text-align:left;padding:4px;">Jed.</th>
+        </tr>
+      </thead>
+      <tbody id="manualMeasuresBody">
+        <tr>
+          <td><input type="text" placeholder="Pod" style="width:100%;"></td>
+          <td><input type="text" placeholder="12,50" style="width:100%;"></td>
+          <td><input type="text" placeholder="m2" style="width:100%;"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button id="btnAddManualMeasure" class="btn-small secondary">➕ Dodaj red</button>
+  </div>
+</section>
+
+
+<!-- ===================== TROŠKOVI VIEW ===================== -->
+<section id="costsView" class="view">
+  <div class="card">
+    <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+    <h2>💰 Troškovi</h2>
+    <p style="font-size:12px;opacity:0.8;">
+      Brza kalkulacija radnih troškova i ostalih izdataka.
+    </p>
+  </div>
+
+  <div class="card">
+    <label>Cijena rada po satu (EUR)
+      <input id="costHourly" placeholder="npr. 15">
+    </label>
+
+    <label>Broj sati rada
+      <input id="costHours" placeholder="npr. 8">
+    </label>
+
+    <label>Ostali troškovi (gorivo, cestarina, materijal…) (EUR)
+      <input id="costOther" placeholder="npr. 20">
+    </label>
+
+    <button id="btnCalcCosts">🔍 Izračunaj trošak</button>
+
+    <div id="costsOutput" style="font-size:13px;margin-top:8px;"></div>
+  </div>
+</section>
+
+
+<!-- ===================== CJENIK VIEW ===================== -->
+<section id="pricesView" class="view">
+  <div class="card">
+    <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+    <h2>💶 Cjenik</h2>
+    <p style="font-size:12px;opacity:0.8;">
+      Popis jediničnih cijena koje koristi automatski obračun.
+    </p>
+  </div>
+
+  <div class="card">
+    <div id="pricesList"></div>
+  </div>
+</section>
+
+
+<!-- ===================== ARHIVA VIEW ===================== -->
+<section id="archiveView" class="view">
+  <div class="card">
+    <button class="secondary" onclick="showView('homeView')">← Natrag</button>
+    <h2>📂 Arhiva obračuna (Cloud)</h2>
+    <p style="font-size:12px;opacity:0.8;">
+      Svi spremljeni obračuni. Prijavljeni korisnici vide zajedničku arhivu.
+    </p>
+  </div>
+
+  <div class="card">
+    <div id="archiveList"></div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===================== JAVASCRIPT BLOK ===================== -->
+<script>
+  /* ===================== GLOBAL STATE ===================== */
+
+let currentUser = null;
+
+// lista prostorija na aktivnom gradilištu
+let siteRooms = [];
+
+// otvori u trenutnoj prostoriji
+let openings = [];
+
+// zadnji izračun (koristi se za CSV, PDF…)
+let lastCalc = null;
+
+
+/* ===================== HELPER FUNKCIJE ===================== */
+
+function parseNum(v) {
+  if (!v) return 0;
+  return parseFloat(String(v).replace(',', '.')) || 0;
+}
+
+function formatHr(v, decimals = 2) {
+  if (v == null || isNaN(v)) return "0";
+  return Number(v).toFixed(decimals).replace('.', ',');
+}
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'block';
+}
+
+
+/* ===================== FORMAT PLOČICA – ODABIR ===================== */
+
+const tileFormatSelect = document.getElementById('tileFormatSelect');
+const tileCustomFields = document.getElementById('tileCustomFields');
+
+tileFormatSelect.addEventListener('change', () => {
+  if (tileFormatSelect.value === 'custom') {
+    tileCustomFields.style.display = 'block';
+  } else {
+    tileCustomFields.style.display = 'none';
+  }
+});
+
+
+/* ===================== OTVORI: LOGIKA ===================== */
+
+function newId() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+function openingArea(o) {
+  return (o.w * o.h) * o.count;
+}
+
+function openingPerim(o) {
+  return (2 * (o.w + o.h)) * o.count;
+}
+
+function renderOpenings() {
+  const container = document.getElementById('openingsList');
+  if (!container) return;
+
+  if (!openings.length) {
+    container.innerHTML = `<p style="font-size:12px;opacity:0.7;">Nema unesenih otvora.</p>`;
+    return;
+  }
+
+  let html = "";
+  openings.forEach(o => {
+    html += `
+      <div class="opening-card">
+        <div class="opening-header">
+          <div>
+            <div class="opening-title">${o.label}</div>
+            <div class="opening-meta">
+              ${formatHr(o.w)} × ${formatHr(o.h)} m • kom: ${o.count}
+            </div>
+          </div>
+          <button class="btn-small secondary" onclick="removeOpening('${o.id}')">🗑 Ukloni</button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function removeOpening(id) {
+  openings = openings.filter(o => o.id !== id);
+  renderOpenings();
+}
+
+function addOpening(type, label) {
+  const w = prompt("Širina (m)?", "0,90");
+  const h = prompt("Visina (m)?", "2,00");
+  const c = prompt("Komada?", "1");
+
+  const wv = parseNum(w);
+  const hv = parseNum(h);
+  const cv = parseInt(c) || 1;
+
+  openings.push({
+    id: newId(),
+    type,
+    label,
+    w: wv,
+    h: hv,
+    count: cv,
+    subtract: type === 'vrata' ? true : false
+  });
+
+  renderOpenings();
+}
+
+document.getElementById('btnAddDoor').addEventListener('click', () => addOpening('vrata', 'Vrata'));
+document.getElementById('btnAddWindow').addEventListener('click', () => addOpening('prozor', 'Prozor'));
+document.getElementById('btnAddNiche').addEventListener('click', () => addOpening('nisa', 'Niša'));
+document.getElementById('btnAddGeberit').addEventListener('click', () => addOpening('geberit', 'Geberit'));
+document.getElementById('btnAddVert').addEventListener('click', () => addOpening('vert', 'Vertikala'));
+document.getElementById('btnAddCustom').addEventListener('click', () => addOpening('custom', 'Custom otvor'));
+  /* ===================== DIMENZIJE I META PODACI PROSTORIJE ===================== */
+
+function readMeta() {
+  const siteName = document.getElementById('siteName').value.trim();
+  const roomName = document.getElementById('roomName').value.trim();
+  const situationNo = document.getElementById('situationNo').value.trim();
+  const investorName = document.getElementById('investorName').value.trim();
+
+  let tileFormat = null;
+  const fmt = tileFormatSelect.value;
+
+  if (fmt && fmt !== "custom") {
+    const [wcm, hcm] = fmt.split('x').map(Number);
+    tileFormat = {
+      wcm, hcm,
+      label: `${wcm} × ${hcm} cm`
+    };
+  } else if (fmt === "custom") {
+    const wcm = parseNum(document.getElementById('tileW').value);
+    const hcm = parseNum(document.getElementById('tileH').value);
+    tileFormat = {
+      wcm, hcm,
+      label: `${wcm} × ${hcm} cm`
+    };
+  }
+
+  return { siteName, roomName, situationNo, investorName, tileFormat };
+}
+
+
+/* ===================== GLAVNI AUTO-OBRAČUN ===================== */
+
+function runAutoCalc(showHtml = false) {
+
+  const meta = readMeta();
+
+  const D = parseNum(document.getElementById('dimD').value);
+  const S = parseNum(document.getElementById('dimS').value);
+  const V = parseNum(document.getElementById('dimV').value);
+
+  const chkPod     = document.getElementById('chkPod').checked;
+  const chkZidovi  = document.getElementById('chkZidovi').checked;
+  const chkHidro   = document.getElementById('chkHidro').checked;
+  const chkSilikon = document.getElementById('chkSilikon').checked;
+  const chkSokl    = document.getElementById('chkSokl').checked;
+  const chkGerung  = document.getElementById('chkGerung').checked;
+  const chkDodatne = document.getElementById('chkDodatne').checked;
+
+  // baza rezultata
+  const results = {};
+  const prices = {};
+
+  let html = `<b>Izračun prostorije:</b><br>`;
+
+  /* ===================== 1. POD ===================== */
+  if (chkPod) {
+    const pod = D * S;
+    results.pod = pod;
+    html += `<b>Pod:</b> ${formatHr(pod)} m²<br>`;
+    prices.pod = { qty: pod, unit: "m2", price: UNIT_PRICES.pod };
+  }
+
+  /* ===================== 2. ZIDOVI ===================== */
+  if (chkZidovi) {
+    const obod = 2 * (D + S);
+    let zidoviBruto = obod * V;
+    let minus = 0;
+
+    openings.forEach(o => {
+      if (o.subtract) minus += openingArea(o);
+    });
+
+    const zidoviNeto = zidoviBruto - minus;
+    results.zidoviNeto = zidoviNeto;
+
+    html += `<b>Zidovi:</b><br>`;
+    html += `Bruto zidovi = ${formatHr(zidoviBruto)} m²<br>`;
+    html += `Oduzimanje vrata = ${formatHr(minus)} m²<br>`;
+    html += `Zidovi neto = <b>${formatHr(zidoviNeto)} m²</b><br><br>`;
+
+    prices.zidovi = { qty: zidoviNeto, unit: "m2", price: UNIT_PRICES.zidovi };
+  }
+
+
+  /* ===================== 3. HIDRO ===================== */
+  if (chkHidro) {
+    const hidroPod = D * S;
+    const hidroTus = S * V;
+    let trakaM = 2 * (D + S);
+
+    openings.forEach(o => {
+      if (o.type === 'prozor' || o.type === 'nisa') trakaM += openingPerim(o);
+    });
+
+    results.hidroPod = hidroPod;
+    results.hidroTus = hidroTus;
+    results.hidroTraka = trakaM;
+
+    html += `<b>Hidroizolacija:</b><br>`;
+    html += `Pod = ${formatHr(hidroPod)} m²<br>`;
+    html += `Tuš zona = ${formatHr(hidroTus)} m²<br>`;
+    html += `Hidro traka = ${formatHr(trakaM)} m<br><br>`;
+
+    prices.hidroPod   = { qty: hidroPod,   unit: "m2", price: UNIT_PRICES.hidroPod };
+    prices.hidroTus   = { qty: hidroTus,   unit: "m2", price: UNIT_PRICES.hidroTus };
+    prices.hidroTraka = { qty: trakaM,      unit: "m", price: UNIT_PRICES.hidroTraka };
+  }
+
+
+  /* ===================== 4. SILIKON ===================== */
+  if (chkSilikon) {
+    let silikonM = 2 * (D + S);
+
+    openings.forEach(o => {
+      if (o.type === 'prozor' || o.type === 'nisa') silikonM += openingPerim(o);
+    });
+
+    results.silikon = silikonM;
+    html += `<b>Silikon:</b> ${formatHr(silikonM)} m<br><br>`;
+
+    prices.silikon = { qty: silikonM, unit: "m", price: UNIT_PRICES.silikon };
+  }
+
+
+  /* ===================== 5. SOKL ===================== */
+  if (chkSokl) {
+    const soklM = 2 * (D + S);
+    results.sokl = soklM;
+    html += `<b>Sokl:</b> ${formatHr(soklM)} m<br><br>`;
+    prices.sokl = { qty: soklM, unit: "m", price: UNIT_PRICES.sokl };
+  }
+
+
+  /* ===================== 6. LAJSNE ===================== */
+  if (chkGerung) {
+    const g1 = 0, g2 = 0, g3 = 0; // placeholder (tvoj stari kod ih koristi)
+    const baseL = g1 + g2 + g3;
+
+    let perimLajsne = 0;
+    openings.forEach(o => {
+      if (o.type === 'prozor' || o.type === 'nisa' || o.type === 'geberit' || o.type === 'vert')
+        perimLajsne += openingPerim(o);
+    });
+
+    const lajsne = baseL + perimLajsne;
+
+    results.lajsne = lajsne;
+    results.lajsneData = { baseL, perimLajsne };
+
+    html += `<b>Lajsne:</b><br>`;
+    html += `Rubovi = ${formatHr(perimLajsne)} m<br>`;
+    html += `Ukupno lajsne = <b>${formatHr(lajsne)} m</b><br><br>`;
+
+    prices.lajsne = { qty: lajsne, unit: "m", price: UNIT_PRICES.lajsne };
+  }
+
+
+  /* ===================== 7. DODATNE MJERE ===================== */
+
+  const dmContainer = document.getElementById('dmContainer');
+  let dmTotal = 0;
+  let dmRowsData = [];
+
+  if (chkDodatne) {
+    const rows = dmContainer.querySelectorAll('.dm-row');
+
+    rows.forEach(row => {
+      const name = row.querySelector('.dmName').value || '';
+      const val  = parseNum(row.querySelector('.dmVal').value);
+      const sign = row.querySelector('.dmSign').value;
+      const signedVal = sign === '-' ? -val : val;
+
+      dmTotal += signedVal;
+      dmRowsData.push({ name, val, sign, signedVal });
+    });
+
+    results.dm = { total: dmTotal, rows: dmRowsData };
+
+    html += `<b>Dodatne mjere:</b><br>`;
+    dmRowsData.forEach((r, i) => {
+      html += `${i+1}. ${r.name}: ${r.sign}${formatHr(r.val)} ⇒ ${formatHr(r.signedVal)}<br>`;
+    });
+    html += `Ukupno = <b>${formatHr(dmTotal)}</b><br><br>`;
+  }
+
+  results.meta = meta;
+
+  lastCalc = {
+    D, S, V,
+    meta,
+    openings,
+    results,
+    prices
+  };
+
+  if (showHtml) {
+    document.getElementById('calcOutput').innerHTML = html;
+    document.getElementById('calcResult').style.display = 'block';
+  }
+
+  return lastCalc;
+}
+
+
+/* ===================== GUMB "IZRAČUNAJ" ===================== */
+
+document.getElementById('btnCalcNow').addEventListener('click', () => {
+  runAutoCalc(true);
+});
+  /* ============================================================
+   VIŠE PROSTORIJA – DODAVANJE / AŽURIRANJE / BRISANJE / LOADING
+   ============================================================ */
+
+function cloneOpenings(src) {
+  return (src || []).map(o => ({ ...o }));
+}
+
+function findRoomIndex(meta) {
+  return siteRooms.findIndex(r =>
+    (r.meta.siteName || "")   === (meta.siteName || "") &&
+    (r.meta.roomName || "")   === (meta.roomName || "") &&
+    (r.meta.situationNo || "") === (meta.situationNo || "")
+  );
+}
+
+function refreshRoomsList() {
+  const list = document.getElementById('roomsList');
+  if (!list) return;
+
+  if (!siteRooms.length) {
+    list.innerHTML = `<p style="font-size:12px;opacity:0.7;">Još nema dodanih prostorija za ovo gradilište.</p>`;
+    return;
+  }
+
+  let html = "";
+  siteRooms.forEach((r, idx) => {
+    const m = r.meta || {};
+    html += `
+      <div class="opening-card">
+        <div class="opening-header">
+          <div>
+            <div class="opening-title">#${idx+1} ${m.roomName || 'Prostorija'}</div>
+            <div class="opening-meta">
+              Situacija: ${m.situationNo || '-'} • Format: ${m.tileFormat ? m.tileFormat.label : '-'}  
+              • D×Š×V: ${formatHr(r.D)}×${formatHr(r.S)}×${formatHr(r.V)}
+            </div>
+          </div>
+        </div>
+
+        <div class="opening-actions">
+          <button class="btn-small secondary" onclick="loadRoomFromList(${idx})">🔁 Učitaj</button>
+          <button class="btn-small secondary" onclick="removeRoomFromList(${idx})">🗑 Obriši</button>
+        </div>
+      </div>
+    `;
+  });
+
+  list.innerHTML = html;
+}
+
+function addOrUpdateCurrentRoom() {
+  const data = runAutoCalc(true);
+  if (!data) return;
+
+  if (!data.meta.siteName) {
+    alert("Upiši naziv gradilišta.");
+    return;
+  }
+  if (!data.meta.roomName) {
+    alert("Upiši naziv prostorije.");
+    return;
+  }
+
+  const idx = findRoomIndex(data.meta);
+
+  const roomObj = {
+    D: data.D,
+    S: data.S,
+    V: data.V,
+    meta: data.meta,
+    openings: cloneOpenings(data.openings),
+    results: data.results,
+    prices: data.prices
+  };
+
+  if (idx === -1) {
+    siteRooms.push(roomObj);
+  } else {
+    siteRooms[idx] = roomObj;
+  }
+
+  refreshRoomsList();
+}
+
+function clearRoomsForCurrentSite() {
+  if (!siteRooms.length) return;
+  if (!confirm("Obrisati sve prostorije iz liste?")) return;
+  siteRooms = [];
+  refreshRoomsList();
+}
+
+function loadRoomFromList(idx) {
+  const room = siteRooms[idx];
+  if (!room) return;
+
+  const m = room.meta || {};
+
+  document.getElementById('siteName').value = m.siteName || "";
+  document.getElementById('roomName').value = m.roomName || "";
+  document.getElementById('situationNo').value = m.situationNo || "";
+  document.getElementById('investorName').value = m.investorName || "";
+
+  // Tile format
+  if (m.tileFormat && m.tileFormat.wcm && m.tileFormat.hcm) {
+    const val = `${m.tileFormat.wcm}x${m.tileFormat.hcm}`;
+    const select = tileFormatSelect;
+
+    if ([...select.options].some(o => o.value === val)) {
+      select.value = val;
+      tileCustomFields.style.display = 'none';
+    } else {
+      select.value = 'custom';
+      tileCustomFields.style.display = 'block';
+      document.getElementById('tileW').value = m.tileFormat.wcm;
+      document.getElementById('tileH').value = m.tileFormat.hcm;
+    }
+  }
+
+  // Dimenzije
+  document.getElementById('dimD').value = String(room.D).replace('.', ',');
+  document.getElementById('dimS').value = String(room.S).replace('.', ',');
+  document.getElementById('dimV').value = String(room.V).replace('.', ',');
+
+  // Otvori
+  openings = cloneOpenings(room.openings);
+  renderOpenings();
+
+  runAutoCalc(true);
+}
+
+function removeRoomFromList(idx) {
+  if (!siteRooms[idx]) return;
+  if (!confirm("Obrisati ovu prostoriju?")) return;
+  siteRooms.splice(idx, 1);
+  refreshRoomsList();
+}
+
+
+/* ===================== POVEZIVANJE GUMBA ZA PROSTORIJE ===================== */
+
+document.getElementById('btnAddRoomToSite').onclick = addOrUpdateCurrentRoom;
+document.getElementById('btnClearRooms').onclick    = clearRoomsForCurrentSite;
+  /* ============================================================
+   PDF – POJEDINAČNA PROSTORIJA
+   (Tvoj originalni buildPdfDocument – optimizirano i očišćeno)
+   ============================================================ */
+
+function buildPdfDocument(data) {
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) {
+    alert("PDF modul nije učitan.");
+    return null;
+  }
+
+  const doc = new jsPDF();
+  let y = 15;
+
+  function newPage() {
+    doc.addPage();
+    y = 15;
+  }
+
+  function w(text, extra = 0) {
+    const lines = doc.splitTextToSize(text, 190);
+    lines.forEach(line => {
+      if (y > 280) newPage();
+      doc.text(line, 10, y);
+      y += 5;
+    });
+    y += extra;
+  }
+
+  const m = data.meta || {};
+  const r = data.results || {};
+  const today = new Date();
+  const dStr = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}.`;
+
+  doc.setFontSize(14);
+  doc.text("Građevinska knjiga – obračun prostorije", 10, y);
+  y += 10;
+
+  doc.setFontSize(11);
+  w(`Gradilište: ${m.siteName || "-"}`);
+  w(`Prostorija: ${m.roomName || "-"}`);
+  w(`Situacija: ${m.situationNo || "-"}`);
+  w(`Format pločice: ${m.tileFormat ? m.tileFormat.label : "-"}`);
+  w(`Datum izrade: ${dStr}`, 4);
+
+  /* ---------------- POD, ZIDOVI, HIDRO, SOKL, LAJSNE, GERUNG ---------------- */
+
+  if (r.pod != null)        w(`Pod: ${formatHr(r.pod)} m²`);
+  if (r.zidoviNeto != null) w(`Zidovi neto: ${formatHr(r.zidoviNeto)} m²`);
+  if (r.hidroPod != null)   w(`Hidro pod: ${formatHr(r.hidroPod)} m²`);
+  if (r.hidroTus != null)   w(`Hidro tuš zona: ${formatHr(r.hidroTus)} m²`);
+  if (r.hidroTraka != null) w(`Hidro traka: ${formatHr(r.hidroTraka)} m`);
+  if (r.silikon != null)    w(`Silikon: ${formatHr(r.silikon)} m`);
+  if (r.sokl != null)       w(`Sokl: ${formatHr(r.sokl)} m`);
+  if (r.lajsne != null)     w(`Lajsne: ${formatHr(r.lajsne)} m`);
+  if (r.gerung != null)     w(`Gerung: ${formatHr(r.gerung)} m`);
+
+  if (r.dm && r.dm.rows && r.dm.rows.length) {
+    w("Dodatne mjere:", 2);
+    r.dm.rows.forEach((row, i) => {
+      w(`${i+1}. ${row.name}: ${row.sign}${formatHr(row.val)} ⇒ ${formatHr(row.signedVal)}`);
+    });
+    w(`Ukupno dodatne mjere = ${formatHr(r.dm.total)}`, 4);
+  }
+
+  /* ---------------- OTOVORI ---------------- */
+
+  if (data.openings?.length) {
+    w("Otvori:", 2);
+    data.openings.forEach(o => {
+      w(`- ${o.label} (${formatHr(o.w)}×${formatHr(o.h)} m, kom ${o.count})`);
+    });
+  }
+
+  /* ---------------- FINANCIJSKI OBRAČUN ---------------- */
+
+  const p = data.prices || {};
+  const rows = [];
+  let grand = 0;
+
+  function add(name, key) {
+    const it = p[key];
+    if (!it) return;
+    const qty = it.qty;
+    const unit = it.unit;
+    const price = UNIT_PRICES[key] || 0;
+    const total = qty * price;
+    grand += total;
+    rows.push({ name, qty, unit, price, total });
+  }
+
+  add("Pod", "pod");
+  add("Zidovi", "zidovi");
+  add("Hidro pod", "hidroPod");
+  add("Hidro tuš", "hidroTus");
+  add("Hidro traka", "hidroTraka");
+  add("Silikon", "silikon");
+  add("Sokl", "sokl");
+  add("Lajsne", "lajsne");
+  add("Gerung", "gerung");
+
+  if (rows.length) {
+    w("Financijski obračun:", 2);
+    rows.forEach(r => {
+      w(`${r.name}: ${formatHr(r.qty)} ${r.unit} × ${formatHr(r.price, 2)} = ${formatHr(r.total, 2)} EUR`);
+    });
+    w(`UKUPNO: ${formatHr(grand, 2)} EUR`, 4);
+  }
+
+  return doc;
+}
+  /* ============================================================
+   PDF ZA VIŠE PROSTORIJA (GRADILIŠTE)
+   ============================================================ */
+
+function buildPdfDocumentForSite(rooms) {
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) {
+    alert("PDF modul nije učitan.");
+    return null;
+  }
+
+  const doc = new jsPDF();
+  let y = 15;
+
+  function newPage() {
+    doc.addPage();
+    y = 15;
+  }
+
+  function w(text, extra = 0) {
+    const lines = doc.splitTextToSize(text, 190);
+    lines.forEach(line => {
+      if (y > 280) newPage();
+      doc.text(line, 10, y);
+      y += 5;
+    });
+    y += extra;
+  }
+
+  if (!rooms.length) return null;
+
+  const site = rooms[0].meta.siteName || "-";
+  const investor = rooms[0].meta.investorName || "-";
+  const today = new Date();
+  const dStr = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}.`;
+
+  doc.setFontSize(14);
+  doc.text("Građevinska knjiga – Više prostorija", 10, y);
+  y += 10;
+
+  doc.setFontSize(11);
+  w(`Gradilište: ${site}`);
+  w(`Investitor: ${investor}`);
+  w(`Datum izrade: ${dStr}`, 4);
+
+  /* ---------------- SAŽETAK ---------------- */
+
+  doc.setFontSize(12);
+  w("Sažetak prostorija:", 2);
+
+  doc.setFontSize(10);
+  doc.text("Prostorija", 10, y);
+  doc.text("Situacija", 70, y);
+  doc.text("Pod (m²)", 120, y);
+  doc.text("Zidovi (m²)", 150, y);
+  doc.text("Ukupno", 190, y, { align: "right" });
+  y += 6;
+
+  let totalSite = 0;
+
+  rooms.forEach(r => {
+    const rr = r.results || {};
+    const pp = r.prices || {};
+    let subtotal = 0;
+
+    Object.keys(pp).forEach(k => {
+      const it = pp[k];
+      if (!it) return;
+      subtotal += it.qty * (UNIT_PRICES[k] || 0);
+    });
+
+    totalSite += subtotal;
+
+    if (y > 270) newPage();
+    doc.text(r.meta.roomName || "-", 10, y);
+    doc.text(r.meta.situationNo || "-", 70, y);
+    doc.text(rr.pod != null ? formatHr(rr.pod) : "-", 120, y);
+    doc.text(rr.zidoviNeto != null ? formatHr(rr.zidoviNeto) : "-", 150, y);
+    doc.text(formatHr(subtotal, 2), 190, y, { align: "right" });
+    y += 6;
+  });
+
+  y += 6;
+  w(`UKUPNO ZA GRADILIŠTE: ${formatHr(totalSite, 2)} EUR`, 4);
+
+  /* ---------------- DETALJI PO PROSTORIJI ---------------- */
+
+  rooms.forEach((room, i) => {
+    if (y > 230) newPage();
+
+    doc.setFontSize(12);
+    w(`Prostorija #${i+1}: ${room.meta.roomName}`, 2);
+
+    const rr = room.results || {};
+
+    doc.setFontSize(10);
+    w(`Situacija: ${room.meta.situationNo}`);
+    w(`Format pločice: ${room.meta.tileFormat ? room.meta.tileFormat.label : "-"}`);
+    w(`Dimenzije: ${formatHr(room.D)} × ${formatHr(room.S)} × ${formatHr(room.V)}`, 2);
+
+    if (rr.pod != null)        w(`Pod: ${formatHr(rr.pod)} m²`);
+    if (rr.zidoviNeto != null) w(`Zidovi neto: ${formatHr(rr.zidoviNeto)} m²`);
+    if (rr.hidroPod != null)   w(`Hidro pod: ${formatHr(rr.hidroPod)} m²`);
+    if (rr.hidroTus != null)   w(`Hidro tuš zona: ${formatHr(rr.hidroTus)} m²`);
+    if (rr.hidroTraka != null) w(`Hidro traka: ${formatHr(rr.hidroTraka)} m`);
+    if (rr.silikon != null)    w(`Silikon: ${formatHr(rr.silikon)} m`);
+    if (rr.sokl != null)       w(`Sokl: ${formatHr(rr.sokl)} m`);
+    if (rr.lajsne != null)     w(`Lajsne: ${formatHr(rr.lajsne)} m`);
+    if (rr.gerung != null)     w(`Gerung: ${formatHr(rr.gerung)} m`);
+  });
+
+  return doc;
+}
+  /* ============================================================
+   PDF – GUMB ZA SPREMANJE (1 ILI VIŠE PROSTORIJA)
+   ============================================================ */
+
+document.getElementById('btnExportPdfAuto').addEventListener('click', () => {
+
+  const current = runAutoCalc(true);
+  if (!current) return;
+
+  let rooms = [];
+  // Ako postoji više prostorija → koristi cijeli siteRooms
+  if (siteRooms.length > 0) {
+    rooms = siteRooms;
+  } else {
+    rooms = [current];
+  }
+
+  let pdf;
+  if (rooms.length === 1) {
+    pdf = buildPdfDocument(rooms[0]);
+  } else {
+    pdf = buildPdfDocumentForSite(rooms);
+  }
+
+  if (!pdf) {
+    alert("Ne mogu generirati PDF.");
+    return;
+  }
+
+  pdf.save("obracun.pdf");
+});
+  /* ============================================================
+   CSV EXPORT
+   ============================================================ */
+
+document.getElementById('btnExportCsvAuto').addEventListener('click', () => {
+  const data = runAutoCalc(true);
+  if (!data) return;
+
+  let csv = "Naziv, Vrijednost\n";
+
+  for (const r in data.results) {
+    const val = data.results[r];
+    if (typeof val === 'number') {
+      csv += `${r}, ${formatHr(val)}\n`;
+    }
+  }
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "obracun.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+  /* ============================================================
+   DODATNE MJERE – DODAJ RED
+   ============================================================ */
+
+document.getElementById('btnAddDm').addEventListener('click', () => {
+  const box = document.createElement('div');
+  box.className = 'dm-row';
+
+  box.innerHTML = `
+    <input class="dmName" placeholder="Naziv mjere">
+    <input class="dmVal" placeholder="0,00">
+    <select class="dmSign">
+      <option value="+">+</option>
+      <option value="-">-</option>
+    </select>
+    <button class="btn-small secondary" onclick="this.parentNode.remove()">🗑</button>
+  `;
+
+  document.getElementById('dmContainer').appendChild(box);
+});
+  /* ============================================================
+   RUČNI UNOS MJERA – DODAJ RED
+   ============================================================ */
+
+document.getElementById('btnAddManualMeasure').addEventListener('click', () => {
+  const tbody = document.getElementById('manualMeasuresBody');
+  const tr = document.createElement("tr");
+
+  tr.innerHTML = `
+    <td><input type="text" placeholder="Naziv" style="width:100%;"></td>
+    <td><input type="text" placeholder="0,00" style="width:100%;"></td>
+    <td><input type="text" placeholder="m2" style="width:100%;"></td>
+  `;
+
+  tbody.appendChild(tr);
+});
+  /* ============================================================
+   CJENIK – JEDINIČNE CIJENE
+   ============================================================ */
+
+const UNIT_PRICES = {
+  pod: 10,
+  zidovi: 12,
+  hidroPod: 7,
+  hidroTus: 9,
+  hidroTraka: 2,
+  silikon: 1.5,
+  sokl: 4,
+  lajsne: 5,
+  gerung: 8
+};
+
+function renderPriceList() {
+  const div = document.getElementById('pricesList');
+  let html = "";
+  for (const key in UNIT_PRICES) {
+    html += `
+      <div class="opening-card">
+        <div class="opening-title">${key}</div>
+        <div class="opening-meta">${UNIT_PRICES[key]} EUR</div>
+      </div>
+    `;
+  }
+  div.innerHTML = html;
+}
+
+renderPriceList();
+  /* ============================================================
+   TROŠKOVI – BRZI IZRAČUN
+   ============================================================ */
+
+document.getElementById('btnCalcCosts').addEventListener('click', () => {
+  const hourly = parseNum(document.getElementById('costHourly').value);
+  const hours  = parseNum(document.getElementById('costHours').value);
+  const other  = parseNum(document.getElementById('costOther').value);
+
+  const total = hourly * hours + other;
+
+  document.getElementById('costsOutput').innerHTML =
+    `<b>Ukupni troškovi:</b> ${formatHr(total, 2)} EUR`;
+});
+  /* ============================================================
+   NAVIGACIJA – GUMBI
+   ============================================================ */
+
+document.getElementById('btnOpenAutoCalc').onclick = () => showView('autoCalcView');
+document.getElementById('btnOpenMeasures').onclick = () => showView('measuresView');
+document.getElementById('btnOpenCosts').onclick    = () => showView('costsView');
+document.getElementById('btnOpenPrices').onclick   = () => showView('pricesView');
+document.getElementById('btnOpenArchive').onclick  = () => {
+  loadArchive();
+  showView('archiveView');
+};
+  /* ============================================================
+   ARHIVA – LOAD LISTA DOKUMENATA
+   ============================================================ */
+
+async function loadArchive() {
+  const listDiv = document.getElementById('archiveList');
+  listDiv.innerHTML = "Učitavam...";
+
+  try {
+    const snap = await db.collection('obracuni').orderBy("timestamp", "desc").get();
+    let html = "";
+
+    snap.forEach(doc => {
+      const d = doc.data();
+      html += `
+        <div class="archive-list-item">
+          <div><b>${d.meta?.siteName || "-"}</b> — ${d.meta?.roomName || "-"}</div>
+          <div class="archive-actions">
+            <button class="btn-small secondary" onclick="reloadFromCloud('${doc.id}')">📄 Otvori</button>
+            <button class="btn-small secondary" onclick="deleteCloudRecord('${doc.id}')">🗑 Obriši</button>
+          </div>
+        </div>
+      `;
+    });
+
+    listDiv.innerHTML = html || "Arhiva je prazna.";
+  } catch (e) {
+    console.error(e);
+    listDiv.innerHTML = "Greška pri učitavanju arhive.";
+  }
+  }
+  /* ============================================================
+   CLOUD SPREMANJE – PODACI + PDF
+   ============================================================ */
+
+async function saveToCloud(data) {
+  try {
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) return alert("PDF modul nije učitan.");
+
+    let rooms = siteRooms.length ? siteRooms : [data];
+    let pdf;
+
+    if (rooms.length === 1) {
+      pdf = buildPdfDocument(rooms[0]);
+    } else {
+      pdf = buildPdfDocumentForSite(rooms);
+    }
+
+    if (!pdf) return alert("Greška pri generiranju PDF-a.");
+
+    const pdfBlob = pdf.output("blob");
+    const pdfPath = `pdf/${Date.now()}_${data.meta.roomName || 'dok'}.pdf`;
+
+    // upload PDF
+    await storage.ref().child(pdfPath).put(pdfBlob);
+
+    // spremanje JSON-a
+    const saveObj = {
+      meta: data.meta,
+      rooms: rooms,
+      timestamp: Date.now(),
+      pdfPath
+    };
+
+    await db.collection('obracuni').add(saveObj);
+
+    alert("Obračun uspješno spremljen u Cloud.");
+  } catch (e) {
+    console.error(e);
+    alert("Greška pri spremanju: " + e.message);
+  }
+}
+
+
+/* ============================================================
+   CLOUD GUMB – SPREMI
+   ============================================================ */
+
+document.getElementById('btnSaveCloud').addEventListener('click', () => {
+  const data = runAutoCalc(true);
+  if (!data) return;
+  saveToCloud(data);
+});
+  /* ============================================================
+   CLOUD – UCITAVANJE POJEDINOG ZAPISA
+   ============================================================ */
+
+async function reloadFromCloud(id) {
+  try {
+    const docSnap = await db.collection('obracuni').doc(id).get();
+    if (!docSnap.exists) {
+      alert("Dokument ne postoji.");
+      return;
+    }
+
+    const d = docSnap.data();
+    const m = d.meta || {};
+
+    document.getElementById('siteName').value = m.siteName || "";
+    document.getElementById('roomName').value = m.roomName || "";
+    document.getElementById('situationNo').value = m.situationNo || "";
+    document.getElementById('investorName').value = m.investorName || "";
+
+    // tile format
+    if (m.tileFormat && m.tileFormat.wcm && m.tileFormat.hcm) {
+      const val = `${m.tileFormat.wcm}x${m.tileFormat.hcm}`;
+      if ([...tileFormatSelect.options].some(o => o.value === val)) {
+        tileFormatSelect.value = val;
+        tileCustomFields.style.display = 'none';
+      } else {
+        tileFormatSelect.value = 'custom';
+        tileCustomFields.style.display = 'block';
+        document.getElementById('tileW').value = m.tileFormat.wcm;
+        document.getElementById('tileH').value = m.tileFormat.hcm;
+      }
+    }
+
+    // Dimenzije
+    document.getElementById('dimD').value = String(d.rooms[0].D).replace('.', ',');
+    document.getElementById('dimS').value = String(d.rooms[0].S).replace('.', ',');
+    document.getElementById('dimV').value = String(d.rooms[0].V).replace('.', ',');
+
+    openings = cloneOpenings(d.rooms[0].openings);
+    renderOpenings();
+
+    siteRooms = d.rooms || [];
+    refreshRoomsList();
+
+    showView('autoCalcView');
+    runAutoCalc(true);
+
+    alert("Obračun učitan iz Cloud-a.");
+  } catch (e) {
+    console.error(e);
+    alert("Greška pri učitavanju: " + e.message);
+  }
+}
+  /* ============================================================
+   CLOUD – BRISANJE S PDF-om
+   ============================================================ */
+
+async function deleteCloudRecord(id) {
+  if (!confirm("Stvarno obrisati ovaj obračun i PDF?")) return;
+
+  try {
+    const docSnap = await db.collection('obracuni').doc(id).get();
+
+    if (docSnap.exists) {
+      const d = docSnap.data();
+      if (d.pdfPath) {
+        try {
+          await storage.ref().child(d.pdfPath).delete();
+        } catch (e) {
+          console.warn("Ne mogu obrisati PDF:", e.message);
+        }
+      }
+    }
+
+    await db.collection('obracuni').doc(id).delete();
+    alert("Obrisano.");
+    loadArchive();
+  } catch (e) {
+    console.error(e);
+    alert("Greška pri brisanju: " + e.message);
+  }
+}
+  /* ============================================================
+   FIREBASE INIT (ostaje kompatibilno s tvojim starim projektom)
+   ============================================================ */
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_APP.firebaseapp.com",
+  projectId: "YOUR_APP",
+  storageBucket: "YOUR_APP.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:00000000000000"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+
+/* ============================================================
+   ZAVRŠETAK SCRIPT BLOKA
+   ============================================================ */
+
+</script>
+
+<!-- JSPDF CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</body>
+</html>
