@@ -39,8 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const tileSelect = $("#tileFormatSelect");
   const tileCustom = $("#tileCustomFields");
   tileSelect?.addEventListener("change", () => {
-    if (tileSelect.value === "custom") tileCustom.style.display = "block";
-    else tileCustom.style.display = "none";
+    tileCustom.style.display = tileSelect.value === "custom" ? "block" : "none";
   });
 
   // Otvori
@@ -52,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btnAddCustom")?.addEventListener("click", () => addOpening("custom"));
   renderOpenings();
 
-  // Stepenice show/hide
+  // Stepenice toggle
   $("#chkStepenice")?.addEventListener("change", () => {
     $("#stepeniceInputs").style.display = $("#chkStepenice").checked ? "block" : "none";
   });
@@ -74,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#dmContainer").appendChild(row);
   });
 
-  // Prostorije (lista)
+  // Prostorije – dodavanje / brisanje
   $("#btnAddRoomToSite")?.addEventListener("click", () => {
     const last = runAutoCalc(false);
     if (!last) return;
@@ -99,31 +98,43 @@ document.addEventListener("DOMContentLoaded", () => {
     exportCsvFromCalc(data);
   });
 
-  // PDF export – ako ima više prostorija → site PDF, inače single
-  $("#btnExportPdfAuto")?.addEventListener("click", () => {
+  // ======================================================
+  // PDF EXPORT (ISPRAVLJENA ASYNC VERZIJA)
+  // ======================================================
+  $("#btnExportPdfAuto")?.addEventListener("click", async () => {
     const data = runAutoCalc(true);
     if (!data) return;
 
     let doc;
+
     if (AppState.siteRooms.length > 0) {
-      doc = buildPdfDocumentForSite(AppState.siteRooms);
+      // PDF za gradilište s više prostorija
+      doc = await buildPdfDocumentForSite(AppState.siteRooms);
     } else {
-      doc = buildPdfDocumentSingle(data);
+      // PDF za jednu prostoriju
+      doc = await buildPdfDocumentSingle(data);
     }
-    if (!doc) return;
+
+    if (!doc) {
+      alert("Greška pri generiranju PDF-a.");
+      return;
+    }
+
     const meta = data.meta || {};
     const name = (meta.siteName || "obracun").replace(/\s+/g, "_");
+
     doc.save(name + ".pdf");
   });
 
-  // Cloud save
-  $("#btnSaveCloud")?.addEventListener("click", () => {
+  // Cloud
+  $("#btnSaveCloud")?.addEventListener("click", async () => {
     const data = runAutoCalc(true);
     if (!data) return;
-    saveToCloud(data);
+
+    await saveToCloud(data);
   });
 
-  // Ručni mjere – dodaj red
+  // Ručni mjere
   $("#btnAddManualMeasure")?.addEventListener("click", () => {
     const tbody = $("#manualMeasuresBody");
     const tr = document.createElement("tr");
@@ -138,18 +149,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Troškovi
   $("#btnCalcCosts")?.addEventListener("click", () => {
     const hourly = parseNum($("#costHourly").value);
-    const hours  = parseNum($("#costHours").value);
-    const other  = parseNum($("#costOther").value);
-    const total  = hourly * hours + other;
-    $("#costsOutput").innerHTML = `<b>Ukupni troškovi:</b> ${formatHr(total,2)} EUR`;
+    const hours = parseNum($("#costHours").value);
+    const other = parseNum($("#costOther").value);
+    const total = hourly * hours + other;
+    $("#costsOutput").innerHTML = `<b>Ukupni troškovi:</b> ${formatHr(total, 2)} EUR`;
   });
 
-  // Cjenik – spremi
+  // Cjenik
   $("#btnSavePrices")?.addEventListener("click", () => {
     savePrices();
-    alert("Cjenik spremljen (vrijednosti se koriste u obračunu i PDF-u).");
+    alert("Cjenik spremljen.");
   });
 
-  // početni view
+  // Start ekran
   showView("homeView");
 });
