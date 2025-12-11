@@ -1,6 +1,6 @@
 // JS/pdf/pdfSite.js
 // Glavni generator PDF-a za više prostorija
-// A4 vertikalno, građevinski stil, formule kao čisti izrazi
+// A4 vertikalno, građevinski stil, formule bez teksta, lajsne/gerung odvojeni
 
 import { jsPDF } from "jspdf";
 import { ensureRoboto } from "./fontRoboto.js";
@@ -24,7 +24,7 @@ export async function buildPdfDocumentForSite(roomsData = []) {
     doc.text(`Stranica ${page}`, 200 - 10, 10, { align: "right" });
   }
 
-  // ⚠️ Ispravljeno — mora biti async zbog await ensureRoboto()
+  // ⚠️ Mora biti async zbog await ensureRoboto()
   async function newPage() {
     doc.addPage();
     page += 1;
@@ -34,7 +34,7 @@ export async function buildPdfDocumentForSite(roomsData = []) {
 
   header();
 
-  // Format broja s decimalom u hrvatskom prikazu
+  // Formatiranje brojeva
   const fmt = x =>
     typeof x === "number"
       ? x.toFixed(2).replace(".", ",")
@@ -122,7 +122,7 @@ export async function buildPdfDocumentForSite(roomsData = []) {
       doc.text(`Hidro tuš: ${fmt(r.hidroTus)} m²`, 12, y); y += 5;
     }
 
-    // HIDRO TRAKA
+    // HIDRO TRKA
     if (r.hidroTraka != null) {
       doc.text(`Hidro traka: ${fmt(r.hidroTraka)} m`, 12, y); y += 5;
     }
@@ -132,9 +132,36 @@ export async function buildPdfDocumentForSite(roomsData = []) {
       doc.text(`Silikon: ${fmt(r.silikon)} m`, 12, y); y += 5;
     }
 
-    // LAJSNE / GERUNG
+    // ------------------------------
+    // 10. LAJSNE (odvojen obračun)
+    // ------------------------------
     if (r.lajsne != null) {
-      doc.text(`Lajsne / gerung: ${fmt(r.lajsne)} m`, 12, y); y += 8;
+      const d = r.lajsneData || { baseL: 0, perimLajsne: 0 };
+
+      doc.setFontSize(13);
+      doc.text("10. Lajsne", 12, y);
+      y += 6;
+
+      doc.setFontSize(11);
+      doc.text(`Ručni unos: ${fmt(d.baseL)} m`, 14, y); y += 5;
+      doc.text(`Rubovi elemenata: ${fmt(d.perimLajsne)} m`, 14, y); y += 5;
+      doc.text(`Ukupno lajsne: ${fmt(r.lajsne)} m`, 14, y); y += 8;
+    }
+
+    // ------------------------------
+    // 11. GERUNG (odvojen obračun)
+    // ------------------------------
+    if (r.gerung != null) {
+      const d = r.gerungData || { baseG: 0, perimGerung: 0 };
+
+      doc.setFontSize(13);
+      doc.text("11. Gerung", 12, y);
+      y += 6;
+
+      doc.setFontSize(11);
+      doc.text(`Ručni unos: ${fmt(d.baseG)} m`, 14, y); y += 5;
+      doc.text(`Rubovi elemenata: ${fmt(d.perimGerung)} m`, 14, y); y += 5;
+      doc.text(`Ukupno gerung: ${fmt(r.gerung)} m`, 14, y); y += 8;
     }
 
     // ------------------------------
@@ -194,6 +221,7 @@ export async function buildPdfDocumentForSite(roomsData = []) {
 
   y2 += 5;
 
+  // UKUPNI IZ
   doc.setFontSize(13);
   doc.text("Ukupni iznosi", 12, y2);
   y2 += 6;
@@ -205,13 +233,23 @@ export async function buildPdfDocumentForSite(roomsData = []) {
   doc.text(`Ukupna vrijednost svih prostorija: ${fmt(total)} EUR`, 12, y2);
   y2 += 8;
 
-  doc.text("Ugovorena vrijednost gradilišta: _________ EUR", 12, y2); y2 += 6;
-  doc.text("Prethodne situacije (ukupno): _________ EUR", 12, y2); y2 += 6;
-  doc.text("Iznos ove situacije: _________ EUR", 12, y2); y2 += 6;
-  doc.text("Preostala vrijednost: _________ EUR", 12, y2); y2 += 10;
+  // Ručni unosi
+  doc.text("Ugovorena vrijednost gradilišta: _________ EUR", 12, y2); 
+  y2 += 6;
 
+  doc.text("Prethodne situacije (ukupno): _________ EUR", 12, y2); 
+  y2 += 6;
+
+  doc.text("Iznos ove situacije: _________ EUR", 12, y2); 
+  y2 += 6;
+
+  doc.text("Preostala vrijednost: _________ EUR", 12, y2);
+  y2 += 10;
+
+  // POTPIS
   doc.setFontSize(12);
   doc.text("Potpis izvođača: ____________________", 12, y2);
 
+  // GOTOVO
   return doc;
-        }
+                              }
