@@ -1,15 +1,15 @@
-// js/cloud/cloudSave.js
-import { state } from "../core/state.js";
-import { buildPdfDocument } from "../pdf/pdfSingle.js";
+// JS/cloud/cloudSave.js
+import { AppState } from "../core/state.js";
+import { buildPdfDocumentSingle } from "../pdf/pdfSingle.js";
 import { buildPdfDocumentForSite } from "../pdf/pdfSite.js";
 import { db, storage } from "./firebase-init.js";
 
 export async function saveToCloud(data) {
   try {
-    let rooms = state.siteRooms.length ? state.siteRooms : [data];
+    const rooms = AppState.siteRooms.length ? AppState.siteRooms : [data];
 
     let pdf;
-    if (rooms.length === 1) pdf = buildPdfDocument(rooms[0]);
+    if (rooms.length === 1) pdf = buildPdfDocumentSingle(data);
     else pdf = buildPdfDocumentForSite(rooms);
 
     if (!pdf) {
@@ -17,13 +17,15 @@ export async function saveToCloud(data) {
       return;
     }
 
-    const pdfBlob = pdf.output("blob");
-    const pdfPath = `pdf/${Date.now()}_${data.meta.roomName || "prostorija"}.pdf`;
+    const blob = pdf.output("blob");
+    const meta = data.meta || {};
+    const filenameSafe = (meta.roomName || "prostorija").replace(/\s+/g, "_");
+    const pdfPath = `pdf/${Date.now()}_${filenameSafe}.pdf`;
 
-    await storage.ref().child(pdfPath).put(pdfBlob);
+    await storage.ref().child(pdfPath).put(blob);
 
     const saveObj = {
-      meta: data.meta,
+      meta,
       rooms,
       timestamp: Date.now(),
       pdfPath
@@ -33,6 +35,6 @@ export async function saveToCloud(data) {
     alert("Obračun spremljen u Cloud.");
   } catch (e) {
     console.error(e);
-    alert("Greška pri spremanju: " + e.message);
+    alert("Greška pri spremanju u Cloud: " + e.message);
   }
 }
