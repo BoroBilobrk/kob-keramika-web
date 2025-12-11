@@ -1,33 +1,54 @@
-// js/cloud/cloudLoad.js
+// JS/cloud/cloudLoad.js
 import { db } from "./firebase-init.js";
-import { state } from "../core/state.js";
+import { AppState } from "../core/state.js";
+import { $, formatHr } from "../core/helpers.js";
 import { renderOpenings } from "../calculations/openings.js";
 import { refreshRoomsList } from "../calculations/rooms.js";
 import { runAutoCalc } from "../calculations/autoCalc.js";
 
 export async function loadArchive() {
-  const listDiv = document.getElementById("archiveList");
+  const listDiv = $("#archiveList");
+  if (!listDiv) return;
+
   listDiv.innerHTML = "Učitavam...";
 
   try {
     const snap = await db.collection("obracuni").orderBy("timestamp", "desc").get();
-    let html = "";
+    if (snap.empty) {
+      listDiv.innerHTML = "<p class='hint'>Arhiva je prazna.</p>";
+      return;
+    }
 
+    let html = "";
     snap.forEach(doc => {
       const d = doc.data();
+      const m = d.meta || {};
+      const date = new Date(d.timestamp || 0);
+      const dStr = `${String(date.getDate()).padStart(2,"0")}.${String(date.getMonth()+1).padStart(2,"0")}.${date.getFullYear()}.`;
       html += `
-        <div class="opening-card">
-          <div class="opening-title">${d.meta?.siteName || "-"} — ${d.meta?.roomName || "-"}</div>
-          <div class="opening-meta">Situacija: ${d.meta?.situationNo || "-"}</div>
-          <div class="row-actions">
-            <button class="btn-small secondary" onclick="window.reloadFromCloud('${doc.id}')">📄 Otvori</button>
-            <button class="btn-small secondary" onclick="window.deleteCloudRecord('${doc.id}')">🗑 Obriši</button>
+        <div class="rooms-list-item">
+          <b>${m.siteName || "-"} – ${m.roomName || "-"}</b><br>
+          <span class="hint">Situacija: ${m.situationNo || "-"} • ${dStr}</span>
+          <div class="rooms-actions" style="margin-top:6px;">
+            <button class="btn-small secondary" data-id="${doc.id}" data-action="load">📄 Učitaj</button>
+            <button class="btn-small secondary" data-id="${doc.id}" data-action="delete">🗑 Obriši</button>
           </div>
         </div>
       `;
     });
 
-    listDiv.innerHTML = html || "<p class='hint'>Arhiva je prazna.</p>";
+    listDiv.innerHTML = html;
+
+    listDiv.querySelectorAll("button").forEach(btn => {
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      if (action === "load") {
+        btn.addEventListener("click", () => reloadFromCloud(id));
+      } else if (action === "delete") {
+        btn.addEventListener("click", () => deleteCloudRecord(id));
+      }
+    });
+
   } catch (e) {
     console.error(e);
     listDiv.innerHTML = "Greška pri učitavanju arhive.";
@@ -44,47 +65,51 @@ export async function reloadFromCloud(id) {
 
     const d = docSnap.data();
     const m = d.meta || {};
-    const firstRoom = (d.rooms && d.rooms[0]) || null;
+    const rooms = d.rooms || [];
+    const firstRoom = rooms[0] || null;
 
-    document.getElementById("siteName").value     = m.siteName || "";
-    document.getElementById("roomName").value     = m.roomName || "";
-    document.getElementById("situationNo").value  = m.situationNo || "";
-    document.getElementById("investorName").value = m.investorName || "";
+    $("#siteName").value     = m.siteName || "";
+    $("#roomName").value     = m.roomName || "";
+    $("#situationNo").value  = m.situationNo || "";
+    $("#investorName").value = m.investorName || "";
 
     if (m.tileFormat && m.tileFormat.wcm && m.tileFormat.hcm) {
       const val = `${m.tileFormat.wcm}x${m.tileFormat.hcm}`;
-      const select = document.getElementById("tileFormatSelect");
-      const custom = document.getElementById("tileCustomFields");
+      const select = $("#tileFormatSelect");
+      const custom = $("#tileCustomFields");
       if ([...select.options].some(o => o.value === val)) {
         select.value = val;
         custom.style.display = "none";
       } else {
         select.value = "custom";
         custom.style.display = "block";
-        document.getElementById("tileW").value = m.tileFormat.wcm;
-        document.getElementById("tileH").value = m.tileFormat.hcm;
+        $("#tileW").value = m.tileFormat.wcm;
+        $("#tileH").value = m.tileFormat.hcm;
       }
     }
 
     if (firstRoom) {
-      document.getElementById("dimD").value = String(firstRoom.D).replace(".", ",");
-      document.getElementById("dimS").value = String(firstRoom.S).replace(".", ",");
-      document.getElementById("dimV").value = String(firstRoom.V).replace(".", ",");
+      $("#dimD").value = String(firstRoom.D).replace(".", ",");
+      $("#dimS").value = String(firstRoom.S).replace(".", ",");
+      $("#dimV").value = String(firstRoom.V).replace(".", ",");
 
-      state.openings = (firstRoom.openings || []).map(o => ({ ...o }));
+      AppState.openings = (firstRoom.openings || []).map(o => ({ ...o }));
       renderOpenings();
     }
 
-    state.siteRooms = (d.rooms || []).map(r => ({ ...r }));
+    AppState.siteRooms = rooms.map(r => ({ ...r }));
     refreshRoomsList();
 
     document.querySelectorAll(".view").forEach(v => v.style.display = "none");
-    document.getElementById("autoCalcView").style.display = "block";
+    $("#autoCalcView").style.display = "block";
 
     runAutoCalc(true);
     alert("Obračun učitan iz Cloud-a.");
   } catch (e) {
     console.error(e);
-    alert("Greška pri učitavanju: " + e.message);
+    alert("Greška pri učitavanju iz Clouda: " + e.message);
   }
 }
+
+// delete se importa u ui.js, ali definiran je u cloudDelete.js
+import { deleteCloudRecord } from "./cloudDelete.js";
