@@ -1,12 +1,14 @@
-// js/cloud/firebase-init.js
-// OVDJE UBACIŠ SVOJ STVARNI CONFIG
+// JS/cloud/firebase-init.js
+
+// TODO: zamijeni ovim svojim stvarnim konfiguracijskim podacima
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_APP.firebaseapp.com",
-  projectId: "YOUR_APP",
-  storageBucket: "YOUR_APP.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:00000000000000"
+  apiKey: "AIzaSyDIuDJqFE3G2yk98WPwGHkc6xomWXUdu3o",
+  authDomain: "kob-keramika.firebaseapp.com",
+  projectId: "kob-keramika",
+  storageBucket: "kob-keramika.firebasestorage.app",
+  messagingSenderId: "604488601212",
+  appId: "1:604488601212:web:70552af260d9e5a283c3f9",
+  measurementId: "G-KDTBSP3H39"
 };
 
 firebase.initializeApp(firebaseConfig);
