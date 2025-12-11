@@ -1,9 +1,8 @@
 // JS/pdf/pdfSingle.js
-// Jedna prostorija koristi isti layout kao više prostorija:
 import { buildPdfDocumentForSite } from "./pdfSite.js";
 
 export function buildPdfDocumentSingle(data) {
   if (!data) return null;
-  // upakiraj jednu prostoriju u array i koristi zajednički generator
+  // koristimo isti generator kao za više prostorija, samo s jednim elementom
   return buildPdfDocumentForSite([data]);
 }
