@@ -2,7 +2,7 @@
 // Glavni generator PDF-a za više prostorija
 // A4 vertikalno, građevinski stil, formule bez teksta, lajsne/gerung odvojeni
 
-import { jsPDF } from "jspdf";
+const { jsPDF } = window.jspdf;
 import { ensureRoboto } from "./fontRoboto.js";
 
 export async function buildPdfDocumentForSite(roomsData = []) {
