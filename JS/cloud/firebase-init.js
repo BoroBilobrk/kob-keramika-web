@@ -15,11 +15,3 @@ firebase.initializeApp(firebaseConfig);
 
 export const db = firebase.firestore();
 export const storage = firebase.storage();
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /obracuni/{docId} {
-      allow read, write: if true;
-    }
-  }
-}
