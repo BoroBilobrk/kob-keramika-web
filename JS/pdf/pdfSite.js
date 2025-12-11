@@ -47,6 +47,9 @@ export async function buildPdfDocumentForSite(roomsData = []) {
     doc.addPage();
     page += 1;
     await ensureRoboto(doc);
+    doc.setFont("Roboto", "normal");
+doc.setFontSize(11);
+if (doc.setCharSpace) doc.setCharSpace(0); // sprječava razmaknuta slova
     header();
   }
 
