@@ -1,4 +1,4 @@
-// js/pdf/pdfSite.js
+// JS/pdf/pdfSite.js
 import { formatHr } from "../core/helpers.js";
 import { UNIT_PRICES } from "../calculations/cjenik.js";
 
@@ -17,7 +17,6 @@ export function buildPdfDocumentForSite(rooms) {
     doc.addPage();
     y = 15;
   }
-
   function w(text, extra = 0) {
     const lines = doc.splitTextToSize(text, 190);
     lines.forEach(line => {
@@ -30,75 +29,42 @@ export function buildPdfDocumentForSite(rooms) {
 
   const first = rooms[0];
   const m = first.meta || {};
-  const site = m.siteName || "-";
-  const investor = m.investorName || "-";
-  const today = new Date();
-  const dStr = `${String(today.getDate()).padStart(2,"0")}.${String(today.getMonth()+1).padStart(2,"0")}.${today.getFullYear()}.`;
+  const now = new Date();
+  const dStr = `${String(now.getDate()).padStart(2,"0")}.${String(now.getMonth()+1).padStart(2,"0")}.${now.getFullYear()}.`;
 
   doc.setFontSize(14);
   doc.text("Građevinska knjiga – više prostorija", 10, y);
   y += 10;
 
   doc.setFontSize(11);
-  w(`Gradilište: ${site}`);
-  w(`Investitor: ${investor}`);
+  w(`Gradilište: ${m.siteName || "-"}`);
+  w(`Investitor: ${m.investorName || "-"}`);
   w(`Datum izrade: ${dStr}`, 4);
-
-  doc.setFontSize(12);
-  w("Sažetak prostorija:", 2);
-
-  doc.setFontSize(10);
-  doc.text("Prostorija", 10, y);
-  doc.text("Situacija", 70, y);
-  doc.text("Pod (m²)", 120, y);
-  doc.text("Zidovi (m²)", 150, y);
-  doc.text("Ukupno", 190, y, { align:"right" });
-  y += 6;
 
   let totalSite = 0;
 
-  rooms.forEach(r => {
-    const rs = r.results || {};
-    const ps = r.prices || {};
+  doc.setFontSize(11);
+  w("Sažetak prostorija:", 2);
+  rooms.forEach((room, i) => {
+    const rs = room.results || {};
+    const pr = room.prices || {};
     let subtotal = 0;
-    Object.keys(ps).forEach(k => {
-      const it = ps[k];
+    Object.keys(pr).forEach(k => {
+      const it = pr[k];
       if (!it) return;
       subtotal += it.qty * (UNIT_PRICES[k] || 0);
     });
     totalSite += subtotal;
 
-    if (y > 270) newPage();
-    doc.text(r.meta.roomName || "-", 10, y);
-    doc.text(r.meta.situationNo || "-", 70, y);
-    doc.text(rs.pod != null ? formatHr(rs.pod) : "-", 120, y);
-    doc.text(rs.zidoviNeto != null ? formatHr(rs.zidoviNeto) : "-", 150, y);
-    doc.text(formatHr(subtotal,2), 190, y, { align:"right" });
-    y += 6;
+    w(`#${i+1} ${room.meta.roomName || "-"} (situacija: ${room.meta.situationNo || "-"})`);
+    if (rs.pod != null)        w(`  Pod: ${formatHr(rs.pod)} m²`);
+    if (rs.zidoviNeto != null) w(`  Zidovi neto: ${formatHr(rs.zidoviNeto)} m²`);
+    if (rs.hidroPod != null)   w(`  Hidro pod: ${formatHr(rs.hidroPod)} m²`);
+    if (rs.hidroTus != null)   w(`  Hidro tuš: ${formatHr(rs.hidroTus)} m²`);
+    w(`  Subtotal: ${formatHr(subtotal,2)} EUR`, 4);
   });
 
-  y += 6;
   w(`UKUPNO ZA GRADILIŠTE: ${formatHr(totalSite,2)} EUR`, 4);
 
-  rooms.forEach((room, i) => {
-    if (y > 230) newPage();
-    const rs = room.results || {};
-    doc.setFontSize(12);
-    w(`Prostorija #${i+1}: ${room.meta.roomName || "-"}`, 2);
-    doc.setFontSize(10);
-    w(`Situacija: ${room.meta.situationNo || "-"}`);
-    w(`Format pločice: ${room.meta.tileFormat ? room.meta.tileFormat.label : "-"}`);
-    w(`Dimenzije: ${formatHr(room.D)}×${formatHr(room.S)}×${formatHr(room.V)}`, 2);
-
-    if (rs.pod != null)        w(`Pod: ${formatHr(rs.pod)} m²`);
-    if (rs.zidoviNeto != null) w(`Zidovi neto: ${formatHr(rs.zidoviNeto)} m²`);
-    if (rs.hidroPod != null)   w(`Hidro pod: ${formatHr(rs.hidroPod)} m²`);
-    if (rs.hidroTus != null)   w(`Hidro tuš: ${formatHr(rs.hidroTus)} m²`);
-    if (rs.hidroTraka != null) w(`Hidro traka: ${formatHr(rs.hidroTraka)} m`);
-    if (rs.silikon != null)    w(`Silikon: ${formatHr(rs.silikon)} m`);
-    if (rs.sokl != null)       w(`Sokl: ${formatHr(rs.sokl)} m`);
-    if (rs.lajsne != null)     w(`Lajsne: ${formatHr(rs.lajsne)} m`);
-  });
-
   return doc;
-             }
+}
