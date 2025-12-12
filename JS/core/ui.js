@@ -1,13 +1,23 @@
 // JS/core/ui.js
 import { $, $$, parseNum, formatHr } from "./helpers.js";
 import { AppState } from "./state.js";
+
 import { addOpening, renderOpenings } from "../calculations/openings.js";
 import { runAutoCalc } from "../calculations/autoCalc.js";
-import { savePrices } from "../calculations/cjenik.js";
+import { readMeta } from "../calculations/autoCalc.js";
+
+import { 
+  savePrices, 
+  applyPricesToUI, 
+  savePricesForFormat 
+} from "../calculations/cjenik.js";
+
 import { addOrUpdateCurrentRoom, clearRoomsForCurrentSite, refreshRoomsList } from "../calculations/rooms.js";
 import { exportCsvFromCalc } from "../csv/csvExport.js";
+
 import { buildPdfDocumentSingle } from "../pdf/pdfSingle.js";
 import { buildPdfDocumentForSite } from "../pdf/pdfSite.js";
+
 import { saveToCloud } from "../cloud/cloudSave.js";
 import { loadArchive } from "../cloud/cloudLoad.js";
 
@@ -28,6 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadArchive();
   });
 
+  // BACK
   $$(".btn-back").forEach(btn => {
     btn.addEventListener("click", () => {
       const target = btn.dataset.target || "homeView";
@@ -35,11 +46,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Format pločica – custom
+  // -----------------------------------------
+  // FORMAT PLOČICA — UČITAVANJE CIJENA
+  // -----------------------------------------
+
   const tileSelect = $("#tileFormatSelect");
   const tileCustom = $("#tileCustomFields");
+
   tileSelect?.addEventListener("change", () => {
+    // show/hide custom fields
     tileCustom.style.display = tileSelect.value === "custom" ? "block" : "none";
+
+    // učitaj cijene za format
+    const meta = readMeta();
+    if (meta.tileFormat) {
+      applyPricesToUI(meta.tileFormat);
+    }
   });
 
   // Otvori
@@ -49,6 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btnAddGeberit")?.addEventListener("click", () => addOpening("geberit"));
   $("#btnAddVert")?.addEventListener("click", () => addOpening("vert"));
   $("#btnAddCustom")?.addEventListener("click", () => addOpening("custom"));
+  
   renderOpenings();
 
   // Stepenice toggle
@@ -98,9 +121,9 @@ document.addEventListener("DOMContentLoaded", () => {
     exportCsvFromCalc(data);
   });
 
-  // ======================================================
-  // PDF EXPORT (ISPRAVLJENA ASYNC VERZIJA)
-  // ======================================================
+  // ----------------------------------------------------
+  // PDF EXPORT – ASYNC (više prostorija → gradilište)
+  // ----------------------------------------------------
   $("#btnExportPdfAuto")?.addEventListener("click", async () => {
     const data = runAutoCalc(true);
     if (!data) return;
@@ -108,10 +131,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let doc;
 
     if (AppState.siteRooms.length > 0) {
-      // PDF za gradilište s više prostorija
       doc = await buildPdfDocumentForSite(AppState.siteRooms);
     } else {
-      // PDF za jednu prostoriju
       doc = await buildPdfDocumentSingle(data);
     }
 
@@ -126,11 +147,10 @@ document.addEventListener("DOMContentLoaded", () => {
     doc.save(name + ".pdf");
   });
 
-  // Cloud
+  // Cloud spremanje
   $("#btnSaveCloud")?.addEventListener("click", async () => {
     const data = runAutoCalc(true);
     if (!data) return;
-
     await saveToCloud(data);
   });
 
@@ -155,10 +175,13 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#costsOutput").innerHTML = `<b>Ukupni troškovi:</b> ${formatHr(total, 2)} EUR`;
   });
 
-  // Cjenik
+  // ----------------------------------------------------
+  // SPREMI CJENIK ZA FORMAT PLOČICA
+  // ----------------------------------------------------
   $("#btnSavePrices")?.addEventListener("click", () => {
-    savePrices();
-    alert("Cjenik spremljen.");
+    const meta = readMeta();
+    savePrices(meta.tileFormat);
+    alert("Cjenik spremljen za format pločica.");
   });
 
   // Start ekran
