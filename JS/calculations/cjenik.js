@@ -1,11 +1,7 @@
 // JS/calculations/cjenik.js
-// ------------------------------------------
-// Cijene po formatu pločica + ručni cjenik
-// ------------------------------------------
-
 import { $, parseNum } from "../core/helpers.js";
 
-// GLOBALNI Cjenik koji koristi autoCalc
+// ručni cjenik – vrijednosti se pune iz input polja
 export const UNIT_PRICES = {
   pod: 0,
   zidovi: 0,
@@ -18,93 +14,7 @@ export const UNIT_PRICES = {
   gerung: 0
 };
 
-// -------------------------------
-// 1. STORAGE CIJENA PO FORMATIMA
-// -------------------------------
-const STORAGE_KEY = "kob_format_prices";
-
-// struktura:
-// {
-//    "120x120": { pod: 12, zidovi: 14, ... },
-//    "60x60":   { pod: 10, zidovi: 12, ... },
-//    "custom:90x45": { ... }
-// }
-export function loadAllFormatPrices() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-  } catch {
-    return {};
-  }
-}
-
-export function saveAllFormatPrices(obj) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
-}
-
-// -------------------------------
-// 2. UČITAVANJE CIJENA ZA ODABRANI FORMAT
-// -------------------------------
-export function loadPricesForFormat(tileFormat) {
-  if (!tileFormat) return null;
-
-  const all = loadAllFormatPrices();
-  const key = formatKey(tileFormat);
-
-  return all[key] || null;
-}
-
-// -------------------------------
-// 3. SPREMANJE CIJENA ZA FORMAT
-// -------------------------------
-export function savePricesForFormat(tileFormat) {
-  if (!tileFormat) return;
-
-  const key = formatKey(tileFormat);
-  const all = loadAllFormatPrices();
-
-  all[key] = {
-    pod: parseNum($("#pricePod")?.value),
-    zidovi: parseNum($("#priceZidovi")?.value),
-    hidroPod: parseNum($("#priceHidroPod")?.value),
-    hidroTus: parseNum($("#priceHidroTus")?.value),
-    hidroTraka: parseNum($("#priceHidroTraka")?.value),
-    silikon: parseNum($("#priceSilikon")?.value),
-    sokl: parseNum($("#priceSokl")?.value),
-    lajsne: parseNum($("#priceLajsne")?.value),
-    gerung: parseNum($("#priceGerung")?.value)
-  };
-
-  saveAllFormatPrices(all);
-}
-
-// generira ključ formata
-function formatKey(f) {
-  if (!f) return "unknown";
-  if (f.wcm && f.hcm) return `${f.wcm}x${f.hcm}`;
-  return String(f).trim();
-}
-
-// -------------------------------
-// 4. UVOĐENJE CIJENA U UI
-// -------------------------------
-export function applyPricesToUI(tileFormat) {
-  const p = loadPricesForFormat(tileFormat);
-  if (!p) return; // ako nema zapisa – UI ostaje prazan
-
-  $("#pricePod").value        = String(p.pod).replace(".", ",");
-  $("#priceZidovi").value     = String(p.zidovi).replace(".", ",");
-  $("#priceHidroPod").value   = String(p.hidroPod).replace(".", ",");
-  $("#priceHidroTus").value   = String(p.hidroTus).replace(".", ",");
-  $("#priceHidroTraka").value = String(p.hidroTraka).replace(".", ",");
-  $("#priceSilikon").value    = String(p.silikon).replace(".", ",");
-  $("#priceSokl").value       = String(p.sokl).replace(".", ",");
-  $("#priceLajsne").value     = String(p.lajsne).replace(".", ",");
-  $("#priceGerung").value     = String(p.gerung).replace(".", ",");
-}
-
-// -------------------------------
-// 5. UČITAVANJE RUČNO UNESENIH CIJENA U UNIT_PRICES (koristi autoCalc)
-// -------------------------------
+// Čitanje cijena iz input polja u UNIT_PRICES
 export function readPricesFromInputs() {
   UNIT_PRICES.pod        = parseNum($("#pricePod")?.value);
   UNIT_PRICES.zidovi     = parseNum($("#priceZidovi")?.value);
@@ -115,12 +25,59 @@ export function readPricesFromInputs() {
   UNIT_PRICES.sokl       = parseNum($("#priceSokl")?.value);
   UNIT_PRICES.lajsne     = parseNum($("#priceLajsne")?.value);
   UNIT_PRICES.gerung     = parseNum($("#priceGerung")?.value);
+
+  // vraćamo plain objekt (zgodno za Cloud)
+  return { ...UNIT_PRICES };
 }
 
-// -------------------------------
-// 6. Gumb "Spremi cjenik" → sprema CIJENE ZA FORMAT
-// -------------------------------
-export function savePrices(tileFormat = null) {
+// Ručno spremanje cjenika (trenutno samo u memoriji + Cloud preko saveToCloud)
+export function savePrices() {
   readPricesFromInputs();
-  if (tileFormat) savePricesForFormat(tileFormat);
+}
+
+/**
+ * Pretvori UNIT_PRICES u običan objekt spreman za Cloud.
+ * (poziva se iz saveToCloud)
+ */
+export function pricesToPlainObject() {
+  // pobrinemo se da je UNIT_PRICES svježe
+  readPricesFromInputs();
+  return { ...UNIT_PRICES };
+}
+
+/**
+ * Primijeni objekt cijena (npr. iz Cloud-a) na:
+ *  - UNIT_PRICES
+ *  - input polja u UI-u "Cjenik"
+ */
+export function applyPricesObject(obj = {}) {
+  if (!obj) return;
+
+  // upiši u UNIT_PRICES
+  Object.keys(UNIT_PRICES).forEach(key => {
+    if (typeof obj[key] === "number") {
+      UNIT_PRICES[key] = obj[key];
+    }
+  });
+
+  // helper za upis u polje (decimalna zarez)
+  const setVal = (id, val) => {
+    const el = $(id);
+    if (!el) return;
+    if (typeof val !== "number" || isNaN(val)) {
+      el.value = "";
+    } else {
+      el.value = val.toFixed(2).replace(".", ",");
+    }
+  };
+
+  setVal("#pricePod",        UNIT_PRICES.pod);
+  setVal("#priceZidovi",     UNIT_PRICES.zidovi);
+  setVal("#priceHidroPod",   UNIT_PRICES.hidroPod);
+  setVal("#priceHidroTus",   UNIT_PRICES.hidroTus);
+  setVal("#priceHidroTraka", UNIT_PRICES.hidroTraka);
+  setVal("#priceSilikon",    UNIT_PRICES.silikon);
+  setVal("#priceSokl",       UNIT_PRICES.sokl);
+  setVal("#priceLajsne",     UNIT_PRICES.lajsne);
+  setVal("#priceGerung",     UNIT_PRICES.gerung);
 }
