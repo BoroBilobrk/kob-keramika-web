@@ -1,4 +1,5 @@
 // JS/core/ui.js
+console.log("UI.JS LOADED!");
 import { $, $$, parseNum, formatHr } from "./helpers.js";
 import { AppState } from "./state.js";
 
