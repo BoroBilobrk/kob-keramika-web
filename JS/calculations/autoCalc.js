@@ -12,7 +12,8 @@ function readMeta() {
   const roomName     = $("#roomName").value.trim();
   const situationNo  = $("#situationNo").value.trim();
   const investorName = $("#investorName").value.trim();
-  const contractValue = parseNum($("#contractValue")?.value || "0");
+
+  const contractValue         = parseNum($("#contractValue")?.value || "0");
   const previousSituationsTotal = parseNum($("#prevSituations")?.value || "0");
 
   let tileFormat = null;
@@ -28,16 +29,26 @@ function readMeta() {
     tileFormat = { wcm, hcm, label: `${wcm} × ${hcm} cm`, key: "custom" };
   }
 
-  return { siteName, roomName, situationNo, investorName, contractValue, previousSituationsTotal, tileFormat };
+  return {
+    siteName,
+    roomName,
+    situationNo,
+    investorName,
+    contractValue,
+    previousSituationsTotal,
+    tileFormat
+  };
 }
 
 /* -------------------------------------------------------------
    GLAVNA FUNKCIJA
 ------------------------------------------------------------- */
 export function runAutoCalc(showHtml = false) {
-  readPricesFromInputs(); // učitaj cjenik u UNIT_PRICES
+  // učitaj cjenik u UNIT_PRICES
+  readPricesFromInputs();
 
   const meta = readMeta();
+
   const D = parseNum($("#dimD").value);
   const S = parseNum($("#dimS").value);
   const V = parseNum($("#dimV").value);
@@ -48,14 +59,27 @@ export function runAutoCalc(showHtml = false) {
   const chkHidroTraka = $("#chkHidroTraka").checked;
   const chkSilikon    = $("#chkSilikon").checked;
   const chkSokl       = $("#chkSokl").checked;
+  const chkLajsne     = $("#chkLajsne").checked;
   const chkGerung     = $("#chkGerung").checked;
   const chkDodatne    = $("#chkDodatne").checked;
   const chkStepenice  = $("#chkStepenice").checked;
 
+  // spremimo checkboxe u meta da PDF zna što je uključeno
+  meta.chkPod        = chkPod;
+  meta.chkZidovi     = chkZidovi;
+  meta.chkHidro      = chkHidro;
+  meta.chkHidroTraka = chkHidroTraka;
+  meta.chkSilikon    = chkSilikon;
+  meta.chkSokl       = chkSokl;
+  meta.chkLajsne     = chkLajsne;
+  meta.chkGerung     = chkGerung;
+  meta.chkDodatne    = chkDodatne;
+  meta.chkStepenice  = chkStepenice;
+
   const openings = getOpenings();
 
   const results = {};
-  const pricesList = {};   // OVO PDF KORISTI
+  const prices  = {};   // koristi se u PDF-u (jedinične cijene)
   let html = `<b>Izračun prostorije:</b><br>`;
 
   /* -------------------------------------------------------------
@@ -66,7 +90,7 @@ export function runAutoCalc(showHtml = false) {
     results.pod = pod;
 
     if (UNIT_PRICES.pod)
-      pricesList.pod = { qty: pod, price: UNIT_PRICES.pod, unit: "m²" };
+      prices.pod = { qty: pod, price: UNIT_PRICES.pod, unit: "m²" };
 
     html += `Pod: <b>${formatHr(pod)}</b> m²<br>`;
   }
@@ -78,31 +102,33 @@ export function runAutoCalc(showHtml = false) {
     const bruto = 2 * (D + S) * V;
     let minusVrata = 0;
 
-    openings.filter(o => o.kind === "door")
+    openings
+      .filter(o => o.kind === "door")
       .forEach(o => minusVrata += openingArea(o));
 
     const neto = bruto - minusVrata;
     results.zidoviNeto = neto;
 
     if (UNIT_PRICES.zidovi)
-      pricesList.zidovi = { qty: neto, price: UNIT_PRICES.zidovi, unit: "m²" };
+      prices.zidovi = { qty: neto, price: UNIT_PRICES.zidovi, unit: "m²" };
 
     html += `Zidovi neto: <b>${formatHr(neto)}</b> m²<br>`;
   }
 
   /* -------------------------------------------------------------
-     3. HIDROIZOLACIJA
+     3. HIDROIZOLACIJA (pod + tuš)
   ------------------------------------------------------------- */
   if (chkHidro) {
     const hidroPod = D * S;
     const hidroTus = S * V;
+
     results.hidroPod = hidroPod;
     results.hidroTus = hidroTus;
 
     if (UNIT_PRICES.hidroPod)
-      pricesList.hidroPod = { qty: hidroPod, price: UNIT_PRICES.hidroPod, unit: "m²" };
+      prices.hidroPod = { qty: hidroPod, price: UNIT_PRICES.hidroPod, unit: "m²" };
     if (UNIT_PRICES.hidroTus)
-      pricesList.hidroTus = { qty: hidroTus, price: UNIT_PRICES.hidroTus, unit: "m²" };
+      prices.hidroTus = { qty: hidroTus, price: UNIT_PRICES.hidroTus, unit: "m²" };
 
     html += `Hidro pod: ${formatHr(hidroPod)} m², tuš: ${formatHr(hidroTus)} m²<br>`;
   }
@@ -112,13 +138,14 @@ export function runAutoCalc(showHtml = false) {
   ------------------------------------------------------------- */
   if (chkHidroTraka) {
     let traka = 2 * (D + S);
-    openings.filter(o => o.kind === "window" || o.kind === "niche")
+    openings
+      .filter(o => o.kind === "window" || o.kind === "niche")
       .forEach(o => traka += openingPerim(o));
 
     results.hidroTraka = traka;
 
     if (UNIT_PRICES.hidroTraka)
-      pricesList.hidroTraka = { qty: traka, price: UNIT_PRICES.hidroTraka, unit: "m" };
+      prices.hidroTraka = { qty: traka, price: UNIT_PRICES.hidroTraka, unit: "m" };
 
     html += `Hidro traka: <b>${formatHr(traka)}</b> m<br>`;
   }
@@ -128,13 +155,14 @@ export function runAutoCalc(showHtml = false) {
   ------------------------------------------------------------- */
   if (chkSilikon) {
     let m = 2 * (D + S);
-    openings.filter(o => ["window","niche"].includes(o.kind))
+    openings
+      .filter(o => ["window", "niche"].includes(o.kind))
       .forEach(o => m += openingPerim(o));
 
     results.silikon = m;
 
     if (UNIT_PRICES.silikon)
-      pricesList.silikon = { qty: m, price: UNIT_PRICES.silikon, unit: "m" };
+      prices.silikon = { qty: m, price: UNIT_PRICES.silikon, unit: "m" };
 
     html += `Silikon: <b>${formatHr(m)}</b> m<br>`;
   }
@@ -147,40 +175,52 @@ export function runAutoCalc(showHtml = false) {
     results.sokl = sokl;
 
     if (UNIT_PRICES.sokl)
-      pricesList.sokl = { qty: sokl, price: UNIT_PRICES.sokl, unit: "m" };
+      prices.sokl = { qty: sokl, price: UNIT_PRICES.sokl, unit: "m" };
 
     html += `Sokl: <b>${formatHr(sokl)}</b> m<br>`;
   }
 
   /* -------------------------------------------------------------
-     7. LAJSNE — SAMO PERIMETRI RUBOVA
+     7. LAJSNE – samo ako je kvačica
   ------------------------------------------------------------- */
-  let lajsneVal = 0;
-  openings.filter(o => ["window","niche","geberit","vert"].includes(o.kind))
-    .forEach(o => lajsneVal += openingPerim(o));
+  if (chkLajsne) {
+    let lajsneVal = 0;
+    openings
+      .filter(o => ["window", "niche", "geberit", "vert"].includes(o.kind))
+      .forEach(o => lajsneVal += openingPerim(o));
 
-  results.lajsne = lajsneVal;
-  results.lajsneData = { baseL: 0, perimLajsne: lajsneVal };
+    results.lajsne = lajsneVal;
+    results.lajsneData = { baseL: 0, perimLajsne: lajsneVal };
 
-  if (UNIT_PRICES.lajsne)
-    pricesList.lajsne = { qty: lajsneVal, price: UNIT_PRICES.lajsne, unit: "m" };
+    if (UNIT_PRICES.lajsne)
+      prices.lajsne = { qty: lajsneVal, price: UNIT_PRICES.lajsne, unit: "m" };
 
-  html += `Lajsne: <b>${formatHr(lajsneVal)}</b> m<br>`;
+    html += `Lajsne: <b>${formatHr(lajsneVal)}</b> m<br>`;
+  } else {
+    results.lajsne = 0;
+    results.lajsneData = { baseL: 0, perimLajsne: 0 };
+  }
 
   /* -------------------------------------------------------------
-     8. GERUNG — POSEBNO
+     8. GERUNG – samo ako je kvačica
   ------------------------------------------------------------- */
-  let gerungVal = 0;
-  openings.filter(o => ["geberit","vert"].includes(o.kind))
-    .forEach(o => gerungVal += openingPerim(o));
+  if (chkGerung) {
+    let gerungVal = 0;
+    openings
+      .filter(o => ["geberit", "vert"].includes(o.kind))
+      .forEach(o => gerungVal += openingPerim(o));
 
-  results.gerung = gerungVal;
-  results.gerungData = { baseG: 0, perimGerung: gerungVal };
+    results.gerung = gerungVal;
+    results.gerungData = { baseG: 0, perimGerung: gerungVal };
 
-  if (UNIT_PRICES.gerung)
-    pricesList.gerung = { qty: gerungVal, price: UNIT_PRICES.gerung, unit: "m" };
+    if (UNIT_PRICES.gerung)
+      prices.gerung = { qty: gerungVal, price: UNIT_PRICES.gerung, unit: "m" };
 
-  html += `Gerung: <b>${formatHr(gerungVal)}</b> m<br>`;
+    html += `Gerung: <b>${formatHr(gerungVal)}</b> m<br>`;
+  } else {
+    results.gerung = 0;
+    results.gerungData = { baseG: 0, perimGerung: 0 };
+  }
 
   /* -------------------------------------------------------------
      9. DODATNE MJERE
@@ -203,22 +243,32 @@ export function runAutoCalc(showHtml = false) {
   }
 
   /* -------------------------------------------------------------
-     10. TOTAL PRICE ZA CIJELU PROSTORIJU
+     10. STEPENICE
+  ------------------------------------------------------------- */
+  if (chkStepenice) {
+    const stepM   = parseNum($("#stepM")?.value || "0");
+    const stepKom = parseNum($("#stepKom")?.value || "0");
+
+    results.stepM   = stepM;
+    results.stepKom = stepKom;
+
+    html += `Stepenice: ${formatHr(stepM)} m, ${formatHr(stepKom, 0)} kom<br>`;
+  }
+
+  /* -------------------------------------------------------------
+     11. TOTAL PRICE ZA CIJELU PROSTORIJU
   ------------------------------------------------------------- */
   let totalPrice = 0;
-  Object.values(pricesList).forEach(p => {
+  Object.values(prices).forEach(p => {
     totalPrice += p.qty * p.price;
   });
 
-  /* -------------------------------------------------------------
-     FORMIRANJE DATOTEKE OBRAČUNA
-  ------------------------------------------------------------- */
   const data = {
     D, S, V,
     meta,
     openings: [...openings],
     results,
-    pricesList,
+    prices,
     totalPrice
   };
 
@@ -231,4 +281,4 @@ export function runAutoCalc(showHtml = false) {
   }
 
   return data;
-}
+     }
