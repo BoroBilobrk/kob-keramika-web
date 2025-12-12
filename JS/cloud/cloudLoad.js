@@ -5,6 +5,7 @@ import { $, formatHr } from "../core/helpers.js";
 import { renderOpenings } from "../calculations/openings.js";
 import { refreshRoomsList } from "../calculations/rooms.js";
 import { runAutoCalc } from "../calculations/autoCalc.js";
+import { deleteCloudRecord } from "./cloudDelete.js";
 
 export async function loadArchive() {
   const listDiv = $("#archiveList");
@@ -73,6 +74,14 @@ export async function reloadFromCloud(id) {
     $("#situationNo").value  = m.situationNo || "";
     $("#investorName").value = m.investorName || "";
 
+    // NOVO: ugovorena vrijednost gradilišta
+    if ($("#contractValue")) {
+      $("#contractValue").value =
+        m.contractValue != null && m.contractValue !== 0
+          ? String(m.contractValue).replace(".", ",")
+          : "";
+    }
+
     if (m.tileFormat && m.tileFormat.wcm && m.tileFormat.hcm) {
       const val = `${m.tileFormat.wcm}x${m.tileFormat.hcm}`;
       const select = $("#tileFormatSelect");
@@ -109,7 +118,4 @@ export async function reloadFromCloud(id) {
     console.error(e);
     alert("Greška pri učitavanju iz Clouda: " + e.message);
   }
-}
-
-// delete se importa u ui.js, ali definiran je u cloudDelete.js
-import { deleteCloudRecord } from "./cloudDelete.js";
+  }
