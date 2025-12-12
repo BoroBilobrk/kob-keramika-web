@@ -5,6 +5,7 @@ import { $, formatHr } from "../core/helpers.js";
 import { renderOpenings } from "../calculations/openings.js";
 import { refreshRoomsList } from "../calculations/rooms.js";
 import { runAutoCalc } from "../calculations/autoCalc.js";
+import { applyPricesObject } from "../calculations/cjenik.js";
 import { deleteCloudRecord } from "./cloudDelete.js";
 
 export async function loadArchive() {
@@ -69,19 +70,13 @@ export async function reloadFromCloud(id) {
     const rooms = d.rooms || [];
     const firstRoom = rooms[0] || null;
 
+    // osnovni podaci o gradilištu
     $("#siteName").value     = m.siteName || "";
     $("#roomName").value     = m.roomName || "";
     $("#situationNo").value  = m.situationNo || "";
     $("#investorName").value = m.investorName || "";
 
-    // NOVO: ugovorena vrijednost gradilišta
-    if ($("#contractValue")) {
-      $("#contractValue").value =
-        m.contractValue != null && m.contractValue !== 0
-          ? String(m.contractValue).replace(".", ",")
-          : "";
-    }
-
+    // format pločica
     if (m.tileFormat && m.tileFormat.wcm && m.tileFormat.hcm) {
       const val = `${m.tileFormat.wcm}x${m.tileFormat.hcm}`;
       const select = $("#tileFormatSelect");
@@ -97,6 +92,7 @@ export async function reloadFromCloud(id) {
       }
     }
 
+    // dimenzije + otvori prve prostorije
     if (firstRoom) {
       $("#dimD").value = String(firstRoom.D).replace(".", ",");
       $("#dimS").value = String(firstRoom.S).replace(".", ",");
@@ -106,9 +102,16 @@ export async function reloadFromCloud(id) {
       renderOpenings();
     }
 
+    // sve prostorije u listu
     AppState.siteRooms = rooms.map(r => ({ ...r }));
     refreshRoomsList();
 
+    // C J E N I K  – ako postoji spremljeni cjenik, primijeni ga
+    if (d.pricesTemplate) {
+      applyPricesObject(d.pricesTemplate);
+    }
+
+    // prikaži autoCalc view i odmah izračunaj
     document.querySelectorAll(".view").forEach(v => v.style.display = "none");
     $("#autoCalcView").style.display = "block";
 
@@ -118,4 +121,4 @@ export async function reloadFromCloud(id) {
     console.error(e);
     alert("Greška pri učitavanju iz Clouda: " + e.message);
   }
-  }
+}
