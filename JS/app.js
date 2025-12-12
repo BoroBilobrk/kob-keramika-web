@@ -1,4 +1,4 @@
-// JS/app.js — glavni modul
+// JS/app.js – glavni modul
 
 // CORE
 import "./core/helpers.js";
@@ -23,8 +23,5 @@ import "./cloud/firebase-init.js";
 import "./cloud/cloudSave.js";
 import "./cloud/cloudLoad.js";
 import "./cloud/cloudDelete.js";
-
-// EVENT BINDINGS
-import "./core/events.js";
 
 console.log("KOB-Keramika app.js uspješno učitan.");
