@@ -5,6 +5,30 @@
 const { jsPDF } = window.jspdf;
 import { ensureRoboto } from "./fontRoboto.js";
 
+// učitaj logo (logo.png) kao dataURL
+async function loadLogoDataUrl() {
+  try {
+    const resp = await fetch("logo.png");
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.warn("Ne mogu učitati logo.png za PDF:", e);
+    return null;
+  }
+}
+
+// Format brojeva (decimalna zarez)
+const fmt = x =>
+  typeof x === "number"
+    ? x.toFixed(2).replace(".", ",")
+    : String(x).replace(".", ",");
+
 export async function buildPdfDocumentForSite(roomsData = []) {
   if (!roomsData || roomsData.length === 0) return null;
 
@@ -14,11 +38,12 @@ export async function buildPdfDocumentForSite(roomsData = []) {
     orientation: "portrait"
   });
 
-  // ---- FONT FIX ----
   await ensureRoboto(doc);
   doc.setFont("Roboto", "normal");
   doc.setFontSize(11);
   if (doc.setCharSpace) doc.setCharSpace(0);
+
+  const logoDataUrl = await loadLogoDataUrl();
 
   let page = 1;
 
@@ -26,17 +51,23 @@ export async function buildPdfDocumentForSite(roomsData = []) {
   // HEADER
   // -------------------------------------------------------
   function header() {
-    doc.setFontSize(10);
-    doc.text("Građevinska knjiga – obračun prostorije", 10, 10);
-    doc.text(`Stranica ${page}`, 200 - 10, 10, { align: "right" });
-
-    // vrati font nakon headera
-    doc.setFontSize(11);
     doc.setFont("Roboto", "normal");
+    doc.setFontSize(10);
+    if (doc.setCharSpace) doc.setCharSpace(0);
+
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, "PNG", 10, 4, 12, 12);
+      doc.text("Građevinska knjiga – obračun prostorije", 26, 10);
+    } else {
+      doc.text("Građevinska knjiga – obračun prostorije", 10, 10);
+    }
+    doc.text(`Stranica ${page}`, 190, 10, { align: "right" });
+
+    doc.setFont("Roboto", "normal");
+    doc.setFontSize(11);
     if (doc.setCharSpace) doc.setCharSpace(0);
   }
 
-  // ⚠️ Obavezno async zbog ensureRoboto
   async function newPage() {
     doc.addPage();
     page++;
@@ -48,12 +79,6 @@ export async function buildPdfDocumentForSite(roomsData = []) {
   }
 
   header();
-
-  // Format brojeva (decimalna zarez)
-  const fmt = x =>
-    typeof x === "number"
-      ? x.toFixed(2).replace(".", ",")
-      : String(x).replace(".", ",");
 
   // -------------------------------------------------------
   // GENERIRANJE STRANICA ZA SVAKU PROSTORIJU
@@ -74,9 +99,7 @@ export async function buildPdfDocumentForSite(roomsData = []) {
     doc.setLineWidth(0.2);
     doc.rect(8, 14, 194, 270);
 
-    // ------------------------------ //
     // PODACI O GRADILIŠTU
-    // ------------------------------ //
     doc.setFontSize(13);
     doc.text("Podaci o gradilištu", 12, y);
     y += 6;
@@ -87,9 +110,7 @@ export async function buildPdfDocumentForSite(roomsData = []) {
     doc.text(`Situacija: ${m.situationNo || "-"}`, 12, y); y += 5;
     doc.text(`Investitor: ${m.investorName || "-"}`, 12, y); y += 8;
 
-    // ------------------------------ //
     // DIMENZIJE
-    // ------------------------------ //
     doc.setFontSize(13);
     doc.text("Dimenzije prostorije", 12, y);
     y += 6;
@@ -99,9 +120,7 @@ export async function buildPdfDocumentForSite(roomsData = []) {
     doc.text(`Širina: ${fmt(room.S)} m`, 12, y); y += 5;
     doc.text(`Visina: ${fmt(room.V)} m`, 12, y); y += 8;
 
-    // ------------------------------ //
     // MJERE I FORMULE
-    // ------------------------------ //
     doc.setFontSize(13);
     doc.text("Mjere i formule", 12, y);
     y += 6;
@@ -119,7 +138,6 @@ export async function buildPdfDocumentForSite(roomsData = []) {
     if (r.zidoviNeto != null) {
       const sub = openings.filter(o => o.subtract).map(o => fmt(o.w * o.h));
       const subTxt = sub.length ? " − " + sub.join(" − ") : "";
-
       const expr = `2×(${fmt(room.D)} + ${fmt(room.S)})×${fmt(room.V)}${subTxt}`;
 
       doc.text(`Zidovi neto: ${fmt(r.zidoviNeto)} m²`, 12, y);
@@ -137,7 +155,7 @@ export async function buildPdfDocumentForSite(roomsData = []) {
       doc.text(`Hidro tuš: ${fmt(r.hidroTus)} m²`, 12, y); y += 5;
     }
 
-    // HIDRO TRKA
+    // HIDRO TRAKA
     if (r.hidroTraka != null) {
       doc.text(`Hidro traka: ${fmt(r.hidroTraka)} m`, 12, y); y += 5;
     }
@@ -147,41 +165,35 @@ export async function buildPdfDocumentForSite(roomsData = []) {
       doc.text(`Silikon: ${fmt(r.silikon)} m`, 12, y); y += 5;
     }
 
-    // ------------------------------ //
-    // 10. LAJSNE – potpuno odvojeno
-    // ------------------------------ //
+    // 10. LAJSNE
     if (r.lajsne != null) {
-      const d = r.lajsneData || { baseL: 0, perimLajsne: 0 };
+      const dL = r.lajsneData || { baseL: 0, perimLajsne: 0 };
 
       doc.setFontSize(13);
       doc.text("10. Lajsne", 12, y);
       y += 6;
 
       doc.setFontSize(11);
-      doc.text(`Ručni unos: ${fmt(d.baseL)} m`, 14, y); y += 5;
-      doc.text(`Rubovi elemenata: ${fmt(d.perimLajsne)} m`, 14, y); y += 5;
+      doc.text(`Ručni unos: ${fmt(dL.baseL)} m`, 14, y); y += 5;
+      doc.text(`Rubovi elemenata: ${fmt(dL.perimLajsne)} m`, 14, y); y += 5;
       doc.text(`Ukupno lajsne: ${fmt(r.lajsne)} m`, 14, y); y += 8;
     }
 
-    // ------------------------------ //
-    // 11. GERUNG – potpuno odvojeno
-    // ------------------------------ //
+    // 11. GERUNG
     if (r.gerung != null) {
-      const d = r.gerungData || { baseG: 0, perimGerung: 0 };
+      const dG = r.gerungData || { baseG: 0, perimGerung: 0 };
 
       doc.setFontSize(13);
       doc.text("11. Gerung", 12, y);
       y += 6;
 
       doc.setFontSize(11);
-      doc.text(`Ručni unos: ${fmt(d.baseG)} m`, 14, y); y += 5;
-      doc.text(`Rubovi elemenata: ${fmt(d.perimGerung)} m`, 14, y); y += 5;
+      doc.text(`Ručni unos: ${fmt(dG.baseG)} m`, 14, y); y += 5;
+      doc.text(`Rubovi elemenata: ${fmt(dG.perimGerung)} m`, 14, y); y += 5;
       doc.text(`Ukupno gerung: ${fmt(r.gerung)} m`, 14, y); y += 8;
     }
 
-    // ------------------------------ //
     // OTVORI
-    // ------------------------------ //
     doc.setFontSize(13);
     doc.text("Otvori:", 12, y);
     y += 6;
@@ -229,7 +241,7 @@ export async function buildPdfDocumentForSite(roomsData = []) {
 
   Object.keys(prices).forEach(key => {
     const p = prices[key];
-    doc.text(`${key}: ${p.price} EUR/${p.unit}`, 12, y2);
+    doc.text(`${key}: ${fmt(p.price)} EUR/${p.unit}`, 12, y2);
     y2 += 5;
   });
 
@@ -241,21 +253,53 @@ export async function buildPdfDocumentForSite(roomsData = []) {
   y2 += 6;
 
   let total = 0;
-  roomsData.forEach(r => total += (r.totalPrice || 0));
+  roomsData.forEach(r => (total += (r.totalPrice || 0)));
 
   doc.setFontSize(11);
   doc.text(`Ukupna vrijednost svih prostorija: ${fmt(total)} EUR`, 12, y2);
   y2 += 8;
 
-  // Ručni unosi
-  doc.text("Ugovorena vrijednost gradilišta: _________ EUR", 12, y2); y2 += 6;
-  doc.text("Prethodne situacije (ukupno): _________ EUR", 12, y2); y2 += 6;
-  doc.text("Iznos ove situacije: _________ EUR", 12, y2); y2 += 6;
-  doc.text("Preostala vrijednost: _________ EUR", 12, y2); y2 += 10;
+  const contractValue = site.contractValue || 0;
+  const prevSituationsTotal = site.prevSituationsTotal || 0;
+  const thisSituation = total;
+  const remaining = contractValue
+    ? contractValue - prevSituationsTotal - thisSituation
+    : 0;
 
-  // POTPIS
+  doc.text(
+    "Ugovorena vrijednost gradilišta: " +
+      (contractValue ? `${fmt(contractValue)} EUR` : "_________ EUR"),
+    12,
+    y2
+  );
+  y2 += 6;
+
+  doc.text(
+    "Prethodne situacije (ukupno): " +
+      (prevSituationsTotal ? `${fmt(prevSituationsTotal)} EUR` : "_________ EUR"),
+    12,
+    y2
+  );
+  y2 += 6;
+
+  doc.text(
+    "Iznos ove situacije: " +
+      (thisSituation ? `${fmt(thisSituation)} EUR` : "_________ EUR"),
+    12,
+    y2
+  );
+  y2 += 6;
+
+  doc.text(
+    "Preostala vrijednost: " +
+      (contractValue ? `${fmt(remaining)} EUR` : "_________ EUR"),
+    12,
+    y2
+  );
+  y2 += 10;
+
   doc.setFontSize(12);
   doc.text("Potpis izvođača: ____________________", 12, y2);
 
   return doc;
-               }
+  }
