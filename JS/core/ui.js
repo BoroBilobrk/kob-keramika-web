@@ -1,179 +1,159 @@
 // JS/core/ui.js
-console.log("UI.JS LOADED!");
+console.log("UI.JS LOADED");
 
-import { $, $$, parseNum, formatHr } from "./helpers.js";
-import { AppState } from "./state.js";
-import { addOpening, renderOpenings } from "../calculations/openings.js";
-import { runAutoCalc } from "../calculations/autoCalc.js";
-import { savePrices } from "../calculations/cjenik.js";
-import {
-  addOrUpdateCurrentRoom,
-  clearRoomsForCurrentSite,
-  refreshRoomsList
-} from "../calculations/rooms.js";
-import { exportCsvFromCalc } from "../csv/csvExport.js";
-import { buildPdfDocumentSingle } from "../pdf/pdfSingle.js";
-import { buildPdfDocumentForSite } from "../pdf/pdfSite.js";
-import { saveToCloud } from "../cloud/cloudSave.js";
-import { loadArchive } from "../cloud/cloudLoad.js";
+// ==========================
+// VIEW SWITCHING
+// ==========================
+const views = document.querySelectorAll(".view");
 
 function showView(id) {
-  $$(".view").forEach(v => (v.style.display = "none"));
-  $("#" + id).style.display = "block";
+  views.forEach(v => v.style.display = "none");
+  const el = document.getElementById(id);
+  if (el) el.style.display = "block";
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Navigacija
-  $("#btnOpenAutoCalc")?.addEventListener("click", () =>
-    showView("autoCalcView")
-  );
-  $("#btnOpenMeasures")?.addEventListener("click", () =>
-    showView("measuresView")
-  );
-  $("#btnOpenCosts")?.addEventListener("click", () =>
-    showView("costsView")
-  );
-  $("#btnOpenPrices")?.addEventListener("click", () =>
-    showView("pricesView")
-  );
-  $("#btnOpenArchive")?.addEventListener("click", () => {
-    showView("archiveView");
-    loadArchive();
-  });
-
-  // BACK gumbi
-  $$(".btn-back").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const target = btn.dataset.target || "homeView";
-      showView(target);
-    });
-  });
-
-  // Format pločica – samo prikaz custom polja
-  const tileSelect = $("#tileFormatSelect");
-  const tileCustom = $("#tileCustomFields");
-  tileSelect?.addEventListener("change", () => {
-    tileCustom.style.display =
-      tileSelect.value === "custom" ? "block" : "none";
-  });
-
-  // Otvori
-  $("#btnAddDoor")?.addEventListener("click", () => addOpening("door"));
-  $("#btnAddWindow")?.addEventListener("click", () => addOpening("window"));
-  $("#btnAddNiche")?.addEventListener("click", () => addOpening("niche"));
-  $("#btnAddGeberit")?.addEventListener("click", () => addOpening("geberit"));
-  $("#btnAddVert")?.addEventListener("click", () => addOpening("vert"));
-  $("#btnAddCustom")?.addEventListener("click", () => addOpening("custom"));
-  renderOpenings();
-
-  // Stepenice
-  $("#chkStepenice")?.addEventListener("change", () => {
-    $("#stepeniceInputs").style.display = $("#chkStepenice").checked
-      ? "block"
-      : "none";
-  });
-
-  // Dodatne mjere
-  $("#btnAddDm")?.addEventListener("click", () => {
-    const row = document.createElement("div");
-    row.className = "dm-row";
-    row.innerHTML = `
-      <input class="dmName" placeholder="Naziv mjere">
-      <input class="dmVal" placeholder="0,00">
-      <select class="dmSign">
-        <option value="+">+</option>
-        <option value="-">-</option>
-      </select>
-      <button class="btn-small secondary">🗑</button>
-    `;
-    row.querySelector("button").addEventListener("click", () => row.remove());
-    $("#dmContainer").appendChild(row);
-  });
-
-  // Prostorije lista
-  $("#btnAddRoomToSite")?.addEventListener("click", () => {
-    const last = runAutoCalc(false);
-    if (!last) return;
-    addOrUpdateCurrentRoom(last);
-  });
-
-  $("#btnClearRooms")?.addEventListener("click", () => {
-    clearRoomsForCurrentSite();
-  });
-
-  refreshRoomsList();
-
-  // Izračun
-  $("#btnCalcNow")?.addEventListener("click", () => {
-    runAutoCalc(true);
-  });
-
-  // CSV export
-  $("#btnExportCsvAuto")?.addEventListener("click", () => {
-    const data = runAutoCalc(true);
-    if (!data) return;
-    exportCsvFromCalc(data);
-  });
-
-  // PDF export – async
-  $("#btnExportPdfAuto")?.addEventListener("click", async () => {
-    const data = runAutoCalc(true);
-    if (!data) return;
-
-    let doc;
-    if (AppState.siteRooms.length > 0) {
-      doc = await buildPdfDocumentForSite(AppState.siteRooms);
-    } else {
-      doc = await buildPdfDocumentSingle(data);
-    }
-
-    if (!doc) {
-      alert("Greška pri generiranju PDF-a.");
-      return;
-    }
-
-    const meta = data.meta || {};
-    const name = (meta.siteName || "obracun").replace(/\s+/g, "_");
-    doc.save(name + ".pdf");
-  });
-
-  // Cloud spremanje
-  $("#btnSaveCloud")?.addEventListener("click", async () => {
-    const data = runAutoCalc(true);
-    if (!data) return;
-    await saveToCloud(data);
-  });
-
-  // Ručni mjere – dodaj red
-  $("#btnAddManualMeasure")?.addEventListener("click", () => {
-    const tbody = $("#manualMeasuresBody");
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><input type="text" placeholder="Naziv"></td>
-      <td><input type="text" placeholder="0,00"></td>
-      <td><input type="text" placeholder="m2"></td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  // Troškovi
-  $("#btnCalcCosts")?.addEventListener("click", () => {
-    const hourly = parseNum($("#costHourly").value);
-    const hours = parseNum($("#costHours").value);
-    const other = parseNum($("#costOther").value);
-    const total = hourly * hours + other;
-    $("#costsOutput").innerHTML = `<b>Ukupni troškovi:</b> ${formatHr(
-      total,
-      2
-    )} EUR`;
-  });
-
-  // Cjenik – spremi (jedan skup cijena, ne po formatu)
-  $("#btnSavePrices")?.addEventListener("click", () => {
-    savePrices();
-    alert("Cjenik spremljen.");
-  });
-
-  // Start ekran
-  showView("homeView");
+// ==========================
+// HOME MENU BUTTONS
+// ==========================
+document.getElementById("btnOpenAutoCalc")?.addEventListener("click", () => {
+  showView("autoCalcView");
 });
+
+document.getElementById("btnOpenMeasures")?.addEventListener("click", () => {
+  showView("measuresView");
+});
+
+document.getElementById("btnOpenCosts")?.addEventListener("click", () => {
+  showView("costsView");
+});
+
+document.getElementById("btnOpenPrices")?.addEventListener("click", () => {
+  showView("pricesView");
+});
+
+document.getElementById("btnOpenArchive")?.addEventListener("click", () => {
+  showView("archiveView");
+});
+
+// ==========================
+// BACK BUTTONS
+// ==========================
+document.querySelectorAll(".btn-back").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.target;
+    if (target) showView(target);
+  });
+});
+
+// ==========================
+// TILE FORMAT CUSTOM
+// ==========================
+const tileSelect = document.getElementById("tileFormatSelect");
+const tileCustom = document.getElementById("tileCustomFields");
+
+tileSelect?.addEventListener("change", () => {
+  tileCustom.style.display = tileSelect.value === "custom" ? "block" : "none";
+});
+
+// ==========================
+// STEPENICE TOGGLE
+// ==========================
+const chkStep = document.getElementById("chkStepenice");
+const stepInputs = document.getElementById("stepeniceInputs");
+
+chkStep?.addEventListener("change", () => {
+  stepInputs.style.display = chkStep.checked ? "block" : "none";
+});
+
+// ==========================
+// DODATNE MJERE
+// ==========================
+const dmContainer = document.getElementById("dmContainer");
+document.getElementById("btnAddDm")?.addEventListener("click", () => {
+  const row = document.createElement("div");
+  row.className = "dm-row";
+  row.innerHTML = `
+    <input placeholder="Opis">
+    <input placeholder="Vrijednost">
+    <select>
+      <option value="+">+</option>
+      <option value="-">−</option>
+    </select>
+    <button class="btn-small">✖</button>
+  `;
+  row.querySelector("button").onclick = () => row.remove();
+  dmContainer.appendChild(row);
+});
+
+// ==========================
+// OTVORI – PLACEHOLDER (logika ide kasnije)
+// ==========================
+const openingsList = document.getElementById("openingsList");
+
+function addOpening(type) {
+  const row = document.createElement("div");
+  row.className = "opening-row";
+  row.innerHTML = `
+    <strong>${type}</strong>
+    <input placeholder="Širina (m)">
+    <input placeholder="Visina (m)">
+    <button class="btn-small">✖</button>
+  `;
+  row.querySelector("button").onclick = () => row.remove();
+  openingsList.appendChild(row);
+}
+
+document.getElementById("btnAddDoor")?.onclick = () => addOpening("Vrata");
+document.getElementById("btnAddWindow")?.onclick = () => addOpening("Prozor");
+document.getElementById("btnAddNiche")?.onclick = () => addOpening("Niša");
+document.getElementById("btnAddGeberit")?.onclick = () => addOpening("Geberit");
+document.getElementById("btnAddVert")?.onclick = () => addOpening("Vertikala");
+document.getElementById("btnAddCustom")?.onclick = () => addOpening("Custom");
+
+// ==========================
+// ROOMS (SITE)
+// ==========================
+const roomsList = document.getElementById("roomsList");
+
+document.getElementById("btnAddRoomToSite")?.addEventListener("click", () => {
+  const name = document.getElementById("roomName")?.value;
+  if (!name) return alert("Upiši naziv prostorije");
+
+  const div = document.createElement("div");
+  div.textContent = `✔ ${name}`;
+  roomsList.appendChild(div);
+
+  // reset mjera NAKON spremanja prostorije
+  resetRoomInputs();
+});
+
+document.getElementById("btnClearRooms")?.addEventListener("click", () => {
+  roomsList.innerHTML = "";
+});
+
+// ==========================
+// RESET MJERA (VAŽNO)
+// ==========================
+function resetRoomInputs() {
+  document.getElementById("dimD").value = "";
+  document.getElementById("dimS").value = "";
+  document.getElementById("dimV").value = "";
+  openingsList.innerHTML = "";
+  dmContainer.innerHTML = "";
+}
+
+// ==========================
+// PLACEHOLDERS ZA DALJNJE FAZE
+// ==========================
+document.getElementById("btnCalcNow")?.addEventListener("click", () => {
+  console.log("CALC klik – ide autoCalc.js");
+});
+
+document.getElementById("btnExportPdfAuto")?.addEventListener("click", () => {
+  console.log("PDF – ide pdf modul");
+});
+
+document.getElementById("btnSaveCloud")?.addEventListener("click", () => {
+  console.log("CLOUD SAVE – ide cloud modul");
+});
+
