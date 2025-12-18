@@ -31,7 +31,66 @@
       <button id="btnOpenMeasures" class="menu-btn">✏️ Ručni unos mjera</button>
       <button id="btnOpenCosts" class="menu-btn">💰 Troškovi</button>
       <button id="btnOpenPrices" class="menu-btn">📒 Cjenik</button>
+
+      <!-- NOVO -->
+      <button id="btnOpenTroskovnikUpload" class="menu-btn">📥 Učitavanje troškovnika</button>
+      <button id="btnOpenTroskovnikCalc" class="menu-btn">📊 Obračun po troškovniku</button>
+
       <button id="btnOpenArchive" class="menu-btn">📂 Arhiva obračuna</button>
+    </div>
+  </section>
+
+
+  <!-- =============== UČITAVANJE TROŠKOVNIKA (NOVO) =============== -->
+  <section id="troskovnikUploadView" class="view">
+    <button class="btn-back" data-target="homeView">← Natrag</button>
+    <h2>📥 Učitavanje troškovnika</h2>
+
+    <div class="card">
+      <p class="hint">
+        Učitaj troškovnik iz Excel-a (XLSX/CSV) ili PDF-a.
+        Nakon učitavanja, stavke će biti dostupne u modulu “Obračun po troškovniku”.
+      </p>
+
+      <input id="troskovnikFile" type="file" accept=".xlsx,.xls,.csv,.pdf">
+      <button id="btnLoadTroskovnik">📥 Učitaj troškovnik</button>
+
+      <div id="troskovnikUploadStatus" class="hint" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <h3>📄 Pregled učitanih stavki</h3>
+      <div id="troskovnikPreview" class="hint">Nema učitanih stavki.</div>
+    </div>
+  </section>
+
+
+  <!-- =============== OBRAČUN PO TROŠKOVNIKU (NOVO) =============== -->
+  <section id="troskovnikCalcView" class="view">
+    <button class="btn-back" data-target="homeView">← Natrag</button>
+    <h2>📊 Obračun po troškovniku</h2>
+
+    <div class="card">
+      <p class="hint">
+        Odaberi stavke iz troškovnika (kvačice), unesi podatke o gradilištu i dimenzije prostorije.
+        Ovaj modul koristi istu logiku mjerenja kao “Automatski obračun”, ali prema stavkama iz troškovnika.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>✅ Stavke iz troškovnika</h3>
+      <div id="troskovnikItemsList" class="hint">Učitaj troškovnik da se pojave stavke.</div>
+    </div>
+
+    <div class="card">
+      <button id="btnCalcFromTroskovnik">🔍 Izračunaj po troškovniku</button>
+      <button id="btnExportPdfTroskovnik" class="secondary">📄 PDF – po troškovniku</button>
+      <button id="btnSaveCloudTroskovnik" class="secondary">☁️ Spremi u Cloud</button>
+    </div>
+
+    <div class="card" id="troskovnikResult" style="display:none;">
+      <h3>📊 Rezultat</h3>
+      <div id="troskovnikOutput"></div>
     </div>
   </section>
 
@@ -46,11 +105,17 @@
     <div class="card">
       <h3>🏗️ Podaci o gradilištu</h3>
 
+      <!-- NOVO: oznaka gradilišta -->
+      <input id="siteCode" placeholder="Oznaka gradilišta (siteCode) (npr. AUR-001)">
+
       <input id="siteName" placeholder="Naziv gradilišta (npr. Hotel Aurora)">
       <input id="roomName" placeholder="Naziv prostorije (npr. Kupaonica 101)">
       <input id="situationNo" placeholder="Broj situacije (npr. S-12)">
       <input id="investorName" placeholder="Investitor (npr. Jadranka d.d.)">
       <input id="contractValue" placeholder="Ugovorena vrijednost gradilišta (EUR), npr. 25000">
+
+      <!-- NOVO: prethodne situacije (puni JS iz Clouda) -->
+      <input id="prevSituations" placeholder="Prethodne situacije ukupno (EUR) – automatski iz Clouda" readonly>
 
       <h4>Prostorije na gradilištu</h4>
       <div class="rooms-actions">
@@ -88,6 +153,26 @@
       <input id="dimV" placeholder="Visina (m), npr. 2,60">
     </div>
 
+    <!-- =================== HIDRO TUŠ (NOVO) =================== -->
+    <div class="card">
+      <h3>🚿 Hidro tuš – mjere</h3>
+      <p class="hint">
+        Unesi mjere tuša kao (a + b) × visina.
+        U obračunu se zbraja u hidroizolaciju, a za hidro traku dodaje se (a + b + visina) prema dogovoru.
+      </p>
+
+      <div class="height-row">
+        <input id="tusA" placeholder="a (m), npr. 1,20">
+        <input id="tusB" placeholder="b (m), npr. 0,80">
+      </div>
+
+      <div style="margin-top:10px;">
+        <input id="tusV" placeholder="visina (m), npr. 2,10">
+      </div>
+
+      <div id="tusHint" class="hint" style="margin-top:8px;"></div>
+    </div>
+
     <!-- OTVORI ISPOD DIMENZIJA -->
     <div class="card">
       <h3>🧱 Otvori (vrata, prozori, niše, geberit, vertikale)</h3>
@@ -104,6 +189,19 @@
         <button id="btnAddCustom" class="btn-small">➕ Custom</button>
       </div>
       <div id="openingsList"></div>
+    </div>
+
+    <!-- =================== STUBIŠTE (NOVO) =================== -->
+    <div class="card">
+      <h3>🪜 Stubište – mjere</h3>
+      <p class="hint">
+        Unesi dužinu jedne stepenice i broj komada. Obračun: dužina × komada.
+      </p>
+
+      <input id="stubeDuzina" placeholder="Dužina jedne stepenice (m), npr. 1,10">
+      <input id="stubeKom" placeholder="Broj stepenica (kom), npr. 12">
+
+      <div id="stubeHint" class="hint" style="margin-top:8px;"></div>
     </div>
 
     <!-- STAVKE -->
@@ -149,6 +247,8 @@
         <input type="checkbox" id="chkDodatne">
         <label for="chkDodatne">Uključi dodatne mjere</label>
       </div>
+
+      <!-- OVO OSTAVLJAMO zbog postojeće logike -->
       <div class="checkbox-row">
         <input type="checkbox" id="chkStepenice">
         <label for="chkStepenice">Stepenice</label>
@@ -306,4 +406,4 @@
 <script type="module" src="JS/app.js?v=2"></script>
 
 </body>
-  </html>
+</html>
