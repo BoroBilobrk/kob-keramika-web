@@ -157,3 +157,15 @@ document.getElementById("btnSaveCloud")?.addEventListener("click", () => {
   console.log("CLOUD SAVE – ide cloud modul");
 });
 
+// ==========================
+// NOVI HOME MENU GUMBI
+// ==========================
+document.getElementById("btnOpenCostImport")?.addEventListener("click", () => {
+  console.log("OPEN costImportView");
+  showView("costImportView");
+});
+
+document.getElementById("btnOpenCostCalc")?.addEventListener("click", () => {
+  console.log("OPEN costCalcView");
+  showView("costCalcView");
+});
