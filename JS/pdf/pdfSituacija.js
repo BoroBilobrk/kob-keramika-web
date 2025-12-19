@@ -55,3 +55,41 @@ export function generateSituacijaPDF(data, type = "privremena") {
 
   return doc;
 }
+// =========================
+  // SITUACIJSKI REZIME
+  // =========================
+  y += 10;
+  doc.setFontSize(10);
+
+  doc.text(
+    `Vrijednost radova prema prethodnoj situaciji: ${data.prevTotal.toFixed(2)} €`,
+    10,
+    y
+  );
+  y += 6;
+
+  doc.text(
+    `Vrijednost radova po ovoj situaciji: ${data.total.toFixed(2)} €`,
+    10,
+    y
+  );
+  y += 6;
+
+  doc.setFontSize(11);
+  doc.text(
+    `Ukupna vrijednost izvršenih radova: ${(data.prevTotal + data.total).toFixed(2)} €`,
+    10,
+    y
+  );
+
+  // =========================
+  // POTPISI
+  // =========================
+  y += 20;
+  doc.setFontSize(10);
+
+  doc.text("Situaciju sastavio:", 10, y);
+  doc.text(data.meta.contractor || "KOB-Keramika", 10, y + 6);
+
+  doc.text("Naručitelj:", 130, y);
+  doc.text(data.meta.investorName || "", 130, y + 6);
