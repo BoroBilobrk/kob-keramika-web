@@ -1,242 +1,204 @@
 // JS/troskovnik/load.js
-console.log("troskovnik/load.js loaded ✅");
+// Učitavanje troškovnika iz Excel-a (XLSX/XLS) + preview + spremanje u window.troskovnikItems
 
-// Helper: normaliziraj tekst (mala slova, bez dijakritike)
-function norm(s) {
-  return String(s ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-// Helper: pretvori "12,50" -> 12.5
-function toNumber(x) {
-  if (x == null) return 0;
-  if (typeof x === "number") return x;
-  const s = String(x).trim().replace(/\s/g, "").replace(",", ".");
-  const n = parseFloat(s);
-  return Number.isFinite(n) ? n : 0;
-}
-
-// Nađi header red (u prvih N redova) po keywordima
-function findHeaderRow(rows, maxScan = 30) {
-  const keys = ["opis", "rad", "naziv", "stavka", "jm", "jed", "cijena", "iznos", "sifra", "kolicina", "kol"];
-  let best = { idx: -1, score: 0 };
-
-  const scan = Math.min(rows.length, maxScan);
-  for (let r = 0; r < scan; r++) {
-    const row = rows[r] || [];
-    const cells = row.map(norm);
-    let score = 0;
-    for (const k of keys) {
-      if (cells.some(c => c.includes(k))) score++;
-    }
-    if (score > best.score) best = { idx: r, score };
-  }
-
-  // prag: mora imati bar nešto smisleno
-  return best.score >= 2 ? best.idx : 0;
-}
-
-// Mapiraj stupce prema nazivu
-function detectColumns(headerCells) {
-  const h = headerCells.map(norm);
-
-  const idxOf = (preds) => {
-    for (let i = 0; i < h.length; i++) {
-      const c = h[i];
-      if (!c) continue;
-      if (preds.some(p => c.includes(p))) return i;
-    }
-    return -1;
-  };
-
-  const colOpis  = idxOf(["opis", "naziv", "rad", "stavka", "opis radova"]);
-  const colJM    = idxOf(["jm", "jed", "jedin", "mj", "mjera", "jed mj"]);
-  const colSifra = idxOf(["sifra", "šifra", "id", "oznaka", "rb", "rbr", "redni"]);
-  const colCijena = idxOf(["cijena", "jedinicna", "jedinična", "eur", "€/"]);
-  // kolicina nije obavezna za učitavanje stavki, ali ga čitamo ako postoji
-  const colKol = idxOf(["kolicina", "količina", "kol", "qty", "kom", "m2", "m²"]);
-
-  return { colOpis, colJM, colSifra, colCijena, colKol };
-}
-
-function renderPreview(items) {
-  const box = document.getElementById("troskovnikPreview");
-  if (!box) return;
-
-  if (!items?.length) {
-    box.textContent = "Nema učitanih stavki.";
-    return;
-  }
-
-  // prikaži prvih 30
-  const show = items.slice(0, 30);
-  box.innerHTML = show
-    .map(i => `${i.opis} (${i.jm || "—"}) – ${i.cijena ? i.cijena.toFixed(2) : "0.00"} €`)
-    .join("<br>");
-
-  if (items.length > 30) {
-    box.innerHTML += `<br><br><span class="hint">Prikazano 30 od ${items.length} stavki.</span>`;
-  }
-}
-
-function renderChecklist(items) {
-  const box = document.getElementById("troskovnikItemsList");
-  if (!box) return;
-
-  if (!items?.length) {
-    box.textContent = "Učitaj troškovnik da se pojave stavke.";
-    return;
-  }
-
-  box.innerHTML = "";
-  items.forEach(i => {
-    const row = document.createElement("div");
-    row.className = "checkbox-row";
-    row.innerHTML = `
-      <label>
-        <input type="checkbox" value="${i.id}" checked>
-        ${i.opis} ${i.jm ? `(${i.jm})` : ""}
-      </label>
-    `;
-    box.appendChild(row);
-  });
-}
-
-function setStatus(msg, ok = true) {
+function setStatus(msg) {
   const el = document.getElementById("troskovnikUploadStatus");
-  if (!el) return;
-  el.textContent = msg;
-  el.style.color = ok ? "" : "#ff6b6b";
+  if (el) el.textContent = msg || "";
+}
+
+function setPreview(html) {
+  const el = document.getElementById("troskovnikPreview");
+  if (el) el.innerHTML = html || "Nema učitanih stavki.";
+}
+
+// Fallback: ako XLSX nije globalno učitan, pokušaj ga dohvatiti kao ESM s jsDelivr (+esm)
+async function ensureXLSX() {
+  if (window.XLSX) return window.XLSX;
+
+  try {
+    const mod = await import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm");
+    // jsDelivr +esm obično vraća default export
+    window.XLSX = mod?.default || mod;
+    return window.XLSX;
+  } catch (e) {
+    console.error("Ne mogu učitati XLSX biblioteku preko +esm:", e);
+    throw new Error("XLSX biblioteka nije učitana. Dodaj XLSX <script> u index.html.");
+  }
+}
+
+function normalizeUnit(u) {
+  if (u == null) return "";
+  const s = String(u).trim();
+  if (!s) return "";
+  // normalize m² / m2
+  if (s.toLowerCase() === "m²") return "m2";
+  return s;
+}
+
+function toNumber(v) {
+  if (v == null) return null;
+  if (typeof v === "number") return v;
+  const s = String(v).trim().replace(/\./g, "").replace(",", ".");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function pickBestSheetName(sheetNames = []) {
+  // prefer “KERAMIČARSKI RADOVI” ili nešto slično
+  const prefer = sheetNames.find(n => /kerami/i.test(n));
+  return prefer || sheetNames[0];
+}
+
+function parseRowsToItems(rows) {
+  // rows = array of arrays (header:1)
+  // očekivano: [RB, Opis, JM, Količina, Cijena, Ukupno]
+  const items = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const rbRaw = row[0];
+    const opisRaw = row[1];
+    const jmRaw = row[2];
+
+    // preskoči potpuno prazne
+    if (
+      (rbRaw == null || String(rbRaw).trim() === "") &&
+      (opisRaw == null || String(opisRaw).trim() === "") &&
+      (jmRaw == null || String(jmRaw).trim() === "")
+    ) continue;
+
+    // preskoči naslovne redove tipa "RB", "opis" itd.
+    const rbStr = rbRaw == null ? "" : String(rbRaw).trim();
+    const opisStr = opisRaw == null ? "" : String(opisRaw).trim();
+    const jmStr = jmRaw == null ? "" : String(jmRaw).trim();
+
+    if (/^rb$/i.test(rbStr) || /opis/i.test(opisStr) || /jed/i.test(jmStr)) continue;
+
+    // RB u tvom file-u često dolazi kao "8." ili "16."
+    // prihvati i "8" i "8." i 8
+    let rbNum = null;
+    if (typeof rbRaw === "number") {
+      rbNum = rbRaw;
+    } else if (rbStr) {
+      const m = rbStr.match(/^(\d+)\s*\.?\s*$/);
+      if (m) rbNum = Number(m[1]);
+    }
+
+    // opis mora postojati
+    if (!opisStr) continue;
+
+    // jedinica mjere
+    const jm = normalizeUnit(jmStr);
+
+    // probaj kol/cijena/ukupno (ako postoje)
+    const kol = toNumber(row[3]);
+    const cijena = toNumber(row[4]);
+    const ukupno = toNumber(row[5]);
+
+    // Dodatni filter: ako nema ni RB ni JM, a opis izgleda kao poglavlje (npr. "1. PODOVI"), možemo preskočiti
+    const isSectionLike =
+      !jm &&
+      !kol &&
+      !cijena &&
+      !ukupno &&
+      (/^\d+\.\s*[A-ZČĆŽŠĐ]/.test(opisStr) || /^[A-ZČĆŽŠĐ0-9 .-]{5,}$/.test(opisStr));
+
+    if (isSectionLike) continue;
+
+    // Ako RB ne postoji, ali ima JM i cijenu ili količinu – svejedno uzmi (generiraj id)
+    const id = rbNum != null ? String(rbNum) : `row_${i + 1}`;
+
+    items.push({
+      id,
+      rb: rbNum != null ? rbNum : null,
+      opis: opisStr,
+      jm: jm || "",
+      kol: kol != null ? kol : null,
+      cijena: cijena != null ? cijena : null,
+      ukupno: ukupno != null ? ukupno : null,
+    });
+  }
+
+  return items;
+}
+
+function renderPreviewList(items) {
+  if (!items || !items.length) {
+    setPreview("Nema učitanih stavki.");
+    return;
+  }
+
+  const first = items.slice(0, 25).map(it => {
+    const jm = it.jm ? ` (${it.jm})` : "";
+    const cij = it.cijena != null ? ` – ${it.cijena} €` : "";
+    const kol = it.kol != null ? `, kol: ${it.kol}` : "";
+    return `<div>${it.rb != null ? `<b>${it.rb}.</b> ` : ""}${it.opis}${jm}${kol}${cij}</div>`;
+  }).join("");
+
+  const more = items.length > 25 ? `<div class="hint" style="margin-top:8px;">Prikazano 25 / ${items.length} stavki.</div>` : "";
+  setPreview(first + more);
+}
+
+function notifyChecklistRender() {
+  // ako app.js ima lokalnu funkciju renderTroskovnikChecklist() – nije globalna
+  // zato emitamo event; a ako postoji globalna funkcija, zovemo je direktno
+  try {
+    if (typeof window.renderTroskovnikChecklist === "function") {
+      window.renderTroskovnikChecklist();
+    } else {
+      window.dispatchEvent(new CustomEvent("troskovnik:loaded", { detail: { count: window.troskovnikItems?.length || 0 } }));
+    }
+  } catch (e) {
+    console.warn("Ne mogu okinuti render checkliste:", e);
+  }
 }
 
 export async function loadTroskovnik(file) {
   try {
-    if (!file) return;
+    if (!file) throw new Error("Nema datoteke.");
 
-    const ext = (file.name.split(".").pop() || "").toLowerCase();
-    const isExcel = ext === "xlsx" || ext === "xls";
-    const isCsv = ext === "csv";
-    const isPdf = ext === "pdf";
+    const name = (file.name || "").toLowerCase();
+    if (!name.endsWith(".xlsx") && !name.endsWith(".xls")) {
+      throw new Error("Molim učitaj Excel datoteku (.xlsx ili .xls).");
+    }
 
-    if (isPdf) {
-      setStatus("PDF učitavanje nije uključeno u ovom koraku.", false);
-      alert("Trenutno radimo XLSX. PDF ćemo kasnije.");
+    setStatus("Učitavam Excel…");
+
+    const XLSX = await ensureXLSX();
+
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, { type: "array" });
+
+    const sheetName = pickBestSheetName(wb.SheetNames);
+    const ws = wb.Sheets[sheetName];
+    if (!ws) throw new Error("Excel nema valjani sheet.");
+
+    // header:1 => dobijemo raw redove (array-of-arrays)
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true });
+
+    const items = parseRowsToItems(rows);
+
+    window.troskovnikItems = items;
+
+    renderPreviewList(items);
+
+    if (!items.length) {
+      setStatus("Excel učitan, ali nema prepoznatih stavki ❗ (provjeri strukturu stupaca).");
+      // korisno za debug u konzoli:
+      console.log("DEBUG rows[0..30]:", rows.slice(0, 30));
       return;
     }
 
-    if (!isExcel && !isCsv) {
-      alert("Podržano: .xlsx, .xls (i opcionalno .csv)");
-      return;
-    }
+    setStatus(`Excel troškovnik učitan ✅ (${items.length} stavki)`);
+    notifyChecklistRender();
 
-    setStatus("Učitavam…");
+    // opcionalno: alert kao kod tebe
+    // alert("Excel troškovnik učitan ✅");
 
-    // ✅ XLSX
-    if (isExcel) {
-      if (typeof XLSX === "undefined") {
-        throw new Error("XLSX nije učitan (XLSX is undefined). Provjeri index.html redoslijed scriptova.");
-      }
-
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
-
-      const firstSheetName = wb.SheetNames?.[0];
-      if (!firstSheetName) throw new Error("Excel nema sheet.");
-      const ws = wb.Sheets[firstSheetName];
-
-      // čitaj kao matrica (header:1) da možemo tražiti header red
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
-
-      if (!rows?.length) throw new Error("Sheet je prazan.");
-
-      const headerRowIdx = findHeaderRow(rows, 30);
-      const header = rows[headerRowIdx] || [];
-      const { colOpis, colJM, colSifra, colCijena } = detectColumns(header);
-
-      if (colOpis === -1) {
-        // bez opisa nema smisla
-        console.warn("Header:", header);
-        throw new Error("Ne mogu pronaći stupac OPIS/NAZIV u Excelu.");
-      }
-
-      const items = [];
-      for (let r = headerRowIdx + 1; r < rows.length; r++) {
-        const row = rows[r] || [];
-
-        const opis = String(row[colOpis] ?? "").trim();
-        if (!opis) continue; // skip prazne
-
-        const jm = colJM >= 0 ? String(row[colJM] ?? "").trim() : "";
-        const sifraRaw = colSifra >= 0 ? String(row[colSifra] ?? "").trim() : "";
-        const cijena = colCijena >= 0 ? toNumber(row[colCijena]) : 0;
-
-        items.push({
-          id: sifraRaw || `row_${r}`,
-          sifra: sifraRaw || "",
-          opis,
-          jm,
-          cijena
-        });
-      }
-
-      // spremi globalno
-      window.troskovnikItems = items;
-
-      renderPreview(items);
-      renderChecklist(items);
-
-      setStatus(`Učitano ${items.length} stavki iz Excel-a ✅`);
-      alert("Excel troškovnik učitan ✅");
-      console.log("troskovnikItems:", items);
-      return;
-    }
-
-    // (Ako baš ostaviš CSV kao fallback — možeš i izbaciti)
-    if (isCsv) {
-      const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(l => l.trim().length);
-      if (!lines.length) throw new Error("CSV je prazan.");
-
-      // probaj ; pa , (HR često ;)
-      const guessSep = (lines[0].includes(";") ? ";" : ",");
-      const header = lines[0].split(guessSep).map(s => s.trim());
-
-      const h = header.map(norm);
-      const colOpis = h.findIndex(x => x.includes("opis") || x.includes("naziv") || x.includes("rad"));
-      const colJM = h.findIndex(x => x === "jm" || x.includes("jed"));
-      const colCijena = h.findIndex(x => x.includes("cijena") || x.includes("jedinicna") || x.includes("eur"));
-      const colSifra = h.findIndex(x => x.includes("sifra") || x.includes("oznaka") || x.includes("rb"));
-
-      if (colOpis === -1) throw new Error("CSV: ne mogu pronaći stupac OPIS/NAZIV.");
-
-      const items = [];
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(guessSep);
-        const opis = (parts[colOpis] ?? "").trim();
-        if (!opis) continue;
-
-        items.push({
-          id: (parts[colSifra] ?? `row_${i}`).trim(),
-          sifra: (parts[colSifra] ?? "").trim(),
-          opis,
-          jm: (parts[colJM] ?? "").trim(),
-          cijena: toNumber(parts[colCijena])
-        });
-      }
-
-      window.troskovnikItems = items;
-      renderPreview(items);
-      renderChecklist(items);
-
-      setStatus(`Učitano ${items.length} stavki iz CSV-a ✅`);
-      alert("CSV troškovnik učitan ✅");
-    }
   } catch (err) {
-    console.error(err);
-    setStatus(`Greška: ${err.message || err}`, false);
-    alert("Greška pri učitavanju Excel troškovnika");
+    console.error("Greška pri učitavanju Excel troškovnika:", err);
+    setStatus("Greška pri učitavanju Excel troškovnika ❌");
+    setPreview("Nema učitanih stavki.");
+    alert(err?.message || "Greška pri učitavanju Excel troškovnika");
   }
-    }
+}
