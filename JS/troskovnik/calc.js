@@ -1,38 +1,48 @@
 // JS/troskovnik/calc.js
-// ===================================
-// MAPIRANJE AUTO OBRAČUNA
-// NA TROŠKOVNIK
-// ===================================
 
-export function calculateFromAuto(auto, troskovnikItems) {
+export function calcFromTroskovnik() {
+  if (!window.troskovnikItems) {
+    alert("Nema učitanog troškovnika");
+    return;
+  }
 
-  const map = {
-    pod: ["pod"],
-    zidovi: ["zid"],
-    hidroPod: ["hidro pod"],
-    hidroTus: ["hidro tuš", "tuš"],
-    hidroTraka: ["traka"],
-    silikon: ["silikon"],
-    sokl: ["sokl"],
-    lajsne: ["lajsna"],
-    gerung: ["gerung"],
-    stepenice: ["stepen"]
-  };
+  const checkedIds = Array.from(
+    document.querySelectorAll("#troskovnikItemsList input[type=checkbox]:checked")
+  ).map(cb => cb.value);
 
-  return troskovnikItems.map(item => {
-    const name = item.name.toLowerCase();
-    let qty = 0;
+  const selected = window.troskovnikItems.filter(i =>
+    checkedIds.includes(i.id)
+  );
 
-    Object.keys(map).forEach(key => {
-      if (map[key].some(k => name.includes(k))) {
-        qty = auto[key] || 0;
-      }
-    });
+  if (selected.length === 0) {
+    alert("Nijedna stavka nije odabrana");
+    return;
+  }
 
-    return {
-      ...item,
-      qty,
-      total: qty * (item.price || 0)
-    };
+  let total = 0;
+
+  const out = document.getElementById("troskovnikOutput");
+  out.innerHTML = "";
+
+  selected.forEach(item => {
+    total += item.total;
+
+    const row = document.createElement("div");
+    row.textContent = `${item.opis}: ${item.qty} ${item.jm} = ${item.total.toFixed(2)} €`;
+    out.appendChild(row);
   });
+
+  const sum = document.createElement("strong");
+  sum.style.display = "block";
+  sum.style.marginTop = "10px";
+  sum.textContent = `UKUPNO: ${total.toFixed(2)} €`;
+  out.appendChild(sum);
+
+  document.getElementById("troskovnikResult").style.display = "block";
+
+  // spremi za PDF
+  window.troskovnikCalcResult = {
+    items: selected,
+    total
+  };
 }
