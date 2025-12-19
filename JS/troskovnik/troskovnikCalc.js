@@ -1,113 +1,124 @@
 // JS/troskovnik/troskovnikCalc.js
-// ==================================
-// OBRAČUN PO TROŠKOVNIKU – PDF SITUACIJA
-// ==================================
+// ===================================
+// OBRAČUN PO TROŠKOVNIKU
+// koristi automatski obračun
+// ===================================
 
+import { calculateAuto } from "../calculations/autoCalc.js";
 import { generateSituacijaPDF } from "../pdf/pdfSituacija.js";
+import { saveSituation } from "../cloud/situacije.js";
 
-console.log("troskovnikCalc.js loaded");
+let situationType = "privremena";
 
-// ===============================
-// PDF – OKONČANA / PRIVREMENA
-// ===============================
-document.getElementById("btnExportPdfTroskovnik")?.addEventListener("click", () => {
+// -------------------------------
+// RADIO BUTTONS (privremena / okončana)
+// -------------------------------
+document.querySelectorAll("input[name='sitType']").forEach(radio => {
+  radio.addEventListener("change", e => {
+    situationType = e.target.value;
+  });
+});
 
-  // Provjera stavki
-  if (!window.itemsFromTroskovnik || !Array.isArray(window.itemsFromTroskovnik)) {
-    alert("Nema učitanih stavki iz troškovnika.");
+// -------------------------------
+// GLAVNI IZRAČUN
+// -------------------------------
+document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () => {
+
+  if (!window.itemsFromTroskovnik || !window.itemsFromTroskovnik.length) {
+    alert("Nema učitanog troškovnika.");
     return;
   }
 
-  if (window.itemsFromTroskovnik.length === 0) {
-    alert("Lista stavki iz troškovnika je prazna.");
-    return;
-  }
+  const auto = calculateAuto();
 
-  // Ukupno za ovu situaciju
-  const totalThisSituation = window.itemsFromTroskovnik.reduce(
-    (sum, item) => sum + (item.total || 0),
-    0
-  );
+  const map = {
+    pod: ["pod"],
+    zidovi: ["zid"],
+    hidroPod: ["hidro pod"],
+    hidroTus: ["hidro tuš", "tuš"],
+    hidroTraka: ["traka"],
+    silikon: ["silikon"],
+    sokl: ["sokl"],
+    lajsne: ["lajsna"],
+    gerung: ["gerung"],
+    stepenice: ["stepen"]
+  };
 
-  // META PODACI
-  const data = {
+  const calculated = window.itemsFromTroskovnik.map(item => {
+    let qty = 0;
+    const name = item.name.toLowerCase();
+
+    Object.keys(map).forEach(key => {
+      if (map[key].some(k => name.includes(k))) {
+        qty = auto[key] || 0;
+      }
+    });
+
+    return {
+      ...item,
+      qty,
+      total: qty * (item.price || 0)
+    };
+  });
+
+  const total = calculated.reduce((s, i) => s + i.total, 0);
+
+  window.currentSituationData = {
     meta: {
-      situationNo: document.getElementById("situationNo")?.value || "",
-      roomName: document.getElementById("roomName")?.value || "",
-      investorName: document.getElementById("investorName")?.value || "",
-      contractor: "KOB-Keramika"
+      siteCode: document.getElementById("siteCode")?.value,
+      siteName: document.getElementById("siteName")?.value,
+      roomName: document.getElementById("roomName")?.value,
+      situationNo: document.getElementById("situationNo")?.value,
+      investorName: document.getElementById("investorName")?.value
     },
-
-    // STAVKE IZ TROŠKOVNIKA
-    items: window.itemsFromTroskovnik.map(i => ({
-      name: i.name || i.opis || "Stavka",
-      qty: Number(i.qty || i.kolicina || 0),
-      unit: i.unit || i.jedinica || "",
-      total: Number(i.total || 0)
-    })),
-
-    total: totalThisSituation,
+    items: calculated,
+    total,
     prevTotal: window.prevSituationsTotal || 0
   };
 
-  // GENERIRAJ PDF
-  const doc = generateSituacijaPDF(data, "okončana");
-
-  const sitNo = data.meta.situationNo || "bez_broja";
-  doc.save(`Situacija_${sitNo}.pdf`);
+  renderResult(calculated, total);
 });
 
+// -------------------------------
+// RENDER REZULTATA
+// -------------------------------
+function renderResult(items, total) {
+  const out = document.getElementById("troskovnikOutput");
+  out.innerHTML = "";
 
-// ===============================
-// IZRAČUN PO TROŠKOVNIKU (BASIC)
-// ===============================
-document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () => {
-
-  if (!window.itemsFromTroskovnik || window.itemsFromTroskovnik.length === 0) {
-    alert("Prvo učitaj troškovnik.");
-    return;
-  }
-
-  const output = document.getElementById("troskovnikOutput");
-  const box = document.getElementById("troskovnikResult");
-
-  let html = "<table class='table'>";
-  html += "<tr><th>Stavka</th><th>Količina</th><th>Jed.</th><th>Iznos €</th></tr>";
-
-  let sum = 0;
-
-  window.itemsFromTroskovnik.forEach(item => {
-    const qty = Number(item.qty || item.kolicina || 0);
-    const total = Number(item.total || 0);
-    sum += total;
-
-    html += `
-      <tr>
-        <td>${item.name || item.opis || ""}</td>
-        <td>${qty.toFixed(2)}</td>
-        <td>${item.unit || item.jedinica || ""}</td>
-        <td>${total.toFixed(2)}</td>
-      </tr>
-    `;
+  items.forEach(i => {
+    if (i.qty > 0) {
+      const div = document.createElement("div");
+      div.textContent = `${i.name}: ${i.qty.toFixed(2)} ${i.unit} = ${i.total.toFixed(2)} €`;
+      out.appendChild(div);
+    }
   });
 
-  html += `
-    <tr>
-      <td colspan="3"><strong>UKUPNO</strong></td>
-      <td><strong>${sum.toFixed(2)} €</strong></td>
-    </tr>
-  `;
+  const sum = document.createElement("strong");
+  sum.style.display = "block";
+  sum.style.marginTop = "10px";
+  sum.textContent = `UKUPNO: ${total.toFixed(2)} €`;
+  out.appendChild(sum);
 
-  html += "</table>";
+  document.getElementById("troskovnikResult").style.display = "block";
+}
 
-  output.innerHTML = html;
-  box.style.display = "block";
+// -------------------------------
+// PDF
+// -------------------------------
+document.getElementById("btnExportPdfTroskovnik")?.addEventListener("click", () => {
+  if (!window.currentSituationData) return;
+
+  const doc = generateSituacijaPDF(window.currentSituationData, situationType);
+  doc.save(`Situacija_${window.currentSituationData.meta.situationNo}.pdf`);
 });
 
+// -------------------------------
+// CLOUD
+// -------------------------------
+document.getElementById("btnSaveCloudTroskovnik")?.addEventListener("click", async () => {
+  if (!window.currentSituationData) return;
 
-// ===============================
-// SPREMANJE U CLOUD – PLACEHOLDER
-// ===============================
-document.getElementById("btnSaveCloudTroskovnik")?.addEventListener("click", () => {
-  alert("Spremanje u Cloud po troškovniku dolazi u sljedećem koraku.");
+  await saveSituation(window.db, window.currentSituationData);
+  alert("Situacija spremljena u Cloud.");
 });
