@@ -80,7 +80,9 @@ function parseItemsFromRows(rows, sheetName) {
 
     // izbaci "NAPOMENA" / bullet redove gdje je jm prazno (već smo)
     // i izbaci sumarne redove gdje je opis predug ali nema mjere (već smo)
-
+// izbaci čiste numeracije tipa "2 (3)"
+if (/^\d+\s*\(\d+\)$/.test(opis)) continue;
+    
     items.push({
       id: `${sheetName}-${r + 1}`,
       rb,
