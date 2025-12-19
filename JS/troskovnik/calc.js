@@ -3,9 +3,10 @@ import { calculateAuto } from "../calculations/autoCalc.js";
 
 export function calcFromTroskovnik() {
   const auto = calculateAuto(); // ← SVI izračuni iz automatskog obračuna
-  const resultBox = document.getElementById("troskovnikResult");
+  const resultCard = document.getElementById("troskovnikResult");
+const resultBox = document.getElementById("troskovnikOutput");
 
-  if (!resultBox) return;
+if (!resultCard || !resultBox) return;
 
   const checked = document.querySelectorAll(
     "#troskovnikItemsList input[type='checkbox']:checked"
