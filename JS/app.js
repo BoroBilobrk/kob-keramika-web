@@ -63,13 +63,19 @@ function renderTroskovnikChecklist() {
   box.innerHTML = "";
 
   window.troskovnikItems.forEach(i => {
-    const div = document.createElement("div");
-    div.className = "troskovnik-item";
-div.innerHTML = `
-  <input type="checkbox" value="${i.id}" checked>
-  <span class="opis">${i.opis}</span>
-  <span class="jm">(${i.jm})</span>
-`;
-    box.appendChild(div);
+    const row = document.createElement("div");
+    row.className = "troskovnik-row";
+
+    row.innerHTML = `
+      <label class="troskovnik-label">
+        <input type="checkbox" value="${i.id}" checked>
+        <span class="troskovnik-text">
+          ${i.opis}
+          <span class="troskovnik-jm">(${i.jm})</span>
+        </span>
+      </label>
+    `;
+
+    box.appendChild(row);
   });
 }
