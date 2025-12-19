@@ -1,4 +1,5 @@
 // JS/app.js
+import "./troskovnik/troskovnikCalc.js";
 console.log("APP.JS LOADED ✅");
 
 // učitaj UI (view switching, gumbi)
