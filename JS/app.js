@@ -64,12 +64,12 @@ function renderTroskovnikChecklist() {
 
   window.troskovnikItems.forEach(i => {
     const div = document.createElement("div");
-    div.innerHTML = `
-      <label>
-        <input type="checkbox" value="${i.id}" checked>
-        ${i.opis} (${i.jm})
-      </label>
-    `;
+    div.className = "troskovnik-item";
+div.innerHTML = `
+  <input type="checkbox" value="${i.id}" checked>
+  <span class="opis">${i.opis}</span>
+  <span class="jm">(${i.jm})</span>
+`;
     box.appendChild(div);
   });
 }
