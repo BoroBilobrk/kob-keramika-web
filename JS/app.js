@@ -1,14 +1,13 @@
-// ==============================
-// APP INIT
-// ==============================
+// JS/app.js
 console.log("APP.JS LOADED ✅");
 
-// ==============================
-// IMPORTI
-// ==============================
+// UI (view switching)
 import "./core/ui.js";
 
+// kalkulacije
 import { calculateAuto } from "./calculations/autoCalc.js";
+
+// troškovnik
 import { loadTroskovnik } from "./troskovnik/load.js";
 import { calcFromTroskovnik } from "./troskovnik/calc.js";
 
@@ -29,14 +28,9 @@ btnCalc?.addEventListener("click", () => {
 // UČITAVANJE TROŠKOVNIKA
 // ==============================
 document.getElementById("btnLoadTroskovnik")?.addEventListener("click", () => {
-  const fileInput = document.getElementById("troskovnikFile");
-  const file = fileInput?.files?.[0];
-
-  if (!file) {
-    alert("Odaberi troškovnik (CSV / Excel / PDF)");
-    return;
-  }
-
+  const input = document.getElementById("troskovnikFile");
+  const file = input?.files[0];
+  if (!file) return alert("Odaberi datoteku");
   loadTroskovnik(file);
 });
 
@@ -50,20 +44,15 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
 
 function renderTroskovnikChecklist() {
   const box = document.getElementById("troskovnikItemsList");
+  if (!box || !window.troskovnikItems) return;
+
   box.innerHTML = "";
-
-  if (!window.troskovnikItems || window.troskovnikItems.length === 0) {
-    box.innerHTML = "<p class='hint'>Nema učitanih stavki.</p>";
-    return;
-  }
-
-  window.troskovnikItems.forEach((item, idx) => {
+  window.troskovnikItems.forEach(i => {
     const row = document.createElement("div");
-    row.className = "checkbox-row";
     row.innerHTML = `
       <label>
-        <input type="checkbox" data-index="${idx}" checked>
-        ${item.opis} (${item.jm})
+        <input type="checkbox" value="${i.id}" checked>
+        ${i.opis} (${i.jm})
       </label>
     `;
     box.appendChild(row);
