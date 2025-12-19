@@ -69,15 +69,15 @@ if (!resultCard || !resultBox) return;
   // ==========================
   // ISPIS
   // ==========================
-  resultBox.innerHTML = `
-    <h4>📊 Rezultat</h4>
-    <ul>
-      ${output
-        .map(
-          o =>
-            `<li><b>${o.qty}</b> ${o.jm} – ${o.opis}</li>`
-        )
-        .join("")}
-    </ul>
-  `;
+resultCard.style.display = "block";
+
+resultBox.innerHTML = `
+  <ul>
+    ${output
+      .map(
+        o => `<li><b>${o.qty}</b> ${o.jm} – ${o.opis}</li>`
+      )
+      .join("")}
+  </ul>
+`;
 }
