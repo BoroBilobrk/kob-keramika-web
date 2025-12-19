@@ -7,8 +7,11 @@ import "./core/ui.js";
 // kalkulacije
 import { calculateAuto } from "./calculations/autoCalc.js";
 
-// troškovnik
-import { loadTroskovnik } from "./troskovnik/load.js";
+// troškovnik loaderi
+import { loadTroskovnikCsv } from "./troskovnik/loadCsv.js";
+import { loadTroskovnikExcel } from "./troskovnik/loadExcel.js";
+
+// obračun
 import { calcFromTroskovnik } from "./troskovnik/calc.js";
 
 // ==============================
@@ -25,28 +28,58 @@ btnCalc?.addEventListener("click", () => {
 });
 
 // ==============================
-// UČITAVANJE TROŠKOVNIKA
+// UČITAVANJE TROŠKOVNIKA (CSV + EXCEL)
 // ==============================
-document.getElementById("btnLoadTroskovnik")?.addEventListener("click", () => {
+document.getElementById("btnLoadTroskovnik")?.addEventListener("click", async () => {
   const input = document.getElementById("troskovnikFile");
   const file = input?.files[0];
-  if (!file) return alert("Odaberi datoteku");
-  loadTroskovnik(file);
+
+  if (!file) {
+    alert("Odaberi datoteku");
+    return;
+  }
+
+  const ext = file.name.split(".").pop().toLowerCase();
+
+  try {
+    if (ext === "csv") {
+      await loadTroskovnikCsv(file);
+    } else if (ext === "xlsx" || ext === "xls") {
+      await loadTroskovnikExcel(file);
+    } else {
+      alert("Podržani formati su CSV i Excel (.xlsx)");
+      return;
+    }
+
+    renderTroskovnikChecklist();
+    alert("Troškovnik uspješno učitan ✔");
+
+  } catch (err) {
+    console.error(err);
+    alert("Greška pri učitavanju troškovnika");
+  }
 });
 
 // ==============================
 // OBRAČUN PO TROŠKOVNIKU
 // ==============================
 document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () => {
-  renderTroskovnikChecklist();
+  if (!window.troskovnikItems || window.troskovnikItems.length === 0) {
+    alert("Nema učitanih stavki");
+    return;
+  }
   calcFromTroskovnik();
 });
 
+// ==============================
+// CHECKLIST RENDER
+// ==============================
 function renderTroskovnikChecklist() {
   const box = document.getElementById("troskovnikItemsList");
   if (!box || !window.troskovnikItems) return;
 
   box.innerHTML = "";
+
   window.troskovnikItems.forEach(i => {
     const row = document.createElement("div");
     row.innerHTML = `
