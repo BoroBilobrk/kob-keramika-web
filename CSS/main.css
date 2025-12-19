@@ -234,3 +234,24 @@ button {
   font-size: 13px;
   line-height: 1.4;
 }
+/* Troškovnik – checklist */
+.troskovnik-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.troskovnik-item input[type="checkbox"] {
+  margin-top: 3px;
+  transform: scale(1.2);
+}
+
+.troskovnik-item .opis {
+  flex: 1;
+}
+
+.troskovnik-item .jm {
+  opacity: 0.7;
+  white-space: nowrap;
+}
