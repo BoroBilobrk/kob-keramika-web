@@ -7,56 +7,38 @@ import "./core/ui.js";
 // kalkulacije
 import { calculateAuto } from "./calculations/autoCalc.js";
 
-// troškovnik loaderi
-import { loadTroskovnikCsv } from "./troskovnik/loadCsv.js";
+// Excel troškovnik
 import { loadTroskovnikExcel } from "./troskovnik/loadExcel.js";
-
-// obračun
 import { calcFromTroskovnik } from "./troskovnik/calc.js";
 
 // ==============================
 // AUTOMATSKI OBRAČUN
 // ==============================
-const btnCalc = document.getElementById("btnCalcNow");
-const output = document.getElementById("calcOutput");
-const resultBox = document.getElementById("calcResult");
-
-btnCalc?.addEventListener("click", () => {
+document.getElementById("btnCalcNow")?.addEventListener("click", () => {
   const data = calculateAuto();
-  resultBox.style.display = "block";
-  output.textContent = JSON.stringify(data, null, 2);
+  document.getElementById("calcResult").style.display = "block";
+  document.getElementById("calcOutput").textContent =
+    JSON.stringify(data, null, 2);
 });
 
 // ==============================
-// UČITAVANJE TROŠKOVNIKA (CSV + EXCEL)
+// UČITAVANJE EXCEL TROŠKOVNIKA
 // ==============================
 document.getElementById("btnLoadTroskovnik")?.addEventListener("click", async () => {
-  const input = document.getElementById("troskovnikFile");
-  const file = input?.files[0];
+  const file = document.getElementById("troskovnikFile")?.files[0];
 
   if (!file) {
-    alert("Odaberi datoteku");
+    alert("Odaberi Excel (.xlsx) datoteku");
     return;
   }
 
-  const ext = file.name.split(".").pop().toLowerCase();
-
   try {
-    if (ext === "csv") {
-      await loadTroskovnikCsv(file);
-    } else if (ext === "xlsx" || ext === "xls") {
-      await loadTroskovnikExcel(file);
-    } else {
-      alert("Podržani formati su CSV i Excel (.xlsx)");
-      return;
-    }
-
+    await loadTroskovnikExcel(file);
     renderTroskovnikChecklist();
-    alert("Troškovnik uspješno učitan ✔");
-
-  } catch (err) {
-    console.error(err);
-    alert("Greška pri učitavanju troškovnika");
+    alert("Excel troškovnik učitan ✔");
+  } catch (e) {
+    console.error(e);
+    alert("Greška pri učitavanju Excel troškovnika");
   }
 });
 
@@ -64,7 +46,7 @@ document.getElementById("btnLoadTroskovnik")?.addEventListener("click", async ()
 // OBRAČUN PO TROŠKOVNIKU
 // ==============================
 document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () => {
-  if (!window.troskovnikItems || window.troskovnikItems.length === 0) {
+  if (!window.troskovnikItems?.length) {
     alert("Nema učitanih stavki");
     return;
   }
@@ -72,22 +54,22 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
 });
 
 // ==============================
-// CHECKLIST RENDER
+// CHECKLIST
 // ==============================
 function renderTroskovnikChecklist() {
   const box = document.getElementById("troskovnikItemsList");
-  if (!box || !window.troskovnikItems) return;
+  if (!box) return;
 
   box.innerHTML = "";
 
   window.troskovnikItems.forEach(i => {
-    const row = document.createElement("div");
-    row.innerHTML = `
+    const div = document.createElement("div");
+    div.innerHTML = `
       <label>
         <input type="checkbox" value="${i.id}" checked>
         ${i.opis} (${i.jm})
       </label>
     `;
-    box.appendChild(row);
+    box.appendChild(div);
   });
 }
