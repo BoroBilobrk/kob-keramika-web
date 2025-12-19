@@ -255,3 +255,34 @@ button {
   opacity: 0.7;
   white-space: nowrap;
 }
+/* Troškovnik – container */
+#troskovnikItemsList {
+  max-width: 720px;
+}
+
+/* Jedan red troškovnika */
+.troskovnik-item {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: start;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+/* Checkbox */
+.troskovnik-item input[type="checkbox"] {
+  margin-top: 2px;
+  transform: scale(1.2);
+}
+
+/* Opis */
+.troskovnik-item .opis {
+  line-height: 1.35;
+}
+
+/* Jedinica mjere */
+.troskovnik-item .jm {
+  opacity: 0.7;
+  white-space: nowrap;
+  font-size: 12px;
+}
