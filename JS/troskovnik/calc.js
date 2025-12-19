@@ -1,54 +1,38 @@
 // JS/troskovnik/calc.js
-import { calculateAuto } from "../calculations/autoCalc.js";
+// ===================================
+// MAPIRANJE AUTO OBRAČUNA
+// NA TROŠKOVNIK
+// ===================================
 
-console.log("troskovnik calc.js loaded");
+export function calculateFromAuto(auto, troskovnikItems) {
 
-const MAP = {
-  "pod": "pod",
-  "zid": "zidovi",
-  "hidro pod": "hidroPod",
-  "hidro tuš": "hidroTus",
-  "hidro traka": "hidroTraka",
-  "silikon": "silikon",
-  "sokl": "sokl",
-  "lajsne": "lajsne",
-  "gerung": "gerung",
-  "stepenice": "stepenice"
-};
+  const map = {
+    pod: ["pod"],
+    zidovi: ["zid"],
+    hidroPod: ["hidro pod"],
+    hidroTus: ["hidro tuš", "tuš"],
+    hidroTraka: ["traka"],
+    silikon: ["silikon"],
+    sokl: ["sokl"],
+    lajsne: ["lajsna"],
+    gerung: ["gerung"],
+    stepenice: ["stepen"]
+  };
 
-export function calcFromTroskovnik() {
-  const auto = calculateAuto();
-  const out = document.getElementById("troskovnikOutput");
-  out.innerHTML = "";
+  return troskovnikItems.map(item => {
+    const name = item.name.toLowerCase();
+    let qty = 0;
 
-  let total = 0;
-
-  document
-    .querySelectorAll("#troskovnikItemsList input[type=checkbox]:checked")
-    .forEach(cb => {
-      const item = window.troskovnikItems.find(i => i.id == cb.value);
-      if (!item) return;
-
-      const key = Object.keys(MAP).find(k =>
-        item.opis.toLowerCase().includes(k)
-      );
-      if (!key) return;
-
-      const qty = auto[MAP[key]] || 0;
-      if (qty <= 0) return;
-
-      const sum = qty * item.cijena;
-      total += sum;
-
-      const row = document.createElement("div");
-      row.textContent =
-        `${item.opis} – ${qty.toFixed(2)} ${item.jm} × ` +
-        `${item.cijena.toFixed(2)} € = ${sum.toFixed(2)} €`;
-      out.appendChild(row);
+    Object.keys(map).forEach(key => {
+      if (map[key].some(k => name.includes(k))) {
+        qty = auto[key] || 0;
+      }
     });
 
-  out.innerHTML += `<hr><strong>UKUPNO: ${total.toFixed(2)} €</strong>`;
-  document.getElementById("troskovnikResult").style.display = "block";
-
-  return total;
+    return {
+      ...item,
+      qty,
+      total: qty * (item.price || 0)
+    };
+  });
 }
