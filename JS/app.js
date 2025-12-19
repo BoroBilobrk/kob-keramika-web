@@ -58,22 +58,18 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
 // ==============================
 function renderTroskovnikChecklist() {
   const box = document.getElementById("troskovnikItemsList");
-  if (!box) return;
+  if (!box || !window.troskovnikItems) return;
 
   box.innerHTML = "";
 
   window.troskovnikItems.forEach(i => {
     const row = document.createElement("div");
-    row.className = "troskovnik-row";
+    row.className = "troskovnik-item";
 
     row.innerHTML = `
-      <label class="troskovnik-label">
-        <input type="checkbox" value="${i.id}" checked>
-        <span class="troskovnik-text">
-          ${i.opis}
-          <span class="troskovnik-jm">(${i.jm})</span>
-        </span>
-      </label>
+      <input type="checkbox" value="${i.id}" checked>
+      <div class="opis">${i.opis}</div>
+      <div class="jm">(${i.jm})</div>
     `;
 
     box.appendChild(row);
