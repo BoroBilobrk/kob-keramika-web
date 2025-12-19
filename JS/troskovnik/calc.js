@@ -1,80 +1,82 @@
+// JS/troskovnik/calc.js
 import { calculateAuto } from "../calculations/autoCalc.js";
 
 export function calcFromTroskovnik() {
-  const checkedIds = Array.from(
-    document.querySelectorAll('#troskovnikItemsList input[type="checkbox"]:checked')
-  ).map(cb => cb.value);
+  const auto = calculateAuto(); // ← SVI izračuni iz automatskog obračuna
+  const resultBox = document.getElementById("troskovnikResult");
 
-  if (!checkedIds.length) {
+  if (!resultBox) return;
+
+  const checked = document.querySelectorAll(
+    "#troskovnikItemsList input[type='checkbox']:checked"
+  );
+
+  if (!checked.length) {
     alert("Nema odabranih stavki");
     return;
   }
 
-  const selectedItems = window.troskovnikItems.filter(i =>
-    checkedIds.includes(String(i.id))
-  );
+  let output = [];
 
-  const autoData = calculateAuto(); // ⬅ postojeća logika
-  const calculated = selectedItems.map(item => ({
-    ...item,
-    kolicina: resolveQuantity(item, autoData)
-  }));
+  checked.forEach(chk => {
+    const id = chk.value;
+    const item = window.troskovnikItems.find(i => i.id === id);
+    if (!item) return;
 
-  renderResult(calculated);
-}
+    let qty = 0;
 
-// ===============================
-// MAPIRANJE OPISA → MJERE
-// ===============================
-function resolveQuantity(item, auto) {
-  const o = item.opis.toLowerCase();
+    const opis = item.opis.toLowerCase();
 
-  if (item.jm === "m2") {
-    if (o.includes("kupaon")) return auto.kupaonice || 0;
-    if (o.includes("wc")) return auto.kupaonice || 0;
-    if (o.includes("kuhin")) return auto.kuhinja || 0;
-    if (o.includes("hodnik") && o.includes("zid")) return auto.hodnikZid || 0;
-    if (o.includes("hodnik")) return auto.hodnikPod || 0;
-    if (o.includes("loggia")) return auto.loggia || 0;
-    if (o.includes("ostav") || o.includes("vešer")) return auto.ostava || 0;
-  }
+    // ==========================
+    // MAPIRANJE PO OPISU
+    // ==========================
 
-  if (item.jm.includes("m")) {
-    if (o.includes("sokl")) return auto.sokl || 0;
-    if (o.includes("lajsne")) return auto.lajsne || 0;
-    if (o.includes("gerung")) return auto.gerung || 0;
-  }
+    // PODOVI – m2
+    if (opis.includes("kupaonice")) qty = auto.m2Kupaonice || 0;
+    else if (opis.includes("kuhinja")) qty = auto.m2Kuhinja || 0;
+    else if (opis.includes("loggia")) qty = auto.m2Loggia || 0;
+    else if (opis.includes("pod hodnika")) qty = auto.m2HodnikPod || 0;
+    else if (opis.includes("pod lifta")) qty = auto.m2Lift || 0;
 
-  if (item.jm === "h") {
-    return auto.radniSati || 0;
-  }
+    // ZIDOVI – m2
+    else if (opis.includes("zid hodnika")) qty = auto.m2HodnikZid || 0;
 
-  return 0;
-}
+    // HIDRO / IMPREGNACIJA – m2 (vežu se na kupaonicu)
+    else if (opis.includes("hidroizolacije")) qty = auto.m2Kupaonice || 0;
+    else if (opis.includes("impregnacije")) qty = auto.m2Kupaonice || 0;
 
-// ===============================
-// PRIKAZ
-// ===============================
-function renderResult(items) {
-  const box = document.getElementById("troskovnikOutput");
-  const result = document.getElementById("troskovnikResult");
+    // TRAKE / SILIKON / SOKL / GERUNG – m'
+    else if (opis.includes("sokl")) qty = auto.mSokl || 0;
+    else if (opis.includes("trake")) qty = auto.mBridovi || 0;
+    else if (opis.includes("silikona")) qty = auto.mBridovi || 0;
+    else if (opis.includes("lajsne")) qty = auto.mLajsne || 0;
+    else if (opis.includes("gerunga")) qty = auto.mGerung || 0;
 
-  box.innerHTML = `
-    <table class="table">
-      <tr>
-        <th>Stavka</th>
-        <th>Količina</th>
-        <th>JM</th>
-      </tr>
-      ${items.map(i => `
-        <tr>
-          <td>${i.opis}</td>
-          <td>${i.kolicina}</td>
-          <td>${i.jm}</td>
-        </tr>
-      `).join("")}
-    </table>
+    // SATI
+    else if (opis.includes("režijski")) qty = auto.sati || 0;
+
+    // FALLBACK
+    else qty = 0;
+
+    output.push({
+      opis: item.opis,
+      jm: item.jm,
+      qty: qty
+    });
+  });
+
+  // ==========================
+  // ISPIS
+  // ==========================
+  resultBox.innerHTML = `
+    <h4>📊 Rezultat</h4>
+    <ul>
+      ${output
+        .map(
+          o =>
+            `<li><b>${o.qty}</b> ${o.jm} – ${o.opis}</li>`
+        )
+        .join("")}
+    </ul>
   `;
-
-  result.style.display = "block";
 }
