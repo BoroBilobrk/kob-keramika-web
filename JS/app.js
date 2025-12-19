@@ -19,3 +19,35 @@ btnCalc?.addEventListener("click", () => {
   resultBox.style.display = "block";
   output.textContent = JSON.stringify(data, null, 2);
 });
+// JS/app.js
+import "./core/ui.js";
+
+import { loadTroskovnik } from "./troskovnik/load.js";
+import { calcFromTroskovnik } from "./troskovnik/calc.js";
+
+document.getElementById("btnLoadTroskovskovnik")?.addEventListener("click", () => {
+  const f = document.getElementById("troskovnikFile").files[0];
+  if (!f) return alert("Odaberi datoteku");
+  loadTroskovnik(f);
+});
+
+document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () => {
+  renderTroskovnikChecklist();
+  calcFromTroskovnik();
+});
+
+function renderTroskovnikChecklist() {
+  const box = document.getElementById("troskovnikItemsList");
+  box.innerHTML = "";
+
+  window.troskovnikItems.forEach(i => {
+    const row = document.createElement("div");
+    row.innerHTML = `
+      <label>
+        <input type="checkbox" value="${i.id}">
+        ${i.opis} (${i.jm})
+      </label>
+    `;
+    box.appendChild(row);
+  });
+}
