@@ -1,24 +1,20 @@
 // JS/core/events.js
-// =====================================================
-// VEZANJE SVIH GUMBA NA FUNKCIJE MODULARNOG SUSTAVA
-// =====================================================
 
 import { calculateAuto } from "../calculations/autoCalc.js";
 import { addOpening } from "../calculations/openings.js";
 import { addOrUpdateCurrentRoom, clearRoomsForCurrentSite } from "../calculations/rooms.js";
 import { saveToCloud } from "../cloud/cloudSave.js";
-import { exportCsv } from "../csv/csvExport.js";
+import { exportCsvFromCalc } from "../csv/csvExport.js";
 import { buildPdfDocument, buildPdfDocumentForSite } from "../pdf/pdfSingle.js";
 import { loadArchive } from "../cloud/cloudLoad.js";
 
-// ---------- HELPERS ----------
 function $(id) {
   return document.getElementById(id);
 }
 
-// =====================================================
-// AUTOMATSKI OBRAČUN
-// =====================================================
+// ==========================
+// IZRAČUN
+// ==========================
 $("btnCalcNow")?.addEventListener("click", () => {
   const data = calculateAuto();
   if (!data) return;
@@ -27,21 +23,18 @@ $("btnCalcNow")?.addEventListener("click", () => {
   $("calcOutput").textContent = JSON.stringify(data, null, 2);
 });
 
-// =====================================================
-// PDF EXPORT
-// =====================================================
+// ==========================
+// PDF
+// ==========================
 $("btnExportPdfAuto")?.addEventListener("click", async () => {
   const data = calculateAuto();
   if (!data) return;
 
-  const rooms = window.lastCalcResult?.rooms || [data];
+  const rooms = (window.siteRooms?.length ? window.siteRooms : [data]);
 
   let pdf;
-  if (rooms.length === 1) {
-    pdf = await buildPdfDocument(data);
-  } else {
-    pdf = await buildPdfDocumentForSite(rooms);
-  }
+  if (rooms.length === 1) pdf = await buildPdfDocument(data);
+  else pdf = await buildPdfDocumentForSite(rooms);
 
   if (!pdf) {
     alert("Ne mogu generirati PDF.");
@@ -51,19 +44,19 @@ $("btnExportPdfAuto")?.addEventListener("click", async () => {
   pdf.save("obracun.pdf");
 });
 
-// =====================================================
-// CSV EXPORT
-// =====================================================
+// ==========================
+// CSV
+// ==========================
 $("btnExportCsvAuto")?.addEventListener("click", () => {
   const data = calculateAuto();
   if (!data) return;
 
-  exportCsv(data);
+  exportCsvFromCalc(data);
 });
 
-// =====================================================
-// SPREMANJE U CLOUD
-// =====================================================
+// ==========================
+// CLOUD SAVE
+// ==========================
 $("btnSaveCloud")?.addEventListener("click", () => {
   const data = calculateAuto();
   if (!data) return;
@@ -71,9 +64,16 @@ $("btnSaveCloud")?.addEventListener("click", () => {
   saveToCloud(data);
 });
 
-// =====================================================
-// OTVORI (VRATA, PROZORI…)
-// =====================================================
+// ==========================
+// ARHIVA
+// ==========================
+$("btnOpenArchive")?.addEventListener("click", () => {
+  loadArchive();
+});
+
+// ==========================
+// OTVORI
+// ==========================
 $("btnAddDoor")?.addEventListener("click", () => addOpening("vrata", "Vrata"));
 $("btnAddWindow")?.addEventListener("click", () => addOpening("prozor", "Prozor"));
 $("btnAddNiche")?.addEventListener("click", () => addOpening("nisa", "Niša"));
@@ -81,9 +81,9 @@ $("btnAddGeberit")?.addEventListener("click", () => addOpening("geberit", "Geber
 $("btnAddVert")?.addEventListener("click", () => addOpening("vert", "Vertikala"));
 $("btnAddCustom")?.addEventListener("click", () => addOpening("custom", "Otvor"));
 
-// =====================================================
+// ==========================
 // VIŠE PROSTORIJA
-// =====================================================
+// ==========================
 $("btnAddRoomToSite")?.addEventListener("click", () => {
   addOrUpdateCurrentRoom();
 });
@@ -92,12 +92,13 @@ $("btnClearRooms")?.addEventListener("click", () => {
   clearRoomsForCurrentSite();
 });
 
-// =====================================================
+// ==========================
 // DODATNE MJERE
-// =====================================================
+// ==========================
 $("btnAddDm")?.addEventListener("click", () => {
   const box = document.createElement("div");
   box.className = "dm-row";
+
   box.innerHTML = `
     <input class="dmName" placeholder="Naziv mjere">
     <input class="dmVal" placeholder="0,00">
@@ -105,23 +106,26 @@ $("btnAddDm")?.addEventListener("click", () => {
       <option value="+">+</option>
       <option value="-">-</option>
     </select>
-    <button class="btn-small secondary" onclick="this.parentNode.remove()">🗑</button>
+    <button class="btn-small secondary" type="button" onclick="this.parentNode.remove()">🗑</button>
   `;
+
   $("dmContainer")?.appendChild(box);
 });
 
-// =====================================================
+// ==========================
 // RUČNI UNOS MJERA
-// =====================================================
+// ==========================
 $("btnAddManualMeasure")?.addEventListener("click", () => {
   const tbody = $("manualMeasuresBody");
   if (!tbody) return;
 
   const tr = document.createElement("tr");
+
   tr.innerHTML = `
-    <td><input type="text" placeholder="Naziv"></td>
-    <td><input type="text" placeholder="0,00"></td>
-    <td><input type="text" placeholder="m2"></td>
+    <td><input type="text" placeholder="Naziv" style="width:100%"></td>
+    <td><input type="text" placeholder="0,00" style="width:100%"></td>
+    <td><input type="text" placeholder="m2" style="width:100%"></td>
   `;
+
   tbody.appendChild(tr);
 });
