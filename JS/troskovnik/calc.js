@@ -46,29 +46,74 @@ export function calcFromTroskovnik() {
     // MAPIRANJE PO OPISU
     // ==========================
 
-    // PODOVI – m2
-    if (opis.includes("kupaonice")) qty = auto.m2Kupaonice || 0;
-    else if (opis.includes("kuhinja")) qty = auto.m2Kuhinja || 0;
-    else if (opis.includes("loggia")) qty = auto.m2Loggia || 0;
-    else if (opis.includes("pod hodnika")) qty = auto.m2HodnikPod || 0;
-    else if (opis.includes("pod lifta")) qty = auto.m2Lift || 0;
+// ==========================
+// MAPIRANJE NA AUTO CALC
+// ==========================
 
-    // ZIDOVI – m2
-    else if (opis.includes("zid hodnika")) qty = auto.m2HodnikZid || 0;
+// PODOVI – m2
+if (
+  opis.includes("kupaonice") ||
+  opis.includes("wc") ||
+  opis.includes("kuhinja") ||
+  opis.includes("loggia") ||
+  opis.includes("pod hodnika") ||
+  opis.includes("pod lifta")
+) {
+  qty = auto.pod || 0;
+}
 
-    // HIDRO / IMPREGNACIJA – m2
-    else if (opis.includes("hidroizolacije")) qty = auto.m2Kupaonice || 0;
-    else if (opis.includes("impregnacije")) qty = auto.m2Kupaonice || 0;
+// ZIDOVI – m2
+else if (opis.includes("zid")) {
+  qty = auto.zidovi || 0;
+}
 
-    // TRAKE / SILIKON / SOKL / GERUNG – m'
-    else if (opis.includes("sokl")) qty = auto.mSokl || 0;
-    else if (opis.includes("trake")) qty = auto.mBridovi || 0;
-    else if (opis.includes("silikona")) qty = auto.mBridovi || 0;
-    else if (opis.includes("lajsne")) qty = auto.mLajsne || 0;
-    else if (opis.includes("gerunga")) qty = auto.mGerung || 0;
+// HIDROIZOLACIJA / IMPREGNACIJA – m2
+else if (
+  opis.includes("hidroizolacije") ||
+  opis.includes("impregnacije")
+) {
+  qty = auto.hidroUkupno || 0;
+}
 
-    // SATI
-    else if (opis.includes("režijski")) qty = auto.sati || 0;
+// HIDRO TRAKA – m'
+else if (opis.includes("trake")) {
+  qty = auto.hidroTraka || 0;
+}
+
+// SILIKON – m'
+else if (opis.includes("silikona")) {
+  qty = auto.silikon || 0;
+}
+
+// SOKL – m'
+else if (opis.includes("sokl")) {
+  qty = auto.sokl || 0;
+}
+
+// LAJSNE – m'
+else if (opis.includes("lajsne")) {
+  qty = auto.lajsne || 0;
+}
+
+// GERUNG – m'
+else if (opis.includes("gerung")) {
+  qty = auto.gerung || 0;
+}
+
+// STEPENICE – kom / m'
+else if (opis.includes("stepenice")) {
+  qty = auto.stepenice || 0;
+}
+
+// REŽIJSKI SATI (ako kasnije dodaš)
+else if (opis.includes("režijski")) {
+  qty = auto.sati || 0;
+}
+
+// FALLBACK
+else {
+  qty = 0;
+}
 
     output.push({
       opis: item.opis,
