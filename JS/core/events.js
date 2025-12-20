@@ -31,21 +31,26 @@ $("btnCalcNow")?.addEventListener("click", () => {
 // PDF EXPORT — jedna prostorija ili cijelo gradilište
 // =====================================================
 $("btnExportPdfAuto")?.addEventListener("click", () => {
-  const data = calculateAuto();
-  if (!data) return;
+$("btnExportPdfAuto")?.addEventListener("click", async () => {
+    const data = runAutoCalc(true);
+    if (!data) return;
 
-  const rooms = window.siteRooms?.length ? window.siteRooms : [data];
+    let rooms = window.siteRooms?.length ? window.siteRooms : [data];
 
-  let pdf;
-  if (rooms.length === 1) {
-    pdf = buildPdfDocument(data);
-  } else {
-    pdf = buildPdfDocumentForSite(rooms);
-  }
+    let pdf;
+    if (rooms.length === 1) {
+        pdf = await buildPdfDocument(data);
+    } else {
+        pdf = await buildPdfDocumentForSite(rooms);
+    }
 
-  pdf.save("obracun.pdf");
+    if (!pdf) {
+        alert("Ne mogu generirati PDF.");
+        return;
+    }
+
+    pdf.save("obracun.pdf");
 });
-
 // =====================================================
 // CSV EXPORT
 // =====================================================
