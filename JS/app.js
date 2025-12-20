@@ -4,6 +4,7 @@ console.log("APP.JS LOADED ✅");
 // UI (view switching)
 import "./core/ui.js";
 
+// EVENTS (gumbi,pdf,cloud, otvori, dodatne mjere)
 import "./core/events.js";
 
 // kalkulacije
