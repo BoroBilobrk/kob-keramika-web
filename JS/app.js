@@ -4,6 +4,8 @@ console.log("APP.JS LOADED ✅");
 // UI (view switching)
 import "./core/ui.js";
 
+import "./core/events.js";
+
 // kalkulacije
 import { calculateAuto } from "./calculations/autoCalc.js";
 
