@@ -6,7 +6,6 @@ import { formatHr } from "../core/helpers.js";
 // DODAJ ILI AŽURIRAJ TRENUTNU PROSTORIJU
 // =====================================================
 export function addOrUpdateCurrentRoom() {
-  // zadnji izračun mora postojati
   const data = window.lastCalcResult;
 
   if (!data || !data.meta) {
@@ -14,25 +13,21 @@ export function addOrUpdateCurrentRoom() {
     return;
   }
 
-  if (!AppState.siteRooms) {
+  if (!Array.isArray(AppState.siteRooms)) {
     AppState.siteRooms = [];
   }
 
   const meta = data.meta;
   const roomKey = `${meta.siteName || ""}__${meta.roomName || ""}`;
 
-  // tražimo postoji li već ta prostorija
-  const index = AppState.siteRooms.findIndex(
-    r =>
-      r.meta &&
-      `${r.meta.siteName || ""}__${r.meta.roomName || ""}` === roomKey
+  const index = AppState.siteRooms.findIndex(r =>
+    r?.meta &&
+    `${r.meta.siteName || ""}__${r.meta.roomName || ""}` === roomKey
   );
 
   if (index >= 0) {
-    // UPDATE
     AppState.siteRooms[index] = structuredClone(data);
   } else {
-    // ADD
     AppState.siteRooms.push(structuredClone(data));
   }
 
@@ -40,11 +35,10 @@ export function addOrUpdateCurrentRoom() {
 }
 
 // =====================================================
-// OČISTI SVE PROSTORIJE NA GRADILIŠTU
+// OČISTI SVE PROSTORIJE
 // =====================================================
 export function clearRoomsForCurrentSite() {
   if (!confirm("Sigurno želiš obrisati sve prostorije?")) return;
-
   AppState.siteRooms = [];
   refreshRoomsList();
 }
@@ -56,7 +50,7 @@ export function refreshRoomsList() {
   const box = document.getElementById("roomsList");
   if (!box) return;
 
-  if (!AppState.siteRooms || !AppState.siteRooms.length) {
+  if (!AppState.siteRooms?.length) {
     box.innerHTML = "<div class='hint'>Nema dodanih prostorija.</div>";
     return;
   }
@@ -86,14 +80,15 @@ export function refreshRoomsList() {
     box.appendChild(div);
   });
 
-  // VEZANJE GUMBA
   box.querySelectorAll("button").forEach(btn => {
     const i = Number(btn.dataset.i);
     const act = btn.dataset.act;
 
     if (act === "load") {
       btn.addEventListener("click", () => loadRoomToForm(i));
-    } else if (act === "delete") {
+    }
+
+    if (act === "delete") {
       btn.addEventListener("click", () => {
         if (!confirm("Obrisati ovu prostoriju?")) return;
         AppState.siteRooms.splice(i, 1);
@@ -112,8 +107,9 @@ function loadRoomToForm(index) {
 
   window.lastCalcResult = structuredClone(room);
 
-  // META
   const m = room.meta || {};
+
+  // META
   document.getElementById("siteName").value = m.siteName || "";
   document.getElementById("roomName").value = m.roomName || "";
   document.getElementById("situationNo").value = m.situationNo || "";
@@ -124,5 +120,10 @@ function loadRoomToForm(index) {
   document.getElementById("dimS").value = formatHr(room.S);
   document.getElementById("dimV").value = formatHr(room.V);
 
-  alert("Prostorija učitana u formu.");
+  // 🔁 AUTOMATSKI NOVI IZRAČUN (KLJUČNO)
+  if (typeof window.calculateAuto === "function") {
+    window.calculateAuto();
+  }
+
+  alert("Prostorija učitana i ponovno izračunata.");
 }
