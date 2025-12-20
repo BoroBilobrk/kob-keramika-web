@@ -114,3 +114,5 @@ export function calculateAuto() {
 
   return result;
 }
+window.lastCalcResult = data;
+return data;
