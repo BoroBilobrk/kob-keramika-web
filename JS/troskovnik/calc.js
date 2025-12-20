@@ -2,11 +2,24 @@
 import { calculateAuto } from "../calculations/autoCalc.js";
 
 export function calcFromTroskovnik() {
-  const auto = calculateAuto(); // ← SVI izračuni iz automatskog obračuna
-  const resultCard = document.getElementById("troskovnikResult");
-const resultBox = document.getElementById("troskovnikOutput");
+  console.log("🔥 calcFromTroskovnik START");
 
-if (!resultCard || !resultBox) return;
+  // provjera troškovnika
+  if (!window.troskovnikItems || !window.troskovnikItems.length) {
+    alert("Troškovnik nije učitan");
+    return;
+  }
+
+  // svi izračuni iz automatskog obračuna
+  const auto = calculateAuto();
+
+  const resultCard = document.getElementById("troskovnikResult");
+  const resultBox = document.getElementById("troskovnikOutput");
+
+  if (!resultCard || !resultBox) {
+    console.error("❌ Result DOM not found");
+    return;
+  }
 
   const checked = document.querySelectorAll(
     "#troskovnikItemsList input[type='checkbox']:checked"
@@ -20,12 +33,13 @@ if (!resultCard || !resultBox) return;
   let output = [];
 
   checked.forEach(chk => {
-    const id = chk.value;
-    const item = window.troskovnikItems.find(i => i.id === id);
+    const id = String(chk.value); // 🔥 KLJUČNO
+    const item = window.troskovnikItems.find(
+      i => String(i.id) === id
+    );
     if (!item) return;
 
     let qty = 0;
-
     const opis = item.opis.toLowerCase();
 
     // ==========================
@@ -42,7 +56,7 @@ if (!resultCard || !resultBox) return;
     // ZIDOVI – m2
     else if (opis.includes("zid hodnika")) qty = auto.m2HodnikZid || 0;
 
-    // HIDRO / IMPREGNACIJA – m2 (vežu se na kupaonicu)
+    // HIDRO / IMPREGNACIJA – m2
     else if (opis.includes("hidroizolacije")) qty = auto.m2Kupaonice || 0;
     else if (opis.includes("impregnacije")) qty = auto.m2Kupaonice || 0;
 
@@ -56,28 +70,25 @@ if (!resultCard || !resultBox) return;
     // SATI
     else if (opis.includes("režijski")) qty = auto.sati || 0;
 
-    // FALLBACK
-    else qty = 0;
-
     output.push({
       opis: item.opis,
       jm: item.jm,
-      qty: qty
+      qty
     });
   });
 
   // ==========================
   // ISPIS
   // ==========================
-resultCard.style.display = "block";
+  resultCard.style.display = "block";
 
-resultBox.innerHTML = `
-  <ul>
-    ${output
-      .map(
-        o => `<li><b>${o.qty}</b> ${o.jm} – ${o.opis}</li>`
-      )
-      .join("")}
-  </ul>
-`;
+  resultBox.innerHTML = `
+    <ul>
+      ${output
+        .map(o => `<li><b>${o.qty}</b> ${o.jm} – ${o.opis}</li>`)
+        .join("")}
+    </ul>
+  `;
+
+  console.log("✅ Rezultat:", output);
 }
