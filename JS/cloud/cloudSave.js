@@ -1,7 +1,6 @@
 // JS/cloud/cloudSave.js
 import { AppState } from "../core/state.js";
-import { buildPdfDocumentSingle } from "../pdf/pdfSingle.js";
-import { buildPdfDocumentForSite } from "../pdf/pdfSite.js";
+import { buildPdfDocument, buildPdfDocumentForSite } from "../pdf/pdfSingle.js";
 import { db, storage } from "./firebase-init.js";
 import { pricesToPlainObject } from "../calculations/cjenik.js";
 
@@ -12,8 +11,11 @@ export async function saveToCloud(data) {
     const rooms = AppState.siteRooms.length ? AppState.siteRooms : [data];
 
     let pdf;
-    if (rooms.length === 1) pdf = await buildPdfDocumentSingle(data);
-    else pdf = await buildPdfDocumentForSite(rooms);
+    if (rooms.length === 1) {
+      pdf = await buildPdfDocument(data);
+    } else {
+      pdf = await buildPdfDocumentForSite(rooms);
+    }
 
     if (!pdf) {
       alert("Ne mogu generirati PDF.");
