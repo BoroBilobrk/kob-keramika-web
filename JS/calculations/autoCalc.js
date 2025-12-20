@@ -112,7 +112,14 @@ export function calculateAuto() {
     result.gerung = result.stepenice;
   }
 
-  return result;
-}
+  // === KRAJ autoCalc funkcije ===
+const data = {
+  meta,
+  results: result,
+  openings: [...openings],
+  D, S, V,
+  totalPrice
+};
+
 window.lastCalcResult = data;
 return data;
