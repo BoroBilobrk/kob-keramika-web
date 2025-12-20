@@ -123,3 +123,4 @@ const data = {
 
 window.lastCalcResult = data;
 return data;
+}
