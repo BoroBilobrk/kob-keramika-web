@@ -1,145 +1,128 @@
 // JS/calculations/rooms.js
 import { AppState } from "../core/state.js";
-import { $, formatHr } from "../core/helpers.js";
-import { renderOpenings } from "./openings.js";
+import { formatHr } from "../core/helpers.js";
 
-function cloneOpenings(list) {
-  return (list || []).map(o => ({ ...o }));
-}
+// =====================================================
+// DODAJ ILI AŽURIRAJ TRENUTNU PROSTORIJU
+// =====================================================
+export function addOrUpdateCurrentRoom() {
+  // zadnji izračun mora postojati
+  const data = window.lastCalcResult;
 
-/* -----------------------------------------------------------
-   DODAJ / AŽURIRAJ PROSTORIJU
------------------------------------------------------------ */
-export function addOrUpdateCurrentRoom(lastCalc) {
-  const meta = lastCalc.meta || {};
-  if (!meta.siteName || !meta.roomName) {
-    alert("Upiši naziv gradilišta i prostorije prije dodavanja u listu.");
+  if (!data || !data.meta) {
+    alert("Prvo izračunaj prostoriju.");
     return;
   }
 
-  const key = meta.roomName + "||" + (meta.situationNo || "");
-  const idx = AppState.siteRooms.findIndex(r => r.key === key);
+  if (!AppState.siteRooms) {
+    AppState.siteRooms = [];
+  }
 
-  const roomObj = {
-    key,
-    meta: { ...meta },
-    D: lastCalc.D,
-    S: lastCalc.S,
-    V: lastCalc.V,
-    openings: cloneOpenings(lastCalc.openings),
-    results: lastCalc.results,
-    pricesList: lastCalc.pricesList || {},
-    totalPrice: lastCalc.totalPrice || 0
-  };
+  const meta = data.meta;
+  const roomKey = `${meta.siteName || ""}__${meta.roomName || ""}`;
 
-  if (idx === -1) AppState.siteRooms.push(roomObj);
-  else AppState.siteRooms[idx] = roomObj;
+  // tražimo postoji li već ta prostorija
+  const index = AppState.siteRooms.findIndex(
+    r =>
+      r.meta &&
+      `${r.meta.siteName || ""}__${r.meta.roomName || ""}` === roomKey
+  );
+
+  if (index >= 0) {
+    // UPDATE
+    AppState.siteRooms[index] = structuredClone(data);
+  } else {
+    // ADD
+    AppState.siteRooms.push(structuredClone(data));
+  }
 
   refreshRoomsList();
 }
 
-/* -----------------------------------------------------------
-   BRIŠI SVE PROSTORIJE
------------------------------------------------------------ */
+// =====================================================
+// OČISTI SVE PROSTORIJE NA GRADILIŠTU
+// =====================================================
 export function clearRoomsForCurrentSite() {
-  if (!AppState.siteRooms.length) return;
-  if (!confirm("Obrisati sve prostorije iz liste?")) return;
+  if (!confirm("Sigurno želiš obrisati sve prostorije?")) return;
+
   AppState.siteRooms = [];
   refreshRoomsList();
 }
 
-/* -----------------------------------------------------------
-   PRIKAZ LISTE PROSTORIJA
------------------------------------------------------------ */
+// =====================================================
+// PRIKAZ LISTE PROSTORIJA
+// =====================================================
 export function refreshRoomsList() {
-  const list = $("#roomsList");
-  if (!list) return;
+  const box = document.getElementById("roomsList");
+  if (!box) return;
 
-  if (!AppState.siteRooms.length) {
-    list.innerHTML = `<p class="hint">Još nema dodanih prostorija za ovo gradilište.</p>`;
+  if (!AppState.siteRooms || !AppState.siteRooms.length) {
+    box.innerHTML = "<div class='hint'>Nema dodanih prostorija.</div>";
     return;
   }
 
-  list.innerHTML = "";
+  box.innerHTML = "";
 
-  AppState.siteRooms.forEach((r, idx) => {
+  AppState.siteRooms.forEach((room, i) => {
+    const m = room.meta || {};
+    const r = room.results || {};
+
     const div = document.createElement("div");
     div.className = "rooms-list-item";
 
-    const m = r.meta || {};
-    const totalTxt = r.totalPrice ? formatHr(r.totalPrice, 2) + " EUR" : "–";
-
     div.innerHTML = `
-      <div><b>#${idx + 1} ${m.roomName || "-"}</b> (situacija: ${m.situationNo || "-"})</div>
-      <div class="hint">
-        Format: ${m.tileFormat ? m.tileFormat.label : "-"} •
-        D×Š×V: ${formatHr(r.D)}×${formatHr(r.S)}×${formatHr(r.V)} •
-        <b>Vrijednost: ${totalTxt}</b>
-      </div>
+      <b>${m.roomName || "Prostorija"}</b><br>
+      <span class="hint">
+        Pod: ${formatHr(r.pod)} m² • 
+        Zidovi: ${formatHr(r.zidoviNeto)} m² • 
+        Hidro: ${formatHr(r.hidroUkupno)} m²
+      </span>
       <div class="rooms-actions" style="margin-top:6px;">
-        <button class="btn-small secondary btnLoadRoom">🔁 Učitaj</button>
-        <button class="btn-small secondary btnDeleteRoom">🗑 Obriši</button>
+        <button class="btn-small secondary" data-i="${i}" data-act="load">📄 Učitaj</button>
+        <button class="btn-small secondary" data-i="${i}" data-act="delete">🗑 Obriši</button>
       </div>
     `;
 
-    div.querySelector(".btnLoadRoom").addEventListener("click", () => loadRoomIntoForm(idx));
-    div.querySelector(".btnDeleteRoom").addEventListener("click", () => removeRoom(idx));
+    box.appendChild(div);
+  });
 
-    list.appendChild(div);
+  // VEZANJE GUMBA
+  box.querySelectorAll("button").forEach(btn => {
+    const i = Number(btn.dataset.i);
+    const act = btn.dataset.act;
+
+    if (act === "load") {
+      btn.addEventListener("click", () => loadRoomToForm(i));
+    } else if (act === "delete") {
+      btn.addEventListener("click", () => {
+        if (!confirm("Obrisati ovu prostoriju?")) return;
+        AppState.siteRooms.splice(i, 1);
+        refreshRoomsList();
+      });
+    }
   });
 }
 
-/* -----------------------------------------------------------
-   UČITAJ PROSTORIJU U FORMU
------------------------------------------------------------ */
-function loadRoomIntoForm(idx) {
-  const room = AppState.siteRooms[idx];
+// =====================================================
+// UČITAJ PROSTORIJU NATRAG U FORMU
+// =====================================================
+function loadRoomToForm(index) {
+  const room = AppState.siteRooms[index];
   if (!room) return;
 
+  window.lastCalcResult = structuredClone(room);
+
+  // META
   const m = room.meta || {};
+  document.getElementById("siteName").value = m.siteName || "";
+  document.getElementById("roomName").value = m.roomName || "";
+  document.getElementById("situationNo").value = m.situationNo || "";
+  document.getElementById("investorName").value = m.investorName || "";
 
-  $("#siteName").value     = m.siteName || "";
-  $("#roomName").value     = m.roomName || "";
-  $("#situationNo").value  = m.situationNo || "";
-  $("#investorName").value = m.investorName || "";
+  // DIMENZIJE
+  document.getElementById("dimD").value = formatHr(room.D);
+  document.getElementById("dimS").value = formatHr(room.S);
+  document.getElementById("dimV").value = formatHr(room.V);
 
-  // nova polja
-  if ($("#contractValue")) $("#contractValue").value = m.contractValue || "";
-  if ($("#prevSituations")) $("#prevSituations").value = m.previousSituationsTotal || "";
-
-  // format pločica
-  if (m.tileFormat && m.tileFormat.wcm && m.tileFormat.hcm) {
-    const val = `${m.tileFormat.wcm}x${m.tileFormat.hcm}`;
-    const select = $("#tileFormatSelect");
-    const custom = $("#tileCustomFields");
-
-    if ([...select.options].some(o => o.value === val)) {
-      select.value = val;
-      custom.style.display = "none";
-    } else {
-      select.value = "custom";
-      custom.style.display = "block";
-      $("#tileW").value = m.tileFormat.wcm;
-      $("#tileH").value = m.tileFormat.hcm;
-    }
-  }
-
-  // dimenzije
-  $("#dimD").value = String(room.D).replace(".", ",");
-  $("#dimS").value = String(room.S).replace(".", ",");
-  $("#dimV").value = String(room.V).replace(".", ",");
-
-  // otvori
-  AppState.openings = cloneOpenings(room.openings);
-  renderOpenings();
-}
-
-/* -----------------------------------------------------------
-   BRISANJE JEDNE PROSTORIJE
------------------------------------------------------------ */
-function removeRoom(idx) {
-  if (!AppState.siteRooms[idx]) return;
-  if (!confirm("Obrisati ovu prostoriju iz liste?")) return;
-  AppState.siteRooms.splice(idx, 1);
-  refreshRoomsList();
+  alert("Prostorija učitana u formu.");
 }
