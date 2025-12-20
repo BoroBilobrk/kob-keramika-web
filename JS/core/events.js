@@ -17,7 +17,7 @@ function $(id) {
 }
 
 // =====================================================
-// AUTOMATSKI OBRAČUN — IZRAČUN
+// AUTOMATSKI OBRAČUN
 // =====================================================
 $("btnCalcNow")?.addEventListener("click", () => {
   const data = calculateAuto();
@@ -28,29 +28,29 @@ $("btnCalcNow")?.addEventListener("click", () => {
 });
 
 // =====================================================
-// PDF EXPORT — jedna prostorija ili cijelo gradilište
+// PDF EXPORT
 // =====================================================
-$("btnExportPdfAuto")?.addEventListener("click", () => {
 $("btnExportPdfAuto")?.addEventListener("click", async () => {
-    const data = runAutoCalc(true);
-    if (!data) return;
+  const data = calculateAuto();
+  if (!data) return;
 
-    let rooms = window.siteRooms?.length ? window.siteRooms : [data];
+  const rooms = window.lastCalcResult?.rooms || [data];
 
-    let pdf;
-    if (rooms.length === 1) {
-        pdf = await buildPdfDocument(data);
-    } else {
-        pdf = await buildPdfDocumentForSite(rooms);
-    }
+  let pdf;
+  if (rooms.length === 1) {
+    pdf = await buildPdfDocument(data);
+  } else {
+    pdf = await buildPdfDocumentForSite(rooms);
+  }
 
-    if (!pdf) {
-        alert("Ne mogu generirati PDF.");
-        return;
-    }
+  if (!pdf) {
+    alert("Ne mogu generirati PDF.");
+    return;
+  }
 
-    pdf.save("obracun.pdf");
+  pdf.save("obracun.pdf");
 });
+
 // =====================================================
 // CSV EXPORT
 // =====================================================
@@ -72,29 +72,17 @@ $("btnSaveCloud")?.addEventListener("click", () => {
 });
 
 // =====================================================
-// OTVORI (VRATA, PROZORI, NIŠE…)
+// OTVORI (VRATA, PROZORI…)
 // =====================================================
-$("btnAddDoor")?.addEventListener("click", () =>
-  addOpening("vrata", "Vrata")
-);
-$("btnAddWindow")?.addEventListener("click", () =>
-  addOpening("prozor", "Prozor")
-);
-$("btnAddNiche")?.addEventListener("click", () =>
-  addOpening("nisa", "Niša")
-);
-$("btnAddGeberit")?.addEventListener("click", () =>
-  addOpening("geberit", "Geberit")
-);
-$("btnAddVert")?.addEventListener("click", () =>
-  addOpening("vert", "Vertikala")
-);
-$("btnAddCustom")?.addEventListener("click", () =>
-  addOpening("custom", "Otvor")
-);
+$("btnAddDoor")?.addEventListener("click", () => addOpening("vrata", "Vrata"));
+$("btnAddWindow")?.addEventListener("click", () => addOpening("prozor", "Prozor"));
+$("btnAddNiche")?.addEventListener("click", () => addOpening("nisa", "Niša"));
+$("btnAddGeberit")?.addEventListener("click", () => addOpening("geberit", "Geberit"));
+$("btnAddVert")?.addEventListener("click", () => addOpening("vert", "Vertikala"));
+$("btnAddCustom")?.addEventListener("click", () => addOpening("custom", "Otvor"));
 
 // =====================================================
-// VIŠE PROSTORIJA NA GRADILIŠTU
+// VIŠE PROSTORIJA
 // =====================================================
 $("btnAddRoomToSite")?.addEventListener("click", () => {
   addOrUpdateCurrentRoom();
