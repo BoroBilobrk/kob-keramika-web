@@ -4,7 +4,7 @@ import { AppState } from "../core/state.js";
 import { $, formatHr } from "../core/helpers.js";
 import { renderOpenings } from "../calculations/openings.js";
 import { refreshRoomsList } from "../calculations/rooms.js";
-import { runAutoCalc } from "../calculations/autoCalc.js";
+import { calculateAuto } from "../calculations/autoCalc.js";
 import { applyPricesObject } from "../calculations/cjenik.js";
 import { deleteCloudRecord } from "./cloudDelete.js";
 
@@ -27,6 +27,7 @@ export async function loadArchive() {
       const m = d.meta || {};
       const date = new Date(d.timestamp || 0);
       const dStr = `${String(date.getDate()).padStart(2,"0")}.${String(date.getMonth()+1).padStart(2,"0")}.${date.getFullYear()}.`;
+
       html += `
         <div class="rooms-list-item">
           <b>${m.siteName || "-"} – ${m.roomName || "-"}</b><br>
@@ -44,6 +45,7 @@ export async function loadArchive() {
     listDiv.querySelectorAll("button").forEach(btn => {
       const id = btn.dataset.id;
       const action = btn.dataset.action;
+
       if (action === "load") {
         btn.addEventListener("click", () => reloadFromCloud(id));
       } else if (action === "delete") {
@@ -77,10 +79,11 @@ export async function reloadFromCloud(id) {
     $("#investorName").value = m.investorName || "";
 
     // format pločica
-    if (m.tileFormat && m.tileFormat.wcm && m.tileFormat.hcm) {
+    if (m.tileFormat?.wcm && m.tileFormat?.hcm) {
       const val = `${m.tileFormat.wcm}x${m.tileFormat.hcm}`;
       const select = $("#tileFormatSelect");
       const custom = $("#tileCustomFields");
+
       if ([...select.options].some(o => o.value === val)) {
         select.value = val;
         custom.style.display = "none";
@@ -92,7 +95,7 @@ export async function reloadFromCloud(id) {
       }
     }
 
-    // dimenzije + otvori prve prostorije
+    // dimenzije + otvori
     if (firstRoom) {
       $("#dimD").value = String(firstRoom.D).replace(".", ",");
       $("#dimS").value = String(firstRoom.S).replace(".", ",");
@@ -102,21 +105,20 @@ export async function reloadFromCloud(id) {
       renderOpenings();
     }
 
-    // sve prostorije u listu
     AppState.siteRooms = rooms.map(r => ({ ...r }));
     refreshRoomsList();
 
-    // C J E N I K  – ako postoji spremljeni cjenik, primijeni ga
     if (d.pricesTemplate) {
       applyPricesObject(d.pricesTemplate);
     }
 
-    // prikaži autoCalc view i odmah izračunaj
+    // prikaži autoCalc view i izračunaj
     document.querySelectorAll(".view").forEach(v => v.style.display = "none");
     $("#autoCalcView").style.display = "block";
 
-    runAutoCalc(true);
+    calculateAuto();
     alert("Obračun učitan iz Cloud-a.");
+
   } catch (e) {
     console.error(e);
     alert("Greška pri učitavanju iz Clouda: " + e.message);
