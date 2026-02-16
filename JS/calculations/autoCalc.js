@@ -38,10 +38,33 @@ export function calculateAuto() {
   }
 
   // ======================
-  // ZIDOVI
+  // ZIDOVI (brutto)
   // ======================
+  let zidoviBrutto = 0;
   if (chk("chkZidovi")) {
-    result.zidovi = 2 * (d + s) * h;
+    zidoviBrutto = 2 * (d + s) * h;
+    result.zidovi = zidoviBrutto;
+  }
+
+  // ======================
+  // OTVORI
+  // PRETPOSTAVKA:
+  // window.openings = [
+  //   { type: "vrata" | "prozor" | "nisa" | "geberit" | "vertikala" | "custom",
+  //     povrsina: broj_u_m2,
+  //     duzina: broj_u_m }
+  // ]
+  // Ako je struktura drugačija, treba prilagoditi ova polja.
+  // ======================
+  const openings = Array.isArray(window.openings) ? window.openings : [];
+
+  // vrata se odbijaju od zidova (površina)
+  const vrataPovrsina = openings
+    .filter(o => o.type === "vrata")
+    .reduce((sum, o) => sum + (o.povrsina || 0), 0);
+
+  if (chk("chkZidovi") && vrataPovrsina > 0) {
+    result.zidovi = Math.max(0, zidoviBrutto - vrataPovrsina);
   }
 
   // ======================
@@ -94,31 +117,46 @@ export function calculateAuto() {
 
   // ======================
   // STEPENICE
-  // dužina × komada
+  // dužina × komada, samo ako oba podatka postoje
   // ======================
+  let stepenice = 0;
   if (chk("chkStepenice")) {
     const stepM = num(document.getElementById("stepM")?.value);
     const stepK = num(document.getElementById("stepKom")?.value);
-    result.stepenice = stepM * stepK;
+    if (stepM > 0 && stepK > 0) {
+      stepenice = stepM * stepK;
+    }
   }
+  result.stepenice = stepenice;
 
   // ======================
   // LAJSNE / GERUNG
-  // (ovisno o kvačici)
+  // baza = zbroj dužina svih otvora osim vrata + stepenice
   // ======================
-  if (chk("chkLajsne")) {
-    result.lajsne = result.stepenice;
-  }
+  const openingsDuzinaBezVrata = openings
+    .filter(o => o.type !== "vrata")
+    .reduce((sum, o) => sum + (o.duzina || 0), 0);
 
-  if (chk("chkGerung")) {
-    result.gerung = result.stepenice;
+  const bazaLajsne = openingsDuzinaBezVrata + stepenice;
+
+  result.lajsne = 0;
+  result.gerung = 0;
+
+  const useLajsne = chk("chkLajsne");
+  const useGerung = chk("chkGerung");
+
+  if (useLajsne && !useGerung) {
+    result.lajsne = bazaLajsne;
+  } else if (useGerung && !useLajsne) {
+    result.gerung = bazaLajsne;
   }
+  // ako su obje kvačice isključene ili uključene, oba ostaju 0
+  // (po potrebi možeš odlučiti da pri obje kvačice npr. preferiraš gerung)
 
   // ======================
   // POVRATNI OBJEKT
   // ======================
   const data = {
-    // možeš dodati meta podatke kasnije ako želiš
     dims: { D: d, S: s, V: h },
     results: result
   };
