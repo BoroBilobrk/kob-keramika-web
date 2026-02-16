@@ -2,13 +2,15 @@
 console.log("autoCalc.js loaded");
 
 export function calculateAuto() {
+  // helper: string -> number (podržava zarez)
   const num = v => parseFloat(String(v ?? "").replace(",", ".")) || 0;
 
+  // osnovne dimenzije prostorije
   const d = num(document.getElementById("dimD")?.value);
   const s = num(document.getElementById("dimS")?.value);
   const h = num(document.getElementById("dimV")?.value);
 
-  const chk = id => document.getElementById(id)?.checked;
+  const chk = id => !!document.getElementById(id)?.checked;
 
   let result = {
     pod: 0,
@@ -112,15 +114,16 @@ export function calculateAuto() {
     result.gerung = result.stepenice;
   }
 
-  // === KRAJ autoCalc funkcije ===
-const data = {
-  meta,
-  results: result,
-  openings: [...openings],
-  D, S, V,
-  totalPrice
-};
+  // ======================
+  // POVRATNI OBJEKT
+  // ======================
+  const data = {
+    // možeš dodati meta podatke kasnije ako želiš
+    dims: { D: d, S: s, V: h },
+    results: result
+  };
 
-window.lastCalcResult = data;
-return data;
+  window.lastCalcResult = data;
+  console.log("calculateAuto result:", data);
+  return data;
 }
