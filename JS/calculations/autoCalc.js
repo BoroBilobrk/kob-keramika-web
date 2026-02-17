@@ -129,7 +129,6 @@ export function calculateAuto() {
     )
     .reduce((sum, o) => sum + openingPerim(o), 0);
 
-  // uključi stepenice u istu bazu – po dogovoru
   const bazaLajsne = bazaOtvor + stepenice;
 
   result.lajsne = 0;
@@ -143,7 +142,6 @@ export function calculateAuto() {
   } else if (useGerung && !useLajsne) {
     result.gerung = bazaLajsne;
   }
-  // ako su obje kvačice isključene ili obje uključene, oba ostaju 0
 
   // ======================
   // POVRATNI OBJEKT
@@ -155,4 +153,4 @@ export function calculateAuto() {
 
   window.lastCalcResult = data;
   return data;
-      }
+}
