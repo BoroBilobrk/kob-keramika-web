@@ -1,7 +1,5 @@
 // JS/pdf/pdfSingle.js
 // PDF za JEDNU prostoriju – TABLICA OBLIK
-// ✓ UTF-8 podrška za hrvatske znakove
-// ✓ NAPOMENE sekcija izbrisana
 
 const { jsPDF } = window.jspdf;
 import { ensureRoboto } from "./fontRoboto.js";
@@ -25,11 +23,11 @@ export async function buildPdfDocumentForSite(rooms) {
     orientation: "portrait"
   });
   await ensureRoboto(doc);
-  
+
   for (let i = 0; i < rooms.length; i++) {
     const pageDoc = await buildPdfDocumentSingle(rooms[i]);
     const pageCount = pageDoc.getNumberOfPages();
-    
+
     for (let j = 1; j <= pageCount; j++) {
       const imgData = pageDoc.internal.pages[j];
       if (i > 0 || j > 1) doc.addPage();
@@ -43,7 +41,7 @@ export async function buildPdfDocumentForSite(rooms) {
       );
     }
   }
-  
+
   return doc;
 }
 
@@ -61,82 +59,190 @@ async function buildPdfDocumentSingle(data) {
 
   await ensureRoboto(doc);
   doc.setFont("Roboto", "normal");
-  doc.getTextDimensions =
-    doc.getTextDimensions || function () { return { w: 0, h: 0 }; };
   if (doc.setCharSpace) doc.setCharSpace(0);
 
   const fmt = x => formatHr(x);
   const m = data.meta || {};
   const r = data.results || {};
 
-  let y = 6;
   const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
   const margin = 5;
   const contentW = pageW - 2 * margin;
 
-  // =====================================
-  // 1. ZAGLAVLJE
-  // =====================================
-  drawHeader(doc, m, pageW);
-  y = 18;
+  let y = 8;
 
-  // =====================================
-  // 2. MJERENJA TABLICA
-  // =====================================
-  y = drawMjerenjaTable(doc, data, y, margin, contentW);
+  // 1) ZAGLAVLJE – kao na slici
+  y = drawHeader(doc, m, margin, contentW, y);
 
-  // =====================================
-  // 3. AUTOMATIKA TABLICA
-  // =====================================
-  y = drawAutomatikaTable(doc, r, y, margin, contentW);
+  // 2) SREDNJA TABLICA (jed. mjera, ukupna količina, cijena…)
+  y = drawMainMeasureTable(doc, r, margin, contentW, y + 4);
+
+  // 3) MJERENJA PROSTORIJE (tvoje dimenzije D/S/V)
+  y = drawMjerenjaTable(doc, data, y + 6, margin, contentW);
+
+  // 4) STAVKE ZA OBRAČUN (10 stavki)
+  y = drawAutomatikaTable(doc, r, y + 3, margin, contentW);
 
   return doc;
 }
 
 // =====================================
-// ZAGLAVLJE – INVESTITOR, GRADILIŠTE
+// ZAGLAVLJE – INVESTITOR, GRAĐEVINA…
 // =====================================
-function drawHeader(doc, meta, pageW) {
+function drawHeader(doc, meta, margin, contentW, startY) {
+  let y = startY;
+
+  // Logo gore lijevo (ako postoji u DOM-u)
   try {
     const img = document.querySelector("header img.logo");
-    if (img) doc.addImage(img, "PNG", 5, 2, 15, 15);
+    if (img) doc.addImage(img, "PNG", margin, y - 6, 18, 12);
   } catch {}
 
-  doc.setFontSize(12);
   doc.setFont("Roboto", "bold");
-  
-  const title = "MJERENJE KERAMIČARSKIH RADOVA";
-  doc.text(title, pageW / 2, 8, { align: "center" });
+  doc.setFontSize(11);
+  doc.text(
+    "MJERENJE KERAMIČARSKIH RADOVA",
+    margin + contentW / 2,
+    y,
+    { align: "center" }
+  );
 
-  doc.setFontSize(9);
+  y += 8;
+  doc.setFont("Roboto", "bold");
+  doc.setFontSize(8);
+
+  // INVESTITOR:
+  doc.text("INVESTITOR:", margin, y);
   doc.setFont("Roboto", "normal");
-  
-  const col1 = 5;
-  const col2 = pageW / 2;
-  let y = 15;
+  doc.text(`${meta.investorName || ""}`, margin + 25, y);
 
-  doc.text(`Gradilište: ${meta.siteName || "-"}`, col1, y);
-  doc.text(`Datum: ${new Date().toLocaleDateString("hr-HR")}`, col2, y);
   y += 4;
+  doc.setFont("Roboto", "bold");
+  doc.text("GRAĐEVINA:", margin, y);
+  doc.setFont("Roboto", "normal");
+  doc.text(`${meta.siteName || ""}`, margin + 25, y);
 
-  doc.text(`Prostorija: ${meta.roomName || "-"}`, col1, y);
-  doc.text(`Situacija: ${meta.situationNo || "-"}`, col2, y);
   y += 4;
+  doc.setFont("Roboto", "bold");
+  doc.text("OPIS RADOVA:", margin, y);
+  doc.setFont("Roboto", "normal");
+  doc.text(`${meta.workDescription || ""}`, margin + 25, y);
 
-  doc.text(`Investitor: ${meta.investorName || "-"}`, col1, y);
+  y += 4;
+  doc.setFont("Roboto", "bold");
+  doc.text("SILIKON", margin, y);
+
+  y += 6;
+
+  // Redni broj po troškovniku, jed. mjera, ukupna količina ugovorena
+  doc.setFont("Roboto", "bold");
+  doc.text("Redni broj po troškovniku:", margin, y);
+  doc.setFont("Roboto", "normal");
+  doc.text(`${meta.troskovnikBroj || "12."}`, margin + 45, y);
+
+  doc.setFont("Roboto", "bold");
+  doc.text("jed. mjera:", margin + 70, y);
+  doc.setFont("Roboto", "normal");
+  doc.text(`${meta.jedMjera || "m2"}`, margin + 95, y);
+
+  doc.setFont("Roboto", "bold");
+  doc.text("ukupna količina ugovorena:", margin + 110, y);
+
+  // drugi red (firma, OIB, k.o., stranica)
+  y += 8;
+  doc.setFont("Roboto", "normal");
+  const companyLine =
+    `${meta.companyName || ""} d.o.o., ${meta.companyAddress || ""}, OIB: ${meta.companyOib || ""}`;
+  doc.text(companyLine, margin, y);
+
+  y += 4;
+  const koLine = `k.č.br. ${meta.cestica || ""} k.o. ${meta.ko || ""} (${meta.location || ""})`;
+  doc.text(koLine, margin, y);
+
+  doc.text("stranica :", margin + contentW - 30, y);
+  doc.text("1", margin + contentW - 10, y);
+
+  return y + 6;
 }
 
 // =====================================
-// MJERENJA TABLICA
+// SREDNJA TABLICA – jed. mjera / količina / cijena / mjesečno / ukupno
+// =====================================
+function drawMainMeasureTable(doc, results, margin, contentW, startY) {
+  let y = startY;
+  const rowH = 6;
+
+  const colJedMj = 20;
+  const colUkupna = 40;
+  const colCijena = 25;
+  const colMjesecno = 40;
+  const colUkupno = contentW - colJedMj - colUkupna - colCijena - colMjesecno;
+
+  doc.setFontSize(7);
+  doc.setFont("Roboto", "bold");
+
+  // Zaglavlje tablice
+  doc.rect(margin, y, colJedMj, rowH);
+  doc.text("jed. mjera", margin + 2, y + 3);
+  doc.rect(margin + colJedMj, y, colUkupna, rowH);
+  doc.text("ukupna količina", margin + colJedMj + 2, y + 2);
+  doc.text("ugovorena", margin + colJedMj + 2, y + 5);
+  doc.rect(margin + colJedMj + colUkupna, y, colCijena, rowH);
+  doc.text("jedinična cijena €", margin + colJedMj + colUkupna + 2, y + 3);
+  doc.rect(margin + colJedMj + colUkupna + colCijena, y, colMjesecno, rowH);
+  doc.text("izvršena količina", margin + colJedMj + colUkupna + colCijena + 2, y + 2);
+  doc.text("radova mjesečno", margin + colJedMj + colUkupna + colCijena + 2, y + 5);
+  doc.rect(
+    margin + colJedMj + colUkupna + colCijena + colMjesecno,
+    y,
+    colUkupno,
+    rowH
+  );
+  doc.text("ukupno", margin + colJedMj + colUkupna + colCijena + colMjesecno + 2, y + 3);
+
+  // 1 red za SILIKON – možeš tu kasnije uvesti realne vrijednosti
+  y += rowH;
+  doc.setFont("Roboto", "normal");
+
+  const jedMj = "m2";
+  const ukupnaKolicina = results.silikonUkupno || "";
+  const jedCijena = results.silikonCijena || "3,00 €";
+  const mjesecno = results.silikonMjesecno || "";
+  const ukupno = results.silikonUkupnoIznos || "";
+
+  doc.rect(margin, y, colJedMj, rowH);
+  doc.text(jedMj, margin + colJedMj / 2, y + 4, { align: "center" });
+
+  doc.rect(margin + colJedMj, y, colUkupna, rowH);
+  doc.text(String(ukupnaKolicina), margin + colJedMj + colUkupna / 2, y + 4, { align: "center" });
+
+  doc.rect(margin + colJedMj + colUkupna, y, colCijena, rowH);
+  doc.text(String(jedCijena), margin + colJedMj + colUkupna + colCijena / 2, y + 4, { align: "center" });
+
+  doc.rect(margin + colJedMj + colUkupna + colCijena, y, colMjesecno, rowH);
+  doc.text(String(mjesecno), margin + colJedMj + colUkupna + colCijena + colMjesecno / 2, y + 4, { align: "center" });
+
+  doc.rect(
+    margin + colJedMj + colUkupna + colCijena + colMjesecno,
+    y,
+    colUkupno,
+    rowH
+  );
+  doc.text(String(ukupno), margin + contentW - colUkupno / 2, y + 4, { align: "center" });
+
+  return y + rowH;
+}
+
+// =====================================
+// MJERENJA PROSTORIJE (D/S/V)
 // =====================================
 function drawMjerenjaTable(doc, data, startY, margin, contentW) {
   let y = startY;
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont("Roboto", "bold");
   doc.text("MJERENJA PROSTORIJE", margin, y);
-  y += 5;
+  y += 4;
 
   const rowH = 5;
   const fmt = x => formatHr(x);
@@ -159,8 +265,6 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
 
   headers.forEach(h => {
     doc.rect(x, y, colW, rowH);
-    doc.setFont("Roboto", "bold");
-    doc.setFontSize(7);
     doc.text(h, x + colW / 2, y + rowH / 2 + 1, { align: "center" });
     x += colW;
   });
@@ -192,7 +296,7 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
   doc.setFont("Roboto", "bold");
   doc.setFontSize(9);
   doc.text("REZULTATI MJERENJA", margin, y);
-  y += 5;
+  y += 4;
 
   doc.setFont("Roboto", "normal");
   doc.setFontSize(8);
@@ -209,11 +313,11 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
     }
   ];
 
-  results.forEach(res => {
-    const labelW = contentW * 0.4;
-    const valueW = contentW * 0.3;
-    const unitW = contentW * 0.3;
+  const labelW = contentW * 0.4;
+  const valueW = contentW * 0.3;
+  const unitW = contentW * 0.3;
 
+  results.forEach(res => {
     doc.rect(margin, y, labelW, rowH);
     doc.text(res.label, margin + 1, y + rowH / 2 + 1);
 
@@ -236,20 +340,19 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
     y += rowH;
   });
 
-  y += 2;
   return y;
 }
 
 // =====================================
-// AUTOMATIKA TABLICA
+// STAVKE ZA OBRAČUN – 10 stavki
 // =====================================
 function drawAutomatikaTable(doc, results, startY, margin, contentW) {
   let y = startY;
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont("Roboto", "bold");
   doc.text("STAVKE ZA OBRAČUN", margin, y);
-  y += 5;
+  y += 4;
 
   doc.setFont("Roboto", "normal");
   doc.setFontSize(8);
@@ -300,4 +403,4 @@ function drawAutomatikaTable(doc, results, startY, margin, contentW) {
   });
 
   return y;
-     }
+}
