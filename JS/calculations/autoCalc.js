@@ -50,11 +50,12 @@ export function calculateAuto() {
   // OTVORI
   // PRETPOSTAVKA:
   // window.openings = [
-  //   { type: "vrata" | "prozor" | "nisa" | "geberit" | "vertikala" | "custom",
+  //   {
+  //     type: "vrata" | "prozor" | "nisa" | "geberit" | "vertikala" | "custom",
   //     povrsina: broj_u_m2,
-  //     duzina: broj_u_m }
+  //     duzina: broj_u_m
+  //   }
   // ]
-  // Ako je struktura drugačija, treba prilagoditi ova polja.
   // ======================
   const openings = Array.isArray(window.openings) ? window.openings : [];
 
@@ -131,13 +132,21 @@ export function calculateAuto() {
 
   // ======================
   // LAJSNE / GERUNG
-  // baza = zbroj dužina svih otvora osim vrata + stepenice
+  // baza = prozori + niše + geberit + vertikale (+ stepenice)
   // ======================
-  const openingsDuzinaBezVrata = openings
-    .filter(o => o.type !== "vrata")
+  const bazaGerung = openings
+    .filter(o =>
+      o.type === "prozor" ||
+      o.type === "nisa" ||
+      o.type === "geberit" ||
+      o.type === "vertikala"
+    )
     .reduce((sum, o) => sum + (o.duzina || 0), 0);
 
-  const bazaLajsne = openingsDuzinaBezVrata + stepenice;
+  // ako želiš da se stepenice računaju u lajsne/gerung:
+  const bazaLajsne = bazaGerung + stepenice;
+  // ako ne želiš stepenice, koristi umjesto ovoga:
+  // const bazaLajsne = bazaGerung;
 
   result.lajsne = 0;
   result.gerung = 0;
@@ -151,7 +160,6 @@ export function calculateAuto() {
     result.gerung = bazaLajsne;
   }
   // ako su obje kvačice isključene ili uključene, oba ostaju 0
-  // (po potrebi možeš odlučiti da pri obje kvačice npr. preferiraš gerung)
 
   // ======================
   // POVRATNI OBJEKT
