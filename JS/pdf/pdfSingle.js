@@ -1,21 +1,21 @@
 // JS/pdf/pdfSingle.js
-// PDF za JEDNU prostoriju â€“ TABLICA OBLIK
-// âś“ UTF-8 podrĹˇka za hrvatske znakove
-// âś“ NAPOMENE sekcija izbrisana
+// PDF za JEDNU prostoriju – TABLICA OBLIK
+// ✓ UTF-8 podrška za hrvatske znakove
+// ✓ NAPOMENE sekcija izbrisana
 
 const { jsPDF } = window.jspdf;
 import { ensureRoboto } from "./fontRoboto.js";
 import { formatHr } from "../core/helpers.js";
 
 // ===============================
-// GLAVNI EXPORT â€“ JEDNA PROSTORIJA
+// GLAVNI EXPORT – JEDNA PROSTORIJA
 // ===============================
 export async function buildPdfDocument(data) {
   return buildPdfDocumentSingle(data);
 }
 
 // ===============================
-// FALLBACK ZA VIĹ E PROSTORIJA
+// FALLBACK ZA VIŠE PROSTORIJA
 // ===============================
 export async function buildPdfDocumentForSite(rooms) {
   if (!rooms || !rooms.length) return null;
@@ -33,7 +33,14 @@ export async function buildPdfDocumentForSite(rooms) {
     for (let j = 1; j <= pageCount; j++) {
       const imgData = pageDoc.internal.pages[j];
       if (i > 0 || j > 1) doc.addPage();
-      doc.addImage(imgData, "PNG", 0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight());
+      doc.addImage(
+        imgData,
+        "PNG",
+        0,
+        0,
+        doc.internal.pageSize.getWidth(),
+        doc.internal.pageSize.getHeight()
+      );
     }
   }
   
@@ -54,7 +61,8 @@ async function buildPdfDocumentSingle(data) {
 
   await ensureRoboto(doc);
   doc.setFont("Roboto", "normal");
-  doc.getTextDimensions = doc.getTextDimensions || function() { return { w: 0, h: 0 }; };
+  doc.getTextDimensions =
+    doc.getTextDimensions || function () { return { w: 0, h: 0 }; };
   if (doc.setCharSpace) doc.setCharSpace(0);
 
   const fmt = x => formatHr(x);
@@ -87,7 +95,7 @@ async function buildPdfDocumentSingle(data) {
 }
 
 // =====================================
-// ZAGLAVLJE â€“ INVESTITOR, GRADILIĹ TE
+// ZAGLAVLJE – INVESTITOR, GRADILIŠTE
 // =====================================
 function drawHeader(doc, meta, pageW) {
   try {
@@ -98,8 +106,7 @@ function drawHeader(doc, meta, pageW) {
   doc.setFontSize(12);
   doc.setFont("Roboto", "bold");
   
-  // UTF-8 tekst sa hrvatskim znakovima
-  const title = "MJERENJE KERAMICARSKIH RADOVA";
+  const title = "MJERENJE KERAMIČARSKIH RADOVA";
   doc.text(title, pageW / 2, 8, { align: "center" });
 
   doc.setFontSize(9);
@@ -109,7 +116,7 @@ function drawHeader(doc, meta, pageW) {
   const col2 = pageW / 2;
   let y = 15;
 
-  doc.text(`Gradiliste: ${meta.siteName || "-"}`, col1, y);
+  doc.text(`Gradilište: ${meta.siteName || "-"}`, col1, y);
   doc.text(`Datum: ${new Date().toLocaleDateString("hr-HR")}`, col2, y);
   y += 4;
 
@@ -140,9 +147,17 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
   const colW = contentW / 7;
   let x = margin;
 
-  const headers = ["Duzina 1", "Sirina 1", "Duzina 2", "Sirina 2", "Duzina 3", "Sirina 3", "Visina"];
+  const headers = [
+    "Dužina 1",
+    "Širina 1",
+    "Dužina 2",
+    "Širina 2",
+    "Dužina 3",
+    "Širina 3",
+    "Visina"
+  ];
 
-  headers.forEach((h) => {
+  headers.forEach(h => {
     doc.rect(x, y, colW, rowH);
     doc.setFont("Roboto", "bold");
     doc.setFontSize(7);
@@ -166,7 +181,7 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
     fmt(data.V || 0)
   ];
 
-  values.forEach((v) => {
+  values.forEach(v => {
     doc.rect(x, y, colW, rowH);
     doc.text(v, x + colW / 2, y + rowH / 2 + 1, { align: "center" });
     x += colW;
@@ -183,14 +198,18 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
   doc.setFontSize(8);
 
   const results = [
-    { label: "Pod", value: fmt(data.results?.pod || 0), unit: "m2" },
-    { label: "Zidovi (neto)", value: fmt(data.results?.zidoviNeto || 0), unit: "m2" },
-    { label: "Hidro pod", value: fmt(data.results?.hidroPod || 0), unit: "m2" },
-    { label: "Hidro tus", value: fmt(data.results?.hidroTus || 0), unit: "m2" },
-    { label: "Hidro ukupno", value: fmt((data.results?.hidroPod || 0) + (data.results?.hidroTus || 0)), unit: "m2" }
+    { label: "Pod", value: fmt(data.results?.pod || 0), unit: "m²" },
+    { label: "Zidovi (neto)", value: fmt(data.results?.zidoviNeto || 0), unit: "m²" },
+    { label: "Hidro pod", value: fmt(data.results?.hidroPod || 0), unit: "m²" },
+    { label: "Hidro tuš", value: fmt(data.results?.hidroTus || 0), unit: "m²" },
+    {
+      label: "Hidro ukupno",
+      value: fmt((data.results?.hidroPod || 0) + (data.results?.hidroTus || 0)),
+      unit: "m²"
+    }
   ];
 
-  results.forEach((res) => {
+  results.forEach(res => {
     const labelW = contentW * 0.4;
     const valueW = contentW * 0.3;
     const unitW = contentW * 0.3;
@@ -199,10 +218,20 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
     doc.text(res.label, margin + 1, y + rowH / 2 + 1);
 
     doc.rect(margin + labelW, y, valueW, rowH);
-    doc.text(res.value, margin + labelW + valueW / 2, y + rowH / 2 + 1, { align: "center" });
+    doc.text(
+      res.value,
+      margin + labelW + valueW / 2,
+      y + rowH / 2 + 1,
+      { align: "center" }
+    );
 
     doc.rect(margin + labelW + valueW, y, unitW, rowH);
-    doc.text(res.unit, margin + labelW + valueW + unitW / 2, y + rowH / 2 + 1, { align: "center" });
+    doc.text(
+      res.unit,
+      margin + labelW + valueW + unitW / 2,
+      y + rowH / 2 + 1,
+      { align: "center" }
+    );
 
     y += rowH;
   });
@@ -219,7 +248,7 @@ function drawAutomatikaTable(doc, results, startY, margin, contentW) {
 
   doc.setFontSize(10);
   doc.setFont("Roboto", "bold");
-  doc.text("STAVKE ZA OBRACUN", margin, y);
+  doc.text("STAVKE ZA OBRAČUN", margin, y);
   y += 5;
 
   doc.setFont("Roboto", "normal");
@@ -229,10 +258,10 @@ function drawAutomatikaTable(doc, results, startY, margin, contentW) {
   const fmt = x => formatHr(x);
 
   const items = [
-    { label: "Pod", value: results.pod, unit: "m2" },
-    { label: "Zidovi", value: results.zidoviNeto, unit: "m2" },
-    { label: "Hidro pod", value: results.hidroPod, unit: "m2" },
-    { label: "Hidro tus", value: results.hidroTus, unit: "m2" },
+    { label: "Pod", value: results.pod, unit: "m²" },
+    { label: "Zidovi", value: results.zidoviNeto, unit: "m²" },
+    { label: "Hidro pod", value: results.hidroPod, unit: "m²" },
+    { label: "Hidro tuš", value: results.hidroTus, unit: "m²" },
     { label: "Hidro traka", value: results.hidroTraka, unit: "m" },
     { label: "Silikon", value: results.silikon, unit: "m" },
     { label: "Sokl", value: results.sokl, unit: "m" },
@@ -245,20 +274,30 @@ function drawAutomatikaTable(doc, results, startY, margin, contentW) {
   const valueW = contentW * 0.25;
   const unitW = contentW * 0.25;
 
-  items.forEach((item) => {
+  items.forEach(item => {
     if (item.value == null) return;
 
     doc.rect(margin, y, labelW, rowH);
     doc.text(item.label, margin + 1, y + rowH / 2, { baseline: "middle" });
 
     doc.rect(margin + labelW, y, valueW, rowH);
-    doc.text(fmt(item.value), margin + labelW + valueW / 2, y + rowH / 2, { align: "center", baseline: "middle" });
+    doc.text(
+      fmt(item.value),
+      margin + labelW + valueW / 2,
+      y + rowH / 2,
+      { align: "center", baseline: "middle" }
+    );
 
     doc.rect(margin + labelW + valueW, y, unitW, rowH);
-    doc.text(item.unit, margin + labelW + valueW + unitW / 2, y + rowH / 2, { align: "center", baseline: "middle" });
+    doc.text(
+      item.unit,
+      margin + labelW + valueW + unitW / 2,
+      y + rowH / 2,
+      { align: "center", baseline: "middle" }
+    );
 
     y += rowH;
   });
 
   return y;
-}
+     }
