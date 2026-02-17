@@ -1,5 +1,7 @@
 // JS/pdf/pdfSingle.js
 // PDF za JEDNU prostoriju â€“ TABLICA OBLIK
+// âś“ UTF-8 podrĹˇka za hrvatske znakove
+// âś“ NAPOMENE sekcija izbrisana
 
 const { jsPDF } = window.jspdf;
 import { ensureRoboto } from "./fontRoboto.js";
@@ -52,6 +54,7 @@ async function buildPdfDocumentSingle(data) {
 
   await ensureRoboto(doc);
   doc.setFont("Roboto", "normal");
+  doc.getTextDimensions = doc.getTextDimensions || function() { return { w: 0, h: 0 }; };
   if (doc.setCharSpace) doc.setCharSpace(0);
 
   const fmt = x => formatHr(x);
@@ -80,13 +83,6 @@ async function buildPdfDocumentSingle(data) {
   // =====================================
   y = drawAutomatikaTable(doc, r, y, margin, contentW);
 
-  // =====================================
-  // 4. NAPOMENE
-  // =====================================
-  if (y < pageH - 20) {
-    drawNapomene(doc, y, margin, contentW);
-  }
-
   return doc;
 }
 
@@ -101,7 +97,10 @@ function drawHeader(doc, meta, pageW) {
 
   doc.setFontSize(12);
   doc.setFont("Roboto", "bold");
-  doc.text("MJERENJE KERAMIÄŚARSKIH RADOVA", pageW / 2, 8, { align: "center" });
+  
+  // UTF-8 tekst sa hrvatskim znakovima
+  const title = "MJERENJE KERAMICARSKIH RADOVA";
+  doc.text(title, pageW / 2, 8, { align: "center" });
 
   doc.setFontSize(9);
   doc.setFont("Roboto", "normal");
@@ -110,7 +109,7 @@ function drawHeader(doc, meta, pageW) {
   const col2 = pageW / 2;
   let y = 15;
 
-  doc.text(`GradiliĹˇte: ${meta.siteName || "-"}`, col1, y);
+  doc.text(`Gradiliste: ${meta.siteName || "-"}`, col1, y);
   doc.text(`Datum: ${new Date().toLocaleDateString("hr-HR")}`, col2, y);
   y += 4;
 
@@ -141,7 +140,7 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
   const colW = contentW / 7;
   let x = margin;
 
-  const headers = ["DuĹľina 1", "Ĺ irina 1", "DuĹľina 2", "Ĺ irina 2", "DuĹľina 3", "Ĺ irina 3", "Visina"];
+  const headers = ["Duzina 1", "Sirina 1", "Duzina 2", "Sirina 2", "Duzina 3", "Sirina 3", "Visina"];
 
   headers.forEach((h) => {
     doc.rect(x, y, colW, rowH);
@@ -184,11 +183,11 @@ function drawMjerenjaTable(doc, data, startY, margin, contentW) {
   doc.setFontSize(8);
 
   const results = [
-    { label: "Pod", value: fmt(data.results?.pod || 0), unit: "mÂ˛" },
-    { label: "Zidovi (neto)", value: fmt(data.results?.zidoviNeto || 0), unit: "mÂ˛" },
-    { label: "Hidro pod", value: fmt(data.results?.hidroPod || 0), unit: "mÂ˛" },
-    { label: "Hidro tuĹˇ", value: fmt(data.results?.hidroTus || 0), unit: "mÂ˛" },
-    { label: "Hidro ukupno", value: fmt((data.results?.hidroPod || 0) + (data.results?.hidroTus || 0)), unit: "mÂ˛" }
+    { label: "Pod", value: fmt(data.results?.pod || 0), unit: "m2" },
+    { label: "Zidovi (neto)", value: fmt(data.results?.zidoviNeto || 0), unit: "m2" },
+    { label: "Hidro pod", value: fmt(data.results?.hidroPod || 0), unit: "m2" },
+    { label: "Hidro tus", value: fmt(data.results?.hidroTus || 0), unit: "m2" },
+    { label: "Hidro ukupno", value: fmt((data.results?.hidroPod || 0) + (data.results?.hidroTus || 0)), unit: "m2" }
   ];
 
   results.forEach((res) => {
@@ -220,7 +219,7 @@ function drawAutomatikaTable(doc, results, startY, margin, contentW) {
 
   doc.setFontSize(10);
   doc.setFont("Roboto", "bold");
-  doc.text("STAVKE ZA OBRAÄŚUN", margin, y);
+  doc.text("STAVKE ZA OBRACUN", margin, y);
   y += 5;
 
   doc.setFont("Roboto", "normal");
@@ -230,10 +229,10 @@ function drawAutomatikaTable(doc, results, startY, margin, contentW) {
   const fmt = x => formatHr(x);
 
   const items = [
-    { label: "Pod", value: results.pod, unit: "mÂ˛" },
-    { label: "Zidovi", value: results.zidoviNeto, unit: "mÂ˛" },
-    { label: "Hidro pod", value: results.hidroPod, unit: "mÂ˛" },
-    { label: "Hidro tuĹˇ", value: results.hidroTus, unit: "mÂ˛" },
+    { label: "Pod", value: results.pod, unit: "m2" },
+    { label: "Zidovi", value: results.zidoviNeto, unit: "m2" },
+    { label: "Hidro pod", value: results.hidroPod, unit: "m2" },
+    { label: "Hidro tus", value: results.hidroTus, unit: "m2" },
     { label: "Hidro traka", value: results.hidroTraka, unit: "m" },
     { label: "Silikon", value: results.silikon, unit: "m" },
     { label: "Sokl", value: results.sokl, unit: "m" },
@@ -261,35 +260,5 @@ function drawAutomatikaTable(doc, results, startY, margin, contentW) {
     y += rowH;
   });
 
-  y += 2;
   return y;
-}
-
-// =====================================
-// NAPOMENE
-// =====================================
-function drawNapomene(doc, startY, margin, contentW) {
-  let y = startY;
-
-  doc.setFontSize(9);
-  doc.setFont("Roboto", "bold");
-  doc.text("NAPOMENE", margin, y);
-  y += 4;
-
-  doc.setFont("Roboto", "normal");
-  doc.setFontSize(7);
-
-  const notes = [
-    "â€˘ Sve mjere kontrolirati u naravi",
-    "â€˘ Ponuditelj se duĹľan drĹľati opÄ‡ih uvjeta troĹˇkovnika i vaĹľeÄ‡ih zakona",
-    "â€˘ Skela za visine veÄ‡e od 150 cm ukljuÄŤena u cijenu"
-  ];
-
-  notes.forEach((note) => {
-    const lines = doc.splitTextToSize(note, contentW);
-    lines.forEach((line) => {
-      doc.text(line, margin, y);
-      y += 2.5;
-    });
-  });
 }
