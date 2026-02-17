@@ -1,121 +1,254 @@
 // JS/pdf/pdfSingle.js
-// PDF za JEDNU prostoriju
-
+// PDF za JEDNU prostoriju – TABLICA OBLIK
 const { jsPDF } = window.jspdf;
 import { ensureRoboto } from "./fontRoboto.js";
 import { formatHr } from "../core/helpers.js";
-
 // ===============================
 // GLAVNI EXPORT – JEDNA PROSTORIJA
 // ===============================
 export async function buildPdfDocument(data) {
-  return buildPdfDocumentSingle(data);
+return buildPdfDocumentSingle(data);
 }
-
 // ===============================
 // FALLBACK ZA VIŠE PROSTORIJA
-// (za sada koristi prvu)
 // ===============================
 export async function buildPdfDocumentForSite(rooms) {
-  if (!rooms || !rooms.length) return null;
-  return buildPdfDocumentSingle(rooms[0]);
+if (!rooms || !rooms.length) return null;
+const doc = new jsPDF({
+unit: "mm",
+format: "a4",
+orientation: "portrait"
+});
+await ensureRoboto(doc);
+for (let i = 0; i < rooms.length; i++) {
+const pageDoc = await buildPdfDocumentSingle(rooms[i]);
+const pageCount = pageDoc.getNumberOfPages();
+for (let j = 1; j <= pageCount; j++) {
+  const imgData = pageDoc.internal.pages[j];
+  if (i > 0 || j > 1) doc.addPage();
+  doc.addImage(imgData, "PNG", 0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight());
 }
 
+}
+return doc;
+}
 // ===============================
 // INTERNI BUILDER
 // ===============================
 async function buildPdfDocumentSingle(data) {
-  if (!data) return null;
+if (!data) return null;
+const doc = new jsPDF({
+unit: "mm",
+format: "a4",
+orientation: "portrait"
+});
+await ensureRoboto(doc);
+doc.setFont("Roboto", "normal");
+if (doc.setCharSpace) doc.setCharSpace(0);
+const fmt = x => formatHr(x);
+const m = data.meta || {};
+const r = data.results || {};
+let y = 6;
+const pageW = doc.internal.pageSize.getWidth();
+const pageH = doc.internal.pageSize.getHeight();
+const margin = 5;
+const contentW = pageW - 2 * margin;
+// =====================================
+// 1. ZAGLAVLJE
+// =====================================
+drawHeader(doc, m, pageW);
+y = 18;
+// =====================================
+// 2. MJERENJA TABLICA
+// =====================================
+y = drawMjerenjaTable(doc, data, y, margin, contentW);
+// =====================================
+// 3. AUTOMATIKA TABLICA
+// =====================================
+y = drawAutomatikaTable(doc, r, y, margin, contentW);
+// =====================================
+// 4. NAPOMENE
+// =====================================
+if (y < pageH - 20) {
+drawNapomene(doc, y, margin, contentW);
+}
+return doc;
+}
+// =====================================
+// ZAGLAVLJE – INVESTITOR, GRADILIŠTE
+// =====================================
+function drawHeader(doc, meta, pageW) {
+try {
+const img = document.querySelector("header img.logo");
+if (img) doc.addImage(img, "PNG", 5, 2, 15, 15);
+} catch {}
+doc.setFontSize(12);
+doc.setFont("Roboto", "bold");
+doc.text("MJERENJE KERAMIČARSKIH RADOVA", pageW / 2, 8, { align: "center" });
+doc.setFontSize(9);
+doc.setFont("Roboto", "normal");
+const col1 = 5;
+const col2 = pageW / 2;
+let y = 15;
+doc.text(Gradilište: ${meta.siteName || "-"}, col1, y);
+doc.text(Datum: ${new Date().toLocaleDateString("hr-HR")}, col2, y);
+y += 4;
+doc.text(Prostorija: ${meta.roomName || "-"}, col1, y);
+doc.text(Situacija: ${meta.situationNo || "-"}, col2, y);
+y += 4;
+doc.text(Investitor: ${meta.investorName || "-"}, col1, y);
+}
+// =====================================
+// MJERENJA TABLICA
+// =====================================
+function drawMjerenjaTable(doc, data, startY, margin, contentW) {
+let y = startY;
+doc.setFontSize(10);
+doc.setFont("Roboto", "bold");
+doc.text("MJERENJA PROSTORIJE", margin, y);
+y += 5;
+// Redovi tablica
+const rowH = 5;
+const fmt = x => formatHr(x);
+// Header
+doc.setFontSize(8);
+doc.setFont("Roboto", "bold");
+const colW = contentW / 7; // 7 stupaca: D1, Š1, D2, Š2, D3, Š3, V
+let x = margin;
+const headers = ["Dužina 1", "Širina 1", "Dužina 2", "Širina 2", "Dužina 3", "Širina 3", "Visina"];
+headers.forEach((h, i) => {
+doc.rect(x, y, colW, rowH);
+doc.setFont("Roboto", "bold");
+doc.setFontSize(7);
+doc.text(h, x + colW / 2, y + rowH / 2 + 1, { align: "center" });
+x += colW;
+});
+y += rowH;
+// Vrijednosti
+doc.setFont("Roboto", "normal");
+doc.setFontSize(8);
+x = margin;
+const values = [
+fmt(data.D || 0),
+fmt(data.S || 0),
+fmt(data.D || 0),
+fmt(data.S || 0),
+fmt(data.D || 0),
+fmt(data.S || 0),
+fmt(data.V || 0)
+];
+values.forEach((v, i) => {
+doc.rect(x, y, colW, rowH);
+doc.text(v, x + colW / 2, y + rowH / 2 + 1, { align: "center" });
+x += colW;
+});
+y += rowH + 3;
+// Rezultati (Pod, Zidovi, Hidro…)
+doc.setFont("Roboto", "bold");
+doc.setFontSize(9);
+doc.text("REZULTATI MJERENJA", margin, y);
+y += 5;
+doc.setFont("Roboto", "normal");
+doc.setFontSize(8);
+const results = [
+{ label: "Pod", value: fmt(data.results?.pod || 0), unit: "m²" },
+{ label: "Zidovi (neto)", value: fmt(data.results?.zidoviNeto || 0), unit: "m²" },
+{ label: "Hidro pod", value: fmt(data.results?.hidroPod || 0), unit: "m²" },
+{ label: "Hidro tuš", value: fmt(data.results?.hidroTus || 0), unit: "m²" },
+{ label: "Hidro ukupno", value: fmt((data.results?.hidroPod || 0) + (data.results?.hidroTus || 0)), unit: "m²" }
+];
+results.forEach((res) => {
+const labelW = contentW * 0.4;
+const valueW = contentW * 0.3;
+const unitW = contentW * 0.3;
+// Label
+doc.rect(margin, y, labelW, rowH);
+doc.text(res.label, margin + 1, y + rowH / 2 + 1);
 
-  const doc = new jsPDF({
-    unit: "mm",
-    format: "a4",
-    orientation: "portrait"
-  });
+// Value
+doc.rect(margin + labelW, y, valueW, rowH);
+doc.text(res.value, margin + labelW + valueW / 2, y + rowH / 2 + 1, { align: "center" });
 
-  await ensureRoboto(doc);
-  doc.setFont("Roboto", "normal");
-  doc.setFontSize(11);
-  if (doc.setCharSpace) doc.setCharSpace(0);
+// Unit
+doc.rect(margin + labelW + valueW, y, unitW, rowH);
+doc.text(res.unit, margin + labelW + valueW + unitW / 2, y + rowH / 2 + 1, { align: "center" });
 
-  let page = 1;
+y += rowH;
 
-  function header() {
-    try {
-      const img = document.querySelector("header img.logo");
-      if (img) doc.addImage(img, "PNG", 10, 6, 18, 18);
-    } catch {}
+});
+y += 2;
+return y;
+}
+// =====================================
+// AUTOMATIKA TABLICA (Pod, Zidovi, Hidro…)
+// =====================================
+function drawAutomatikaTable(doc, results, startY, margin, contentW) {
+let y = startY;
+doc.setFontSize(10);
+doc.setFont("Roboto", "bold");
+doc.text("STAVKE ZA OBRAČUN", margin, y);
+y += 5;
+doc.setFont("Roboto", "normal");
+doc.setFontSize(8);
+const rowH = 4;
+const fmt = x => formatHr(x);
+// Items
+const items = [
+{ label: "Pod", value: results.pod, unit: "m²" },
+{ label: "Zidovi", value: results.zidoviNeto, unit: "m²" },
+{ label: "Hidro pod", value: results.hidroPod, unit: "m²" },
+{ label: "Hidro tuš", value: results.hidroTus, unit: "m²" },
+{ label: "Hidro traka", value: results.hidroTraka, unit: "m" },
+{ label: "Silikon", value: results.silikon, unit: "m" },
+{ label: "Sokl", value: results.sokl, unit: "m" },
+{ label: "Lajsne", value: results.lajsne, unit: "m" },
+{ label: "Gerung", value: results.gerung, unit: "m" },
+{ label: "Stepenice", value: results.stepenice, unit: "kom" }
+];
+const labelW = contentW * 0.5;
+const valueW = contentW * 0.25;
+const unitW = contentW * 0.25;
+items.forEach((item) => {
+if (item.value == null) return;
+// Label
+doc.rect(margin, y, labelW, rowH);
+doc.text(item.label, margin + 1, y + rowH / 2, { baseline: "middle" });
 
-    doc.setFontSize(10);
-    doc.text("Građevinska knjiga – obračun prostorije", 30, 12);
-    doc.text(`Stranica ${page}`, 200 - 10, 12, { align: "right" });
+// Value
+doc.rect(margin + labelW, y, valueW, rowH);
+doc.text(fmt(item.value), margin + labelW + valueW / 2, y + rowH / 2, { align: "center", baseline: "middle" });
 
-    doc.rect(8, 14, 194, 270);
-    doc.setFontSize(11);
-  }
+// Unit
+doc.rect(margin + labelW + valueW, y, unitW, rowH);
+doc.text(item.unit, margin + labelW + valueW + unitW / 2, y + rowH / 2, { align: "center", baseline: "middle" });
 
-  header();
+y += rowH;
 
-  const m = data.meta || {};
-  const r = data.results || {};
-  const openings = data.openings || [];
-  const fmt = x => formatHr(x);
-
-  let y = 22;
-
-  // PODACI
-  doc.setFontSize(13);
-  doc.text("Podaci o gradilištu", 12, y); y += 6;
-  doc.setFontSize(11);
-  doc.text(`Gradilište: ${m.siteName || "-"}`, 12, y); y += 5;
-  doc.text(`Prostorija: ${m.roomName || "-"}`, 12, y); y += 5;
-  doc.text(`Situacija: ${m.situationNo || "-"}`, 12, y); y += 5;
-  doc.text(`Investitor: ${m.investorName || "-"}`, 12, y); y += 8;
-
-  // DIMENZIJE
-  doc.setFontSize(13);
-  doc.text("Dimenzije prostorije", 12, y); y += 6;
-  doc.setFontSize(11);
-  doc.text(`Dužina: ${fmt(data.D)} m`, 12, y); y += 5;
-  doc.text(`Širina: ${fmt(data.S)} m`, 12, y); y += 5;
-  doc.text(`Visina: ${fmt(data.V)} m`, 12, y); y += 8;
-
-  if (m.tileFormat?.label) {
-    doc.text(`Format pločica: ${m.tileFormat.label}`, 12, y);
-    y += 8;
-  }
-
-  // MJERE
-  doc.setFontSize(13);
-  doc.text("Mjere", 12, y); y += 6;
-  doc.setFontSize(11);
-
-  if (r.pod != null) doc.text(`Pod: ${fmt(r.pod)} m²`, 12, y), y += 5;
-  if (r.zidoviNeto != null) doc.text(`Zidovi: ${fmt(r.zidoviNeto)} m²`, 12, y), y += 5;
-  if (r.hidroPod != null) doc.text(`Hidro pod: ${fmt(r.hidroPod)} m²`, 12, y), y += 5;
-  if (r.hidroTus != null) doc.text(`Hidro tuš: ${fmt(r.hidroTus)} m²`, 12, y), y += 5;
-  if (r.hidroTraka != null) doc.text(`Hidro traka: ${fmt(r.hidroTraka)} m`, 12, y), y += 5;
-  if (r.silikon != null) doc.text(`Silikon: ${fmt(r.silikon)} m`, 12, y), y += 5;
-  if (r.sokl != null) doc.text(`Sokl: ${fmt(r.sokl)} m`, 12, y), y += 5;
-  if (r.lajsne != null) doc.text(`Lajsne: ${fmt(r.lajsne)} m`, 12, y), y += 5;
-  if (r.gerung != null) doc.text(`Gerung: ${fmt(r.gerung)} m`, 12, y), y += 5;
-
-  // OTVORI
-  if (openings.length) {
-    y += 5;
-    doc.setFontSize(13);
-    doc.text("Otvori", 12, y); y += 6;
-    doc.setFontSize(11);
-
-    openings.forEach(o => {
-      doc.text(
-        `- ${o.label}: ${fmt(o.w)}×${fmt(o.h)} m, kom ${o.count}`,
-        12,
-        y
-      );
-      y += 5;
-    });
-  }
-
-  return doc;
+});
+y += 2;
+return y;
+}
+// =====================================
+// NAPOMENE
+// =====================================
+function drawNapomene(doc, startY, margin, contentW) {
+let y = startY;
+doc.setFontSize(9);
+doc.setFont("Roboto", "bold");
+doc.text("NAPOMENE", margin, y);
+y += 4;
+doc.setFont("Roboto", "normal");
+doc.setFontSize(7);
+const notes = [
+"• Sve mjere kontrolirati u naravi",
+"• Ponuditelj se dužan držati općih uvjeta troškovnika i važećih zakona",
+"• Skela za visine veće od 150 cm uključena u cijenu"
+];
+notes.forEach((note) => {
+const lines = doc.splitTextToSize(note, contentW);
+lines.forEach((line) => {
+doc.text(line, margin, y);
+y += 2.5;
+});
+});
 }
