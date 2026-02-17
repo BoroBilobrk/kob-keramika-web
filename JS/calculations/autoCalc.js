@@ -1,6 +1,8 @@
 // JS/calculations/autoCalc.js
 console.log("autoCalc.js loaded");
 
+import { getOpenings, openingArea } from "./openings.js";
+
 export function calculateAuto() {
   // helper: string -> number (podržava zarez)
   const num = v => parseFloat(String(v ?? "").replace(",", ".")) || 0;
@@ -38,33 +40,22 @@ export function calculateAuto() {
   }
 
   // ======================
-  // ZIDOVI (brutto)
+  // OTVORI (iz AppState preko helpersa)
+  // ======================
+  const openings = getOpenings() || [];
+
+  // ======================
+  // ZIDOVI (brutto - vrata)
   // ======================
   let zidoviBrutto = 0;
   if (chk("chkZidovi")) {
     zidoviBrutto = 2 * (d + s) * h;
-    result.zidovi = zidoviBrutto;
-  }
 
-  // ======================
-  // OTVORI
-  // PRETPOSTAVKA:
-  // window.openings = [
-  //   {
-  //     type: "vrata" | "prozor" | "nisa" | "geberit" | "vertikala" | "custom",
-  //     povrsina: broj_u_m2,
-  //     duzina: broj_u_m
-  //   }
-  // ]
-  // ======================
-  const openings = Array.isArray(window.openings) ? window.openings : [];
+    // vrata: kind === "door"; površina iz openingArea
+    const vrataPovrsina = openings
+      .filter(o => o.kind === "door")
+      .reduce((sum, o) => sum + openingArea(o), 0);
 
-  // vrata se odbijaju od zidova (površina)
-  const vrataPovrsina = openings
-    .filter(o => o.type === "vrata")
-    .reduce((sum, o) => sum + (o.povrsina || 0), 0);
-
-  if (chk("chkZidovi") && vrataPovrsina > 0) {
     result.zidovi = Math.max(0, zidoviBrutto - vrataPovrsina);
   }
 
@@ -133,19 +124,22 @@ export function calculateAuto() {
   // ======================
   // LAJSNE / GERUNG
   // baza = prozori + niše + geberit + vertikale (+ stepenice)
+  // za sve te otvore koristimo "dužinu" = obod jednog komada * count
   // ======================
+  const perim = o => 2 * (o.w + o.h) * o.count;
+
   const bazaGerung = openings
     .filter(o =>
-      o.type === "prozor" ||
-      o.type === "nisa" ||
-      o.type === "geberit" ||
-      o.type === "vertikala"
+      o.kind === "window" ||
+      o.kind === "niche" ||
+      o.kind === "geberit" ||
+      o.kind === "vert"
     )
-    .reduce((sum, o) => sum + (o.duzina || 0), 0);
+    .reduce((sum, o) => sum + perim(o), 0);
 
   // ako želiš da se stepenice računaju u lajsne/gerung:
   const bazaLajsne = bazaGerung + stepenice;
-  // ako ne želiš stepenice, koristi umjesto ovoga:
+  // ako ne želiš stepenice, umjesto ovoga koristi:
   // const bazaLajsne = bazaGerung;
 
   result.lajsne = 0;
@@ -173,3 +167,4 @@ export function calculateAuto() {
   console.log("calculateAuto result:", data);
   return data;
 }
+
