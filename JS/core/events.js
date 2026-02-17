@@ -13,17 +13,6 @@ function $(id) {
 }
 
 // ==========================
-// IZRAČUN
-// ==========================
-$("btnCalcNow")?.addEventListener("click", () => {
-  const data = calculateAuto();
-  if (!data) return;
-
-  $("calcResult").style.display = "block";
-  $("calcOutput").textContent = JSON.stringify(data, null, 2);
-});
-
-// ==========================
 // PDF
 // ==========================
 $("btnExportPdfAuto")?.addEventListener("click", async () => {
@@ -74,12 +63,12 @@ $("btnOpenArchive")?.addEventListener("click", () => {
 // ==========================
 // OTVORI
 // ==========================
-$("btnAddDoor")?.addEventListener("click", () => addOpening("vrata", "Vrata"));
-$("btnAddWindow")?.addEventListener("click", () => addOpening("prozor", "Prozor"));
-$("btnAddNiche")?.addEventListener("click", () => addOpening("nisa", "Niša"));
-$("btnAddGeberit")?.addEventListener("click", () => addOpening("geberit", "Geberit"));
-$("btnAddVert")?.addEventListener("click", () => addOpening("vert", "Vertikala"));
-$("btnAddCustom")?.addEventListener("click", () => addOpening("custom", "Otvor"));
+$("btnAddDoor")?.addEventListener("click", () => addOpening("door"));
+$("btnAddWindow")?.addEventListener("click", () => addOpening("window"));
+$("btnAddNiche")?.addEventListener("click", () => addOpening("niche"));
+$("btnAddGeberit")?.addEventListener("click", () => addOpening("geberit"));
+$("btnAddVert")?.addEventListener("click", () => addOpening("vert"));
+$("btnAddCustom")?.addEventListener("click", () => addOpening("custom"));
 
 // ==========================
 // VIŠE PROSTORIJA
