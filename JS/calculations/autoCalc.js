@@ -1,7 +1,7 @@
 // JS/calculations/autoCalc.js
 console.log("autoCalc.js loaded");
 
-import { getOpenings, openingArea } from "./openings.js";
+import { getOpenings, openingArea, openingPerim } from "./openings.js";
 
 export function calculateAuto() {
   // helper: string -> number (podržava zarez)
@@ -13,6 +13,8 @@ export function calculateAuto() {
   const h = num(document.getElementById("dimV")?.value);
 
   const chk = id => !!document.getElementById(id)?.checked;
+
+  const openings = getOpenings() || [];
 
   let result = {
     pod: 0,
@@ -40,18 +42,12 @@ export function calculateAuto() {
   }
 
   // ======================
-  // OTVORI (iz AppState preko helpersa)
-  // ======================
-  const openings = getOpenings() || [];
-
-  // ======================
   // ZIDOVI (brutto - vrata)
   // ======================
-  let zidoviBrutto = 0;
   if (chk("chkZidovi")) {
-    zidoviBrutto = 2 * (d + s) * h;
+    const zidoviBrutto = 2 * (d + s) * h;
 
-    // vrata: kind === "door"; površina iz openingArea
+    // vrata: kind === "door"
     const vrataPovrsina = openings
       .filter(o => o.kind === "door")
       .reduce((sum, o) => sum + openingArea(o), 0);
@@ -67,8 +63,7 @@ export function calculateAuto() {
   }
 
   // ======================
-  // HIDRO TUŠ (RUČNI UNOS)
-  // (a + b) × visina
+  // HIDRO TUŠ (RUČNI UNOS) – (a + b) × visina
   // ======================
   const tusA = num(document.getElementById("tusA")?.value);
   const tusB = num(document.getElementById("tusB")?.value);
@@ -87,29 +82,28 @@ export function calculateAuto() {
   result.hidroUkupno = result.hidroPod + result.hidroTus;
 
   // ======================
-  // HIDRO TRAKA – OSNOVNO
+  // HIDRO TRAKA – OSNOVNO (po obodu prostorije)
   // ======================
   if (chk("chkHidroTraka")) {
     result.hidroTraka += 2 * (d + s);
   }
 
   // ======================
-  // SILIKON
+  // SILIKON (po obodu prostorije)
   // ======================
   if (chk("chkSilikon")) {
     result.silikon = 2 * (d + s);
   }
 
   // ======================
-  // SOKL
+  // SOKL (po obodu prostorije)
   // ======================
   if (chk("chkSokl")) {
     result.sokl = 2 * (d + s);
   }
 
   // ======================
-  // STEPENICE
-  // dužina × komada, samo ako oba podatka postoje
+  // STEPENICE – dužina × komada, samo ako oba podatka postoje
   // ======================
   let stepenice = 0;
   if (chk("chkStepenice")) {
@@ -123,24 +117,20 @@ export function calculateAuto() {
 
   // ======================
   // LAJSNE / GERUNG
-  // baza = prozori + niše + geberit + vertikale (+ stepenice)
-  // za sve te otvore koristimo "dužinu" = obod jednog komada * count
+  // baza = PROZOR + NIŠA + GEBERIT + VERTIKALA (+ stepenice)
+  // perimetar jednog otvora = openingPerim(o)
   // ======================
-  const perim = o => 2 * (o.w + o.h) * o.count;
-
-  const bazaGerung = openings
+  const bazaOtvor = openings
     .filter(o =>
       o.kind === "window" ||
-      o.kind === "niche" ||
-      o.kind === "geberit" ||
+      o.kind === "niche"  ||
+      o.kind === "geberit"||
       o.kind === "vert"
     )
-    .reduce((sum, o) => sum + perim(o), 0);
+    .reduce((sum, o) => sum + openingPerim(o), 0);
 
-  // ako želiš da se stepenice računaju u lajsne/gerung:
-  const bazaLajsne = bazaGerung + stepenice;
-  // ako ne želiš stepenice, umjesto ovoga koristi:
-  // const bazaLajsne = bazaGerung;
+  // uključi stepenice u istu bazu – po dogovoru
+  const bazaLajsne = bazaOtvor + stepenice;
 
   result.lajsne = 0;
   result.gerung = 0;
@@ -153,7 +143,7 @@ export function calculateAuto() {
   } else if (useGerung && !useLajsne) {
     result.gerung = bazaLajsne;
   }
-  // ako su obje kvačice isključene ili uključene, oba ostaju 0
+  // ako su obje kvačice isključene ili obje uključene, oba ostaju 0
 
   // ======================
   // POVRATNI OBJEKT
@@ -164,7 +154,5 @@ export function calculateAuto() {
   };
 
   window.lastCalcResult = data;
-  console.log("calculateAuto result:", data);
   return data;
-}
-
+      }
