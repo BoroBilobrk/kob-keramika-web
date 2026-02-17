@@ -8,7 +8,7 @@ import { formatHr } from "../core/helpers.js";
 export function addOrUpdateCurrentRoom() {
   const data = window.lastCalcResult;
 
-  if (!data || !data.meta) {
+  if (!data || !data.results) {
     alert("Prvo izračunaj prostoriju.");
     return;
   }
@@ -17,8 +17,20 @@ export function addOrUpdateCurrentRoom() {
     AppState.siteRooms = [];
   }
 
-  const meta = data.meta;
-  const roomKey = `${meta.siteName || ""}__${meta.roomName || ""}`;
+  const meta = {
+    siteName:     document.getElementById("siteName")?.value || "",
+    roomName:     document.getElementById("roomName")?.value || "",
+    situationNo:  document.getElementById("situationNo")?.value || "",
+    investorName: document.getElementById("investorName")?.value || ""
+  };
+
+  const roomKey = `${meta.siteName}__${meta.roomName}`;
+
+  const payload = {
+    meta,
+    dims: data.dims || {},
+    results: data.results || {}
+  };
 
   const index = AppState.siteRooms.findIndex(r =>
     r?.meta &&
@@ -26,9 +38,9 @@ export function addOrUpdateCurrentRoom() {
   );
 
   if (index >= 0) {
-    AppState.siteRooms[index] = structuredClone(data);
+    AppState.siteRooms[index] = structuredClone(payload);
   } else {
-    AppState.siteRooms.push(structuredClone(data));
+    AppState.siteRooms.push(structuredClone(payload));
   }
 
   refreshRoomsList();
@@ -44,7 +56,7 @@ export function clearRoomsForCurrentSite() {
 }
 
 // =====================================================
-// PRIKAZ LISTE PROSTORIJA
+// PRIKAZ LISTE PROSTORija
 // =====================================================
 export function refreshRoomsList() {
   const box = document.getElementById("roomsList");
@@ -68,8 +80,9 @@ export function refreshRoomsList() {
       <b>${m.roomName || "Prostorija"}</b><br>
       <span class="hint">
         Pod: ${formatHr(r.pod)} m² • 
-        Zidovi: ${formatHr(r.zidoviNeto)} m² • 
-        Hidro: ${formatHr(r.hidroUkupno)} m²
+        Zidovi: ${formatHr(r.zidovi)} m² • 
+        Hidro: ${formatHr(r.hidroUkupno)} m² •
+        Gerung: ${formatHr(r.gerung)} m
       </span>
       <div class="rooms-actions" style="margin-top:6px;">
         <button class="btn-small secondary" data-i="${i}" data-act="load">📄 Učitaj</button>
@@ -105,25 +118,24 @@ function loadRoomToForm(index) {
   const room = AppState.siteRooms[index];
   if (!room) return;
 
-  window.lastCalcResult = structuredClone(room);
+  window.lastCalcResult = structuredClone({
+    dims: room.dims,
+    results: room.results
+  });
 
   const m = room.meta || {};
+  const d = room.dims || {};
 
   // META
-  document.getElementById("siteName").value = m.siteName || "";
-  document.getElementById("roomName").value = m.roomName || "";
-  document.getElementById("situationNo").value = m.situationNo || "";
+  document.getElementById("siteName").value     = m.siteName || "";
+  document.getElementById("roomName").value     = m.roomName || "";
+  document.getElementById("situationNo").value  = m.situationNo || "";
   document.getElementById("investorName").value = m.investorName || "";
 
   // DIMENZIJE
-  document.getElementById("dimD").value = formatHr(room.D);
-  document.getElementById("dimS").value = formatHr(room.S);
-  document.getElementById("dimV").value = formatHr(room.V);
+  if (d.D != null) document.getElementById("dimD").value = formatHr(d.D);
+  if (d.S != null) document.getElementById("dimS").value = formatHr(d.S);
+  if (d.V != null) document.getElementById("dimV").value = formatHr(d.V);
 
-  // 🔁 AUTOMATSKI NOVI IZRAČUN (KLJUČNO)
-  if (typeof window.calculateAuto === "function") {
-    window.calculateAuto();
-  }
-
-  alert("Prostorija učitana i ponovno izračunata.");
+  alert("Prostorija učitana.");
 }
