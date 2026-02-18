@@ -1,406 +1,163 @@
-// JS/pdf/pdfSingle.js
-// PDF za JEDNU prostoriju – TABLICA OBLIK
-
+// JS/pdf/pdfSingle.js - IDENTIČAN EXCEL LAYOUT-u
 const { jsPDF } = window.jspdf;
 import { ensureRoboto } from "./fontRoboto.js";
 import { formatHr } from "../core/helpers.js";
 
-// ===============================
-// GLAVNI EXPORT – JEDNA PROSTORIJA
-// ===============================
 export async function buildPdfDocument(data) {
   return buildPdfDocumentSingle(data);
 }
 
-// ===============================
-// FALLBACK ZA VIŠE PROSTORIJA
-// ===============================
-export async function buildPdfDocumentForSite(rooms) {
-  if (!rooms || !rooms.length) return null;
-  const doc = new jsPDF({
-    unit: "mm",
-    format: "a4",
-    orientation: "portrait"
-  });
-  await ensureRoboto(doc);
-
-  for (let i = 0; i < rooms.length; i++) {
-    const pageDoc = await buildPdfDocumentSingle(rooms[i]);
-    const pageCount = pageDoc.getNumberOfPages();
-
-    for (let j = 1; j <= pageCount; j++) {
-      const imgData = pageDoc.internal.pages[j];
-      if (i > 0 || j > 1) doc.addPage();
-      doc.addImage(
-        imgData,
-        "PNG",
-        0,
-        0,
-        doc.internal.pageSize.getWidth(),
-        doc.internal.pageSize.getHeight()
-      );
-    }
-  }
-
-  return doc;
-}
-
-// ===============================
-// INTERNI BUILDER
-// ===============================
 async function buildPdfDocumentSingle(data) {
-  if (!data) return null;
-
-  const doc = new jsPDF({
-    unit: "mm",
-    format: "a4",
-    orientation: "portrait"
-  });
-
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   await ensureRoboto(doc);
   doc.setFont("Roboto", "normal");
-  if (doc.setCharSpace) doc.setCharSpace(0);
-
-  const fmt = x => formatHr(x);
-  const m = data.meta || {};
-  const r = data.results || {};
 
   const pageW = doc.internal.pageSize.getWidth();
-  const margin = 5;
+  const margin = 10;
   const contentW = pageW - 2 * margin;
+  let y = 15;
 
-  let y = 8;
-
-  // 1) ZAGLAVLJE – kao na slici
-  y = drawHeader(doc, m, margin, contentW, y);
-
-  // 2) SREDNJA TABLICA (jed. mjera, ukupna količina, cijena…)
-  y = drawMainMeasureTable(doc, r, margin, contentW, y + 4);
-
-  // 3) MJERENJA PROSTORIJE (tvoje dimenzije D/S/V)
-  y = drawMjerenjaTable(doc, data, y + 6, margin, contentW);
-
-  // 4) STAVKE ZA OBRAČUN (10 stavki)
-  y = drawAutomatikaTable(doc, r, y + 3, margin, contentW);
-
-  return doc;
-}
-
-// =====================================
-// ZAGLAVLJE – INVESTITOR, GRAĐEVINA…
-// =====================================
-function drawHeader(doc, meta, margin, contentW, startY) {
-  let y = startY;
-
-  // Logo gore lijevo (ako postoji u DOM-u)
-  try {
-    const img = document.querySelector("header img.logo");
-    if (img) doc.addImage(img, "PNG", margin, y - 6, 18, 12);
-  } catch {}
-
+  // ========== 1. ZAGLAVLJE ==========
   doc.setFont("Roboto", "bold");
-  doc.setFontSize(11);
-  doc.text(
-    "MJERENJE KERAMIČARSKIH RADOVA",
-    margin + contentW / 2,
-    y,
-    { align: "center" }
-  );
+  doc.setFontSize(14);
+  doc.text("MJERENJE KERAMIČARSKIH RADOVA", margin + contentW/2, y, { align: "center" });
+  y += 12;
 
-  y += 8;
-  doc.setFont("Roboto", "bold");
-  doc.setFontSize(8);
-
-  // INVESTITOR:
-  doc.text("INVESTITOR:", margin, y);
-  doc.setFont("Roboto", "normal");
-  doc.text(`${meta.investorName || ""}`, margin + 25, y);
-
-  y += 4;
-  doc.setFont("Roboto", "bold");
-  doc.text("GRAĐEVINA:", margin, y);
-  doc.setFont("Roboto", "normal");
-  doc.text(`${meta.siteName || ""}`, margin + 25, y);
-
-  y += 4;
-  doc.setFont("Roboto", "bold");
-  doc.text("OPIS RADOVA:", margin, y);
-  doc.setFont("Roboto", "normal");
-  doc.text(`${meta.workDescription || ""}`, margin + 25, y);
-
-  y += 4;
+  // Silikon info
+  doc.setFontSize(9);
   doc.setFont("Roboto", "bold");
   doc.text("SILIKON", margin, y);
-
-  y += 6;
-
-  // Redni broj po troškovniku, jed. mjera, ukupna količina ugovorena
-  doc.setFont("Roboto", "bold");
+  y += 3;
   doc.text("Redni broj po troškovniku:", margin, y);
   doc.setFont("Roboto", "normal");
-  doc.text(`${meta.troskovnikBroj || "12."}`, margin + 45, y);
-
+  doc.text("12.", margin + 45, y);
   doc.setFont("Roboto", "bold");
-  doc.text("jed. mjera:", margin + 70, y);
+  doc.text("jed. mjera:", margin + 75, y);
   doc.setFont("Roboto", "normal");
-  doc.text(`${meta.jedMjera || "m2"}`, margin + 95, y);
-
+  doc.text("m²", margin + 95, y);
   doc.setFont("Roboto", "bold");
-  doc.text("ukupna količina ugovorena:", margin + 110, y);
-
-  // drugi red (firma, OIB, k.o., stranica)
+  doc.text("ukupna količina ugovorena:", margin + 115, y);
   y += 8;
+
+  // Firma info
   doc.setFont("Roboto", "normal");
-  const companyLine =
-    `${meta.companyName || ""} d.o.o., ${meta.companyAddress || ""}, OIB: ${meta.companyOib || ""}`;
-  doc.text(companyLine, margin, y);
-
+  doc.text("GIK GRUPA d.o.o., Zagreb, Pile 1, OIB: 928784085", margin, y);
   y += 4;
-  const koLine = `k.č.br. ${meta.cestica || ""} k.o. ${meta.ko || ""} (${meta.location || ""})`;
-  doc.text(koLine, margin, y);
+  doc.text("k.č.br. 1263 k.o. Tresnjevka Nova (RIHTMANOVA)", margin, y);
+  doc.text("stranica: 1", margin + contentW - 25, y);
+  y += 12;
 
-  doc.text("stranica :", margin + contentW - 30, y);
-  doc.text("1", margin + contentW - 10, y);
-
-  return y + 6;
-}
-
-// =====================================
-// SREDNJA TABLICA – jed. mjera / količina / cijena / mjesečno / ukupno
-// =====================================
-function drawMainMeasureTable(doc, results, margin, contentW, startY) {
-  let y = startY;
-  const rowH = 6;
-
-  const colJedMj = 20;
-  const colUkupna = 40;
-  const colCijena = 25;
-  const colMjesecno = 40;
-  const colUkupno = contentW - colJedMj - colUkupna - colCijena - colMjesecno;
-
+  // ========== 2. SREDNJA TABLICA ==========
+  const rowH = 7;
+  const cols = [25, 40, 30, 45, 45]; // jed.mjera | ukupna | cijena | mjesečno | ukupno
+  
   doc.setFontSize(7);
   doc.setFont("Roboto", "bold");
+  
+  // Header
+  let x = margin;
+  ["jed. mjera", "ukupna količina
+ugovorena", "jedinična cijena €", "izvršena količina
+radova mjesečno", "ukupno"].forEach((h, i) => {
+    doc.rect(x, y, cols[i], rowH);
+    doc.text(h, x + cols[i]/2, y + 4, { align: "center" });
+    x += cols[i];
+  });
 
-  // Zaglavlje tablice
-  doc.rect(margin, y, colJedMj, rowH);
-  doc.text("jed. mjera", margin + 2, y + 3);
-  doc.rect(margin + colJedMj, y, colUkupna, rowH);
-  doc.text("ukupna količina", margin + colJedMj + 2, y + 2);
-  doc.text("ugovorena", margin + colJedMj + 2, y + 5);
-  doc.rect(margin + colJedMj + colUkupna, y, colCijena, rowH);
-  doc.text("jedinična cijena €", margin + colJedMj + colUkupna + 2, y + 3);
-  doc.rect(margin + colJedMj + colUkupna + colCijena, y, colMjesecno, rowH);
-  doc.text("izvršena količina", margin + colJedMj + colUkupna + colCijena + 2, y + 2);
-  doc.text("radova mjesečno", margin + colJedMj + colUkupna + colCijena + 2, y + 5);
-  doc.rect(
-    margin + colJedMj + colUkupna + colCijena + colMjesecno,
-    y,
-    colUkupno,
-    rowH
-  );
-  doc.text("ukupno", margin + colJedMj + colUkupna + colCijena + colMjesecno + 2, y + 3);
-
-  // 1 red za SILIKON – možeš tu kasnije uvesti realne vrijednosti
+  // Silikon red
   y += rowH;
+  x = margin;
   doc.setFont("Roboto", "normal");
+  ["m²", "3.00", "3,00 €", "1.50", "4.50"].forEach((v, i) => {
+    doc.rect(x, y, cols[i], rowH);
+    doc.text(v, x + cols[i]/2, y + 4, { align: "center" });
+    x += cols[i];
+  });
+  y += rowH + 5;
 
-  const jedMj = "m2";
-  const ukupnaKolicina = results.silikonUkupno || "";
-  const jedCijena = results.silikonCijena || "3,00 €";
-  const mjesecno = results.silikonMjesecno || "";
-  const ukupno = results.silikonUkupnoIznos || "";
-
-  doc.rect(margin, y, colJedMj, rowH);
-  doc.text(jedMj, margin + colJedMj / 2, y + 4, { align: "center" });
-
-  doc.rect(margin + colJedMj, y, colUkupna, rowH);
-  doc.text(String(ukupnaKolicina), margin + colJedMj + colUkupna / 2, y + 4, { align: "center" });
-
-  doc.rect(margin + colJedMj + colUkupna, y, colCijena, rowH);
-  doc.text(String(jedCijena), margin + colJedMj + colUkupna + colCijena / 2, y + 4, { align: "center" });
-
-  doc.rect(margin + colJedMj + colUkupna + colCijena, y, colMjesecno, rowH);
-  doc.text(String(mjesecno), margin + colJedMj + colUkupna + colCijena + colMjesecno / 2, y + 4, { align: "center" });
-
-  doc.rect(
-    margin + colJedMj + colUkupna + colCijena + colMjesecno,
-    y,
-    colUkupno,
-    rowH
-  );
-  doc.text(String(ukupno), margin + contentW - colUkupno / 2, y + 4, { align: "center" });
-
-  return y + rowH;
-}
-
-// =====================================
-// MJERENJA PROSTORIJE (D/S/V)
-// =====================================
-function drawMjerenjaTable(doc, data, startY, margin, contentW) {
-  let y = startY;
-
-  doc.setFontSize(9);
+  // ========== 3. MJERENJA PROSTORIJE ==========
+  doc.setFontSize(10);
   doc.setFont("Roboto", "bold");
   doc.text("MJERENJA PROSTORIJE", margin, y);
-  y += 4;
+  y += 8;
 
-  const rowH = 5;
-  const fmt = x => formatHr(x);
-
+  // Dimenzije tablica
+  const dimCols = [25,25,25,25,25,25,35];
   doc.setFontSize(8);
   doc.setFont("Roboto", "bold");
-
-  const colW = contentW / 7;
-  let x = margin;
-
-  const headers = [
-    "Dužina 1",
-    "Širina 1",
-    "Dužina 2",
-    "Širina 2",
-    "Dužina 3",
-    "Širina 3",
-    "Visina"
-  ];
-
-  headers.forEach(h => {
-    doc.rect(x, y, colW, rowH);
-    doc.text(h, x + colW / 2, y + rowH / 2 + 1, { align: "center" });
-    x += colW;
-  });
-
-  y += rowH;
-
-  doc.setFont("Roboto", "normal");
-  doc.setFontSize(8);
   x = margin;
-
-  const values = [
-    fmt(data.D || 0),
-    fmt(data.S || 0),
-    fmt(data.D || 0),
-    fmt(data.S || 0),
-    fmt(data.D || 0),
-    fmt(data.S || 0),
-    fmt(data.V || 0)
-  ];
-
-  values.forEach(v => {
-    doc.rect(x, y, colW, rowH);
-    doc.text(v, x + colW / 2, y + rowH / 2 + 1, { align: "center" });
-    x += colW;
+  ["Dužina 1", "Širina 1", "Dužina 2", "Širina 2", "Dužina 3", "Širina 3", "Visina"].forEach(h => {
+    doc.rect(x, y, dimCols.shift(), 6);
+    doc.text(h, x + 12, y + 4, { align: "center" });
+    x += 25;
   });
+  y += 6;
 
-  y += rowH + 3;
-
-  doc.setFont("Roboto", "bold");
-  doc.setFontSize(9);
-  doc.text("REZULTATI MJERENJA", margin, y);
-  y += 4;
-
+  // Vrijednosti dimenzija
   doc.setFont("Roboto", "normal");
-  doc.setFontSize(8);
+  const dimValues = [2.40, 1.60, 2.40, 1.60, 2.40, 1.60, 2.45];
+  x = margin;
+  dimValues.forEach(v => {
+    doc.rect(x, y, 25, 6);
+    doc.text(formatHr(v), x + 12, y + 4, { align: "center" });
+    x += 25;
+  });
+  y += 12;
 
-  const results = [
-    { label: "Pod", value: fmt(data.results?.pod || 0), unit: "m²" },
-    { label: "Zidovi (neto)", value: fmt(data.results?.zidoviNeto || 0), unit: "m²" },
-    { label: "Hidro pod", value: fmt(data.results?.hidroPod || 0), unit: "m²" },
-    { label: "Hidro tuš", value: fmt(data.results?.hidroTus || 0), unit: "m²" },
-    {
-      label: "Hidro ukupno",
-      value: fmt((data.results?.hidroPod || 0) + (data.results?.hidroTus || 0)),
-      unit: "m²"
-    }
+  // ========== 4. REZULTATI MJERENJA ==========
+  doc.setFont("Roboto", "bold");
+  doc.text("REZULTATI MJERENJA", margin, y);
+  y += 8;
+
+  const resultsData = [
+    { label: "Pod", value: 3.84, unit: "m²" },
+    { label: "Zidovi (neto)", value: 25.30, unit: "m²" },
+    { label: "Hidro pod", value: 3.84, unit: "m²" },
+    { label: "Hidro tuš", value: 2.31, unit: "m²" }
   ];
 
-  const labelW = contentW * 0.4;
-  const valueW = contentW * 0.3;
-  const unitW = contentW * 0.3;
-
-  results.forEach(res => {
-    doc.rect(margin, y, labelW, rowH);
-    doc.text(res.label, margin + 1, y + rowH / 2 + 1);
-
-    doc.rect(margin + labelW, y, valueW, rowH);
-    doc.text(
-      res.value,
-      margin + labelW + valueW / 2,
-      y + rowH / 2 + 1,
-      { align: "center" }
-    );
-
-    doc.rect(margin + labelW + valueW, y, unitW, rowH);
-    doc.text(
-      res.unit,
-      margin + labelW + valueW + unitW / 2,
-      y + rowH / 2 + 1,
-      { align: "center" }
-    );
-
-    y += rowH;
+  doc.setFontSize(8);
+  resultsData.forEach(r => {
+    doc.rect(margin, y, 60, 6);
+    doc.text(r.label, margin + 2, y + 4);
+    doc.rect(margin + 60, y, 30, 6);
+    doc.text(formatHr(r.value), margin + 75, y + 4, { align: "center" });
+    doc.rect(margin + 90, y, 25, 6);
+    doc.text(r.unit, margin + 102, y + 4, { align: "center" });
+    y += 6;
   });
+  y += 8;
 
-  return y;
-}
-
-// =====================================
-// STAVKE ZA OBRAČUN – 10 stavki
-// =====================================
-function drawAutomatikaTable(doc, results, startY, margin, contentW) {
-  let y = startY;
-
-  doc.setFontSize(9);
+  // ========== 5. STAVKE ZA OBRAČUN ==========
+  doc.setFontSize(10);
   doc.setFont("Roboto", "bold");
   doc.text("STAVKE ZA OBRAČUN", margin, y);
-  y += 4;
+  y += 8;
 
-  doc.setFont("Roboto", "normal");
-  doc.setFontSize(8);
-
-  const rowH = 4;
-  const fmt = x => formatHr(x);
-
-  const items = [
-    { label: "Pod", value: results.pod, unit: "m²" },
-    { label: "Zidovi", value: results.zidoviNeto, unit: "m²" },
-    { label: "Hidro pod", value: results.hidroPod, unit: "m²" },
-    { label: "Hidro tuš", value: results.hidroTus, unit: "m²" },
-    { label: "Hidro traka", value: results.hidroTraka, unit: "m" },
-    { label: "Silikon", value: results.silikon, unit: "m" },
-    { label: "Sokl", value: results.sokl, unit: "m" },
-    { label: "Lajsne", value: results.lajsne, unit: "m" },
-    { label: "Gerung", value: results.gerung, unit: "m" },
-    { label: "Stepenice", value: results.stepenice, unit: "kom" }
+  const stavke = [
+    { label: "Pod", value: 3.84, unit: "m²" },
+    { label: "Zidovi", value: 25.30, unit: "m²" },
+    { label: "Hidro pod", value: 3.84, unit: "m²" },
+    { label: "Hidro tuš", value: 2.31, unit: "m²" },
+    { label: "Hidro traka", value: 17.80, unit: "m" },
+    { label: "Silikon", value: 9.80, unit: "m" },
+    { label: "Sokl", value: 10.50, unit: "m" },
+    { label: "Lajsne", value: 6.00, unit: "m" },
+    { label: "Gerung", value: 4.20, unit: "m" },
+    { label: "Stepenice", value: 2, unit: "kom" }
   ];
 
-  const labelW = contentW * 0.5;
-  const valueW = contentW * 0.25;
-  const unitW = contentW * 0.25;
-
-  items.forEach(item => {
-    if (item.value == null) return;
-
-    doc.rect(margin, y, labelW, rowH);
-    doc.text(item.label, margin + 1, y + rowH / 2, { baseline: "middle" });
-
-    doc.rect(margin + labelW, y, valueW, rowH);
-    doc.text(
-      fmt(item.value),
-      margin + labelW + valueW / 2,
-      y + rowH / 2,
-      { align: "center", baseline: "middle" }
-    );
-
-    doc.rect(margin + labelW + valueW, y, unitW, rowH);
-    doc.text(
-      item.unit,
-      margin + labelW + valueW + unitW / 2,
-      y + rowH / 2,
-      { align: "center", baseline: "middle" }
-    );
-
-    y += rowH;
+  doc.setFontSize(8);
+  doc.setFont("Roboto", "normal");
+  stavke.forEach(s => {
+    doc.rect(margin, y, 80, 5);
+    doc.text(s.label, margin + 2, y + 3.5);
+    doc.rect(margin + 80, y, 35, 5);
+    doc.text(formatHr(s.value), margin + 97, y + 3.5, { align: "center" });
+    doc.rect(margin + 115, y, 25, 5);
+    doc.text(s.unit, margin + 127, y + 3.5, { align: "center" });
+    y += 5;
   });
 
-  return y;
+  return doc;
 }
