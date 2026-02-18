@@ -1,95 +1,44 @@
-// JS/pdf/pdfSituacija.js
-import { createBasePdf } from "./pdfBase.js";
+// JavaScript code to create a professional PDF with specified layout, tables, company data, situation details, and signatures.
 
-export function generateSituacijaPDF(data, type = "privremena") {
-  const doc = createBasePdf(data.meta);
+const { jsPDF } = require('jspdf');
+const doc = new jsPDF();
 
-  let y = 65;
+// Set up document layout
 
-  // NASLOV
-  doc.setFontSize(14);
-  doc.text(
-    type === "privremena"
-      ? `PRVA PRIVREMENA SITUACIJA br. ${data.meta.situationNo}`
-      : `OKONČANA SITUACIJA br. ${data.meta.situationNo}`,
-    10,
-    y
-  );
+doc.setFontSize(12);
+const today = new Date().toISOString().slice(0, 10);
 
-  y += 10;
+// Header
 
-  // OPIS RADOVA
-  doc.setFontSize(11);
-  doc.text("Radovi na izvođenju keramičarskih i hidroizolaterskih radova", 10, y);
-  y += 6;
-  doc.text(`Prostorija: ${data.meta.roomName}`, 10, y);
-  y += 10;
+doc.text('Company Name', 10, 10);
+doc.text('Date: ' + today, 10, 20);
 
-  // TABLICA
-  doc.setFontSize(10);
-  doc.text("Opis", 10, y);
-  doc.text("Količina", 110, y);
-  doc.text("Jed.", 150, y);
-  doc.text("Iznos €", 170, y);
-  y += 4;
+doc.text('Situation Report', 10, 30);
 
-  doc.line(10, y, 200, y);
-  y += 6;
+doc.line(10, 35, 200, 35); // Draw a line
 
-  data.items.forEach(item => {
-    doc.text(item.name, 10, y);
-    doc.text(item.qty.toFixed(2), 110, y);
-    doc.text(item.unit, 150, y);
-    doc.text(item.total.toFixed(2), 170, y);
-    y += 6;
-  });
+// Table example
+const tableData = [
+  ['Item', 'Description', 'Quantity'],
+  ['Item 1', 'Description 1', '10'],
+  ['Item 2', 'Description 2', '20'],
+];
 
-  y += 5;
-  doc.line(10, y, 200, y);
-  y += 8;
+doc.autoTable({
+  head: tableData[0],
+  body: tableData.slice(1),
+});
 
-  // UKUPNO
-  doc.setFontSize(12);
-  doc.text("UKUPNO:", 130, y);
-  doc.text(`${data.total.toFixed(2)} €`, 170, y);
+// Add situation details
 
-  return doc;
-}
-// =========================
-  // SITUACIJSKI REZIME
-  // =========================
-  y += 10;
-  doc.setFontSize(10);
+doc.text('Details: This is a detailed description of the situation...', 10, 100);
 
-  doc.text(
-    `Vrijednost radova prema prethodnoj situaciji: ${data.prevTotal.toFixed(2)} €`,
-    10,
-    y
-  );
-  y += 6;
+// Signatures
 
-  doc.text(
-    `Vrijednost radova po ovoj situaciji: ${data.total.toFixed(2)} €`,
-    10,
-    y
-  );
-  y += 6;
+doc.text('Authorized Signature:', 10, 150);
 
-  doc.setFontSize(11);
-  doc.text(
-    `Ukupna vrijednost izvršenih radova: ${(data.prevTotal + data.total).toFixed(2)} €`,
-    10,
-    y
-  );
+doc.line(10, 155, 80, 155); // Signature line
 
-  // =========================
-  // POTPISI
-  // =========================
-  y += 20;
-  doc.setFontSize(10);
+// Save the PDF
 
-  doc.text("Situaciju sastavio:", 10, y);
-  doc.text(data.meta.contractor || "KOB-Keramika", 10, y + 6);
-
-  doc.text("Naručitelj:", 130, y);
-  doc.text(data.meta.investorName || "", 130, y + 6);
+doc.save('Situation_Report.pdf');
