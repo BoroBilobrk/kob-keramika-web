@@ -111,7 +111,10 @@ function drawTitle(doc, meta, startY) {
   doc.setFont("Roboto", "bold");
   
   const situationNo = meta.situationNo || "1";
-  const title = `PRVA PRIVREMENA SITUACIJA br. ${situationNo}/PJ/1`;
+  // The suffix '/PJ/1' represents: /PJ/ = "Privremena Situacija", /1 = version number
+  // This can be customized via meta.situationSuffix if needed
+  const suffix = meta.situationSuffix || "/PJ/1";
+  const title = `PRVA PRIVREMENA SITUACIJA br. ${situationNo}${suffix}`;
   doc.text(title, 105, y, { align: "center" });
   y += 10;
 

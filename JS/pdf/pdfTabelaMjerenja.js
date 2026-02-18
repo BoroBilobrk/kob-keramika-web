@@ -129,6 +129,11 @@ function drawMeasurementTable(doc, items, startY) {
   doc.text("TABELA ZA MJERENJE", 15, y);
   y += 8;
 
+  // Table constants
+  const TABLE_WIDTH = 185;
+  const HEADER_HEIGHT = 15;
+  const ROW_HEIGHT = 8;
+
   // Table header
   doc.setFontSize(8);
   const colX = {
@@ -145,12 +150,12 @@ function drawMeasurementTable(doc, items, startY) {
   
   // Draw header background
   doc.setFillColor(230, 230, 230);
-  doc.rect(colX.rb, headerY - 5, 185, 15, 'F');
+  doc.rect(colX.rb, headerY - 5, TABLE_WIDTH, HEADER_HEIGHT, 'F');
   
   // Draw header borders
   doc.setDrawColor(0);
   doc.setLineWidth(0.3);
-  doc.rect(colX.rb, headerY - 5, 185, 15);
+  doc.rect(colX.rb, headerY - 5, TABLE_WIDTH, HEADER_HEIGHT);
 
   // Header text
   doc.setFont("Roboto", "bold");
@@ -181,14 +186,13 @@ function drawMeasurementTable(doc, items, startY) {
       doc.setFontSize(9);
     }
 
-    const rowHeight = 8;
-    
     // Draw row borders
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.2);
-    doc.line(colX.rb, y + rowHeight, colX.rb + 185, y + rowHeight);
+    doc.line(colX.rb, y + ROW_HEIGHT, colX.rb + TABLE_WIDTH, y + ROW_HEIGHT);
 
-    // Row data
+    // Row data - using 'kolicina' as the primary field name from Excel loader
+    // 'totalQuantity' is kept as fallback for backward compatibility with older data
     const rb = item.rb || (index + 1).toString();
     const opis = item.opis || item.name || "";
     const jm = item.jm || item.unit || "m²";
@@ -209,13 +213,13 @@ function drawMeasurementTable(doc, items, startY) {
     doc.text(izvrsena, colX.izvrsena + 2, y + 5);
     doc.text(mjesecni, colX.mjesecni + 2, y + 5);
 
-    y += rowHeight;
+    y += ROW_HEIGHT;
   });
 
   // Draw table borders
   doc.setDrawColor(0);
   doc.setLineWidth(0.3);
-  doc.rect(colX.rb, headerY - 5, 185, y - headerY + 5);
+  doc.rect(colX.rb, headerY - 5, TABLE_WIDTH, y - headerY + 5);
 
   return y;
 }

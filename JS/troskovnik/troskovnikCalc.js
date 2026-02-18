@@ -46,6 +46,9 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
 
   const calculated = window.troskovnikItems.map(item => {
     let qty = 0;
+    // Field name mapping for backward compatibility:
+    // - 'opis' is the primary field name used by Excel loader (loadExcel.js)
+    // - 'name' is kept as fallback for compatibility with older data or manual entries
     const opis = (item.opis || item.name || "").toLowerCase();
 
     Object.keys(map).forEach(key => {
@@ -105,6 +108,10 @@ function renderResult(items, total) {
   items.forEach(i => {
     if (i.qty > 0) {
       const div = document.createElement("div");
+      // Field name mapping:
+      // - 'opis'/'name': description field from Excel or manual entry
+      // - 'jm'/'unit': unit of measurement
+      // - 'cijena'/'price': unit price
       const name = i.opis || i.name || "Nepoznata stavka";
       const unit = i.jm || i.unit || "";
       const price = i.cijena || i.price || 0;
