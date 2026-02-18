@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test PDF Generation</title>
+</head>
+<body>
+  <h1>Test PDF Generiranja s Hrvatskim Znakovima</h1>
+  
+  <div style="margin: 20px;">
+    <h2>PDF 1: TABELA ZA MJERENJE</h2>
+    <button id="testPDF1">Generiraj PDF 1 (TABELA ZA MJERENJE)</button>
+  </div>
+
+  <div style="margin: 20px;">
+    <h2>PDF 2: PRVA PRIVREMENA SITUACIJA</h2>
+    <button id="testPDF2">Generiraj PDF 2 (PRVA PRIVREMENA SITUACIJA)</button>
+  </div>
+
+  <div id="status" style="margin: 20px; padding: 10px; background: #f0f0f0;"></div>
+
+  <!-- Logo za testiranje -->
+  <header style="display:none;">
+    <img src="http://localhost:8080/logo.png" class="logo" alt="Logo">
+  </header>
+
+  <!-- jsPDF iz CDN koji radi -->
+  <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+
+  <script type="module">
+    // Wait for jsPDF to load
+    function waitForJsPDF() {
+      return new Promise((resolve) => {
+        const check = () => {
+          if (window.jspdf) {
+            resolve();
+          } else {
+            setTimeout(check, 100);
+          }
+        };
+        check();
+      });
+    }
+
+    await waitForJsPDF();
+    
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = 'jsPDF loaded successfully!';
+
+    import { buildPdfDocument } from 'http://localhost:8080/JS/pdf/pdfSingle.js';
+    import { generateSituacijaPDF } from 'http://localhost:8080/JS/pdf/pdfSituacija.js';
+
+    statusEl.textContent += ' Modules loaded!';
+
+    // Test data with Croatian characters
+    const testData1 = {
+      meta: {
+        siteName: "k.č.br. 1263 k.o. Trešnjevka Nova",
+        roomName: "Keramičarski radovi - kupaonica",
+        investorName: "GIK GRUPA d.o.o., Zagreb, Pile I. 1",
+        situationNo: "S-12/2025"
+      },
+      results: {
+        pod: 15.50,
+        zidovi: 42.30,
+        hidroPod: 15.50,
+        silikon: 12.80,
+        sokl: 8.40,
+        lajsne: 6.20
+      },
+      prices: {
+        pod: 25.00,
+        zidovi: 35.00,
+        hidroPod: 18.50,
+        silikon: 8.50,
+        sokl: 12.00,
+        lajsne: 15.00
+      }
+    };
+
+    const testData2 = {
+      meta: {
+        siteName: "k.č.br. 1263 k.o. Trešnjevka Nova (RIHTMANOVA stranica)",
+        investorName: "GIK GRUPA d.o.o., Zagreb, Pile I. 1",
+        situationNo: "1/PJ/1",
+        contractNo: "UG-2025-123",
+        contractValue: "115233.90"
+      },
+      items: [
+        {
+          name: "Keramičarski radovi - pod",
+          qty: 15.50,
+          unit: "m²",
+          price: 25.00,
+          total: 387.50
+        },
+        {
+          name: "Zidovi - pločice",
+          qty: 42.30,
+          unit: "m²",
+          price: 35.00,
+          total: 1480.50
+        }
+      ],
+      total: 1868.00,
+      prevTotal: 0
+    };
+
+    document.getElementById('testPDF1').addEventListener('click', async () => {
+      console.log('Generating PDF 1...');
+      statusEl.textContent = 'Generating PDF 1...';
+      try {
+        const doc = await buildPdfDocument(testData1);
+        if (doc) {
+          doc.save('Test_Tabela_Za_Mjerenje.pdf');
+          console.log('PDF 1 generated successfully!');
+          statusEl.textContent = 'PDF 1 generated successfully! Check downloads.';
+        }
+      } catch (error) {
+        console.error('Error generating PDF 1:', error);
+        statusEl.textContent = 'Error: ' + error.message;
+        alert('Error: ' + error.message);
+      }
+    });
+
+    document.getElementById('testPDF2').addEventListener('click', async () => {
+      console.log('Generating PDF 2...');
+      statusEl.textContent = 'Generating PDF 2...';
+      try {
+        const doc = generateSituacijaPDF(testData2, 'privremena');
+        if (doc) {
+          doc.save('Test_Prva_Privremena_Situacija.pdf');
+          console.log('PDF 2 generated successfully!');
+          statusEl.textContent = 'PDF 2 generated successfully! Check downloads.';
+        }
+      } catch (error) {
+        console.error('Error generating PDF 2:', error);
+        statusEl.textContent = 'Error: ' + error.message;
+        alert('Error: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>
