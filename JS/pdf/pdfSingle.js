@@ -8,6 +8,8 @@ import { buildPdfDocumentForSite } from "./pdfSite.js";
 import { getPricesForCurrentFormat } from "../calculations/cjenik.js";
 import { getOpenings, openingArea, openingPerim } from "../calculations/openings.js";
 
+let logoDataUrlCache = null;
+
 function fmt(num, dec = 2) {
   return formatHr(num, dec);
 }
@@ -26,6 +28,27 @@ function getTileFormatLabel() {
   const w = document.getElementById("tileW")?.value || "";
   const h = document.getElementById("tileH")?.value || "";
   return w && h ? `${w}×${h} cm` : "";
+}
+
+async function ensureLogoDataUrl() {
+  if (logoDataUrlCache) return logoDataUrlCache;
+
+  try {
+    const response = await fetch("JS/pdf/logo-kob.png");
+    if (!response.ok) return null;
+
+    const blob = await response.blob();
+    logoDataUrlCache = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+
+    return logoDataUrlCache;
+  } catch (e) {
+    return null;
+  }
 }
 
 export async function buildPdfDocument(data = {}) {
@@ -75,6 +98,8 @@ export async function buildPdfDocument(data = {}) {
   const frameW = 190;
   const frameH = 255;
 
+  const logoDataUrl = await ensureLogoDataUrl();
+
   const drawFrame = () => {
     doc.setLineWidth(0.2);
     doc.rect(frameX, frameY, frameW, frameH);
@@ -83,13 +108,8 @@ export async function buildPdfDocument(data = {}) {
     doc.text("KOB - KERAMIKA", frameX + 4, frameY + 6);
     doc.text("Vl. Slobodan Bilobrk", frameX + 4, frameY + 10);
 
-    try {
-      const img = document.querySelector("header img.logo");
-      if (img) {
-        doc.addImage(img, "PNG", frameX + 70, frameY + 2, 20, 20);
-      }
-    } catch (e) {
-      // ignore logo errors
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, "PNG", frameX + 70, frameY + 2, 26, 18);
     }
 
     doc.setFontSize(9);
