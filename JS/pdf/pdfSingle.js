@@ -20,7 +20,7 @@ const costTable = [
         ukupno: 0         // Total
     },
     // Add additional lines as necessary
-    {...}, // Placeholder for additional items
+ // Placeholder for additional items
 ];
 
 // Function to display the measurement layout
