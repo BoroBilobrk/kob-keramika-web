@@ -11,7 +11,7 @@ import { formatNumber, drawTable, addLogo } from "./pdfHelpers.js";
  * @param {string} type - Tip situacije ("privremena" ili "okončana")
  * @returns {jsPDF} - PDF dokument
  */
-export function generateSituacijaPDF(data, type = "privremena") {
+export async function generateSituacijaPDF(data, type = "privremena") {
   if (!data) return null;
 
   const doc = new jsPDF({
@@ -20,14 +20,8 @@ export function generateSituacijaPDF(data, type = "privremena") {
     orientation: "portrait"
   });
 
-  // Učitaj Roboto font za hrvatske znakove (sinkrono - mora se pozvati prije teksta)
-  // Napomena: pozivamo async funkciju ali ne čekamo - font će se učitati ako nije već
-  ensureRoboto(doc).then(() => {
-    doc.setFont("Roboto", "normal");
-  }).catch(() => {
-    doc.setFont("helvetica", "normal");
-  });
-
+  // Učitaj Roboto font za hrvatske znakove i čekaj dok se učita
+  await ensureRoboto(doc);
   doc.setFont("Roboto", "normal");
 
   let y = 10;
@@ -74,8 +68,10 @@ export function generateSituacijaPDF(data, type = "privremena") {
   doc.text(`Datum isporuke: ${dateStr}`, 10, y);
   y += 6;
 
-  // Periode izvršenja
-  doc.text("Periode izvršenja: od 1.12.2025 do 31.12.2025", 10, y);
+  // Periode izvršenja - koristi podatke iz meta ili default vrijednosti
+  const periodFrom = meta.periodFrom || "1.12.2025";
+  const periodTo = meta.periodTo || "31.12.2025";
+  doc.text(`Periode izvršenja: od ${periodFrom} do ${periodTo}`, 10, y);
   y += 6;
 
   // Gradilište
@@ -192,25 +188,4 @@ export function generateSituacijaPDF(data, type = "privremena") {
   doc.text(`Operater: ${meta.operator || "KOB-KERAMIKA"}`, 10, y);
 
   return doc;
-}
-
-/**
- * Export async verzija funkcije koja čeka učitavanje fonta
- */
-export async function generateSituacijaPDFAsync(data, type = "privremena") {
-  const doc = new jsPDF({
-    unit: "mm",
-    format: "a4",
-    orientation: "portrait"
-  });
-
-  // Učitaj Roboto font i čekaj
-  await ensureRoboto(doc);
-  doc.setFont("Roboto", "normal");
-
-  // Kopiraj ostatak koda iz generateSituacijaPDF
-  // (pozivamo originalnu funkciju ali s već učitanim fontom)
-  const tempDoc = generateSituacijaPDF(data, type);
-  
-  return tempDoc;
 }

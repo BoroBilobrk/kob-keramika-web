@@ -127,7 +127,7 @@ export function addCompanyHeader(doc, x, y, options = {}) {
   doc.setFontSize(fontSize);
   doc.setFont("Roboto", "normal");
 
-  doc.text("KOB – KERAMIKA", x, currentY);
+  doc.text("KOB-KERAMIKA", x, currentY);
   currentY += 5;
   doc.text("vl. Slobodan Bilobrk", x, currentY);
   currentY += 5;
