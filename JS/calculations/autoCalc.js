@@ -143,10 +143,18 @@ export function calculateAuto() {
     result.gerung = bazaLajsne;
   }
 
+  const meta = {
+    siteName: document.getElementById("siteName")?.value || "",
+    roomName: document.getElementById("roomName")?.value || "",
+    situationNo: document.getElementById("situationNo")?.value || "",
+    investorName: document.getElementById("investorName")?.value || ""
+  };
+
   // ======================
   // POVRATNI OBJEKT
   // ======================
   const data = {
+    meta,
     dims: { D: d, S: s, V: h },
     results: result
   };
