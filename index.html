@@ -73,13 +73,44 @@
     <div class="card">
       <p class="hint">
         Odaberi stavke iz troškovnika (kvačice), unesi podatke o gradilištu i dimenzije prostorije.
-        Ovaj modul koristi istu logiku mjerenja kao “Automatski obračun”, ali prema stavkama iz troškovnika.
+        Ovaj modul koristi istu logiku mjerenja kao "Automatski obračun", ali prema stavkama iz troškovnika.
       </p>
+    </div>
+
+    <!-- PODACI O PROJEKTU -->
+    <div class="card">
+      <h3>📋 Podaci o projektu</h3>
+      <input id="siteName" placeholder="Naziv gradilišta (npr. k.č.br. 1263 k.o. Trešnjevka Nova)">
+      <input id="roomName" placeholder="Opis radova (npr. kosi profil)">
+      <input id="situationNo" placeholder="Broj situacije (npr. 1)">
+      <input id="investorName" placeholder="Investitor (npr. GIK GRUPA d.o.o.)">
+      <input id="investorLocation" placeholder="Lokacija investitora (npr. Zagreb)">
+      <input id="investorAddress" placeholder="Adresa investitora (npr. Pile I. 1)">
+      <input id="investorOIB" placeholder="OIB investitora (npr. 91287854085)">
+      <input id="contractNo" placeholder="Broj ugovora (npr. 001/2025)">
+      <input id="contractValue" placeholder="Vrijednost ugovora (EUR, npr. 115233.90)">
+      <input id="deliveryDate" placeholder="Datum isporuke (npr. 31.12.2025)">
+      <input id="periodStart" placeholder="Početak perioda (npr. 01.12.2025)">
+      <input id="periodEnd" placeholder="Kraj perioda (npr. 31.12.2025)">
+    </div>
+
+    <!-- TIP PDF-a -->
+    <div class="card">
+      <h3>📄 Tip PDF dokumenta</h3>
+      <div class="checkbox-row">
+        <input type="radio" id="sitTypePrivremena" name="sitType" value="privremena" checked>
+        <label for="sitTypePrivremena">Privremena situacija</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="radio" id="sitTypeTabela" name="sitType" value="tabela">
+        <label for="sitTypeTabela">Tabela za mjerenje</label>
+      </div>
     </div>
 
     <div class="card">
       <h3>✅ Stavke iz troškovnika</h3>
       <div id="troskovnikItemsList" class="hint">Učitaj troškovnik da se pojave stavke.</div>
+    </div>
     </div>
 
     <div class="card">

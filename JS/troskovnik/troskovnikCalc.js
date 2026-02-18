@@ -63,13 +63,29 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
 
   const total = calculated.reduce((s, i) => s + i.total, 0);
 
+  // Gather metadata from form fields
+  const parseValue = (id) => document.getElementById(id)?.value || "";
+  const parseNumber = (id) => {
+    const val = document.getElementById(id)?.value || "";
+    return val ? parseFloat(val.replace(",", ".")) : 0;
+  };
+
   window.currentSituationData = {
     meta: {
-      siteCode: document.getElementById("siteCode")?.value,
-      siteName: document.getElementById("siteName")?.value,
-      roomName: document.getElementById("roomName")?.value,
-      situationNo: document.getElementById("situationNo")?.value,
-      investorName: document.getElementById("investorName")?.value
+      siteCode: parseValue("siteCode"),
+      siteName: parseValue("siteName"),
+      roomName: parseValue("roomName"),
+      situationNo: parseValue("situationNo"),
+      investorName: parseValue("investorName"),
+      investorLocation: parseValue("investorLocation"),
+      investorAddress: parseValue("investorAddress"),
+      investorOIB: parseValue("investorOIB"),
+      contractNo: parseValue("contractNo"),
+      contractValue: parseNumber("contractValue"),
+      deliveryDate: parseValue("deliveryDate"),
+      periodStart: parseValue("periodStart"),
+      periodEnd: parseValue("periodEnd"),
+      workDescription: parseValue("roomName")
     },
     items: calculated,
     total,
@@ -106,11 +122,20 @@ function renderResult(items, total) {
 // -------------------------------
 // PDF
 // -------------------------------
-document.getElementById("btnExportPdfTroskovnik")?.addEventListener("click", () => {
-  if (!window.currentSituationData) return;
+document.getElementById("btnExportPdfTroskovnik")?.addEventListener("click", async () => {
+  if (!window.currentSituationData) {
+    alert("Nema podataka za generiranje PDF-a. Prvo izračunaj radove.");
+    return;
+  }
 
-  const doc = generateSituacijaPDF(window.currentSituationData, situationType);
-  doc.save(`Situacija_${window.currentSituationData.meta.situationNo}.pdf`);
+  try {
+    const doc = await generateSituacijaPDF(window.currentSituationData, situationType);
+    const filename = `Situacija_${window.currentSituationData.meta.situationNo || 'nova'}.pdf`;
+    doc.save(filename);
+  } catch (error) {
+    console.error("Greška pri generiranju PDF-a:", error);
+    alert("Greška pri generiranju PDF-a: " + error.message);
+  }
 });
 
 // -------------------------------

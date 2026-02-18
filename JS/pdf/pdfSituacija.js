@@ -1,27 +1,19 @@
-# PRVA PRIVREMENA SITUACIJA
+// JS/pdf/pdfSituacija.js
+// Main PDF generator that routes to the appropriate PDF type
 
-## Podaci o kompaniji
+import { generateTabelaMjerenjaPDF } from "./pdfTabelaMjerenja.js";
+import { generatePrivremenaSituacijaPDF } from "./pdfPrivremenaSituacija.js";
 
-- **Naručitelj:** GIK GRUPA d.o.o.
-- **Broj ugovora:** (dodati broj ugovora)
-- **Vrijednost ugovora:** 115.233,90 EUR
-- **Ukupna vrijednost izvršenih radova:** 600,00 EUR
-
-## Gradilište
-- **K.č.br.:** 1263 k.o. Trešnjevka Nova
-
-| Datum      | Opis izvršenih radova                 |
-|------------|---------------------------------------|
-| 01.12.2025 | (dodati opis radova)                 |
-| ...        | ...                                   |
-| 31.12.2025 | (dodati opis radova)                 |
-
-## Potpisi
-
-- **Slobodan Bilobrk**: ____________________
-- **Nadzorni inženjer**: ____________________
-
-## Završni podatci
-
-- **Datum:** 2026-02-18 12:40:28 UTC
-- **Informacije:** (dodati dodatne informacije)
+/**
+ * Generate PDF based on situation type
+ * @param {Object} data - Contains meta, items, totals
+ * @param {String} type - Type of PDF: "tabela" or "privremena"
+ * @returns {jsPDF} - PDF document
+ */
+export async function generateSituacijaPDF(data, type = "privremena") {
+  if (type === "tabela") {
+    return await generateTabelaMjerenjaPDF(data);
+  } else {
+    return await generatePrivremenaSituacijaPDF(data);
+  }
+}
