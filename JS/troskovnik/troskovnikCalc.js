@@ -24,7 +24,7 @@ document.querySelectorAll("input[name='sitType']").forEach(radio => {
 // -------------------------------
 document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () => {
 
-  if (!window.itemsFromTroskovnik || !window.itemsFromTroskovnik.length) {
+  if (!window.troskovnikItems || !window.troskovnikItems.length) {
     alert("Nema učitanog troškovnika.");
     return;
   }
@@ -44,12 +44,15 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
     stepenice: ["stepen"]
   };
 
-  const calculated = window.itemsFromTroskovnik.map(item => {
+  const calculated = window.troskovnikItems.map(item => {
     let qty = 0;
-    const name = item.name.toLowerCase();
+    // Field name mapping for backward compatibility:
+    // - 'opis' is the primary field name used by Excel loader (loadExcel.js)
+    // - 'name' is kept as fallback for compatibility with older data or manual entries
+    const opis = (item.opis || item.name || "").toLowerCase();
 
     Object.keys(map).forEach(key => {
-      if (map[key].some(k => name.includes(k))) {
+      if (map[key].some(k => opis.includes(k))) {
         qty = auto[key] || 0;
       }
     });
@@ -57,19 +60,35 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
     return {
       ...item,
       qty,
-      total: qty * (item.price || 0)
+      total: qty * (item.cijena || item.price || 0)
     };
   });
 
   const total = calculated.reduce((s, i) => s + i.total, 0);
 
+  // Gather metadata from form fields (using trk prefix for troskovnik-specific fields)
+  const parseValue = (id) => document.getElementById(id)?.value || "";
+  const parseNumber = (id) => {
+    const val = document.getElementById(id)?.value || "";
+    return val ? parseFloat(val.replace(",", ".")) : 0;
+  };
+
   window.currentSituationData = {
     meta: {
-      siteCode: document.getElementById("siteCode")?.value,
-      siteName: document.getElementById("siteName")?.value,
-      roomName: document.getElementById("roomName")?.value,
-      situationNo: document.getElementById("situationNo")?.value,
-      investorName: document.getElementById("investorName")?.value
+      siteCode: parseValue("siteCode"),
+      siteName: parseValue("trkSiteName"),
+      roomName: parseValue("trkRoomName"),
+      situationNo: parseValue("trkSituationNo"),
+      investorName: parseValue("trkInvestorName"),
+      investorLocation: parseValue("trkInvestorLocation"),
+      investorAddress: parseValue("trkInvestorAddress"),
+      investorOIB: parseValue("trkInvestorOIB"),
+      contractNo: parseValue("trkContractNo"),
+      contractValue: parseNumber("trkContractValue"),
+      deliveryDate: parseValue("trkDeliveryDate"),
+      periodStart: parseValue("trkPeriodStart"),
+      periodEnd: parseValue("trkPeriodEnd"),
+      workDescription: parseValue("trkRoomName")
     },
     items: calculated,
     total,
@@ -89,7 +108,14 @@ function renderResult(items, total) {
   items.forEach(i => {
     if (i.qty > 0) {
       const div = document.createElement("div");
-      div.textContent = `${i.name}: ${i.qty.toFixed(2)} ${i.unit} = ${i.total.toFixed(2)} €`;
+      // Field name mapping:
+      // - 'opis'/'name': description field from Excel or manual entry
+      // - 'jm'/'unit': unit of measurement
+      // - 'cijena'/'price': unit price
+      const name = i.opis || i.name || "Nepoznata stavka";
+      const unit = i.jm || i.unit || "";
+      const price = i.cijena || i.price || 0;
+      div.textContent = `${name}: ${i.qty.toFixed(2)} ${unit} × ${price.toFixed(2)} = ${i.total.toFixed(2)} €`;
       out.appendChild(div);
     }
   });
@@ -106,11 +132,20 @@ function renderResult(items, total) {
 // -------------------------------
 // PDF
 // -------------------------------
-document.getElementById("btnExportPdfTroskovnik")?.addEventListener("click", () => {
-  if (!window.currentSituationData) return;
+document.getElementById("btnExportPdfTroskovnik")?.addEventListener("click", async () => {
+  if (!window.currentSituationData) {
+    alert("Nema podataka za generiranje PDF-a. Prvo izračunaj radove.");
+    return;
+  }
 
-  const doc = generateSituacijaPDF(window.currentSituationData, situationType);
-  doc.save(`Situacija_${window.currentSituationData.meta.situationNo}.pdf`);
+  try {
+    const doc = await generateSituacijaPDF(window.currentSituationData, situationType);
+    const filename = `Situacija_${window.currentSituationData.meta.situationNo || 'nova'}.pdf`;
+    doc.save(filename);
+  } catch (error) {
+    console.error("Greška pri generiranju PDF-a:", error);
+    alert("Greška pri generiranju PDF-a: " + error.message);
+  }
 });
 
 // -------------------------------
