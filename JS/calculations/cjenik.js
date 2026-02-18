@@ -32,6 +32,8 @@ function readFormatPricesFromInputs() {
   // očekujemo inpute tipa pricePod_30x60, priceZidovi_30x60, itd.
   const formats = Object.keys(FORMAT_PRICES);
 
+  const hasFormatInputs = formats.some(fmt => $("#pricePod_" + fmt) || $("#priceZidovi_" + fmt));
+
   formats.forEach(fmt => {
     const podId    = `#pricePod_${fmt}`;
     const zidoviId = `#priceZidovi_${fmt}`;
@@ -50,6 +52,16 @@ function readFormatPricesFromInputs() {
 
   if (legacyPod != null)    FORMAT_PRICES.custom.pod    = parseNum(legacyPod);
   if (legacyZidovi != null) FORMAT_PRICES.custom.zidovi = parseNum(legacyZidovi);
+
+  if (!hasFormatInputs) {
+    const podNum = legacyPod != null ? parseNum(legacyPod) : 0;
+    const zidoviNum = legacyZidovi != null ? parseNum(legacyZidovi) : 0;
+
+    formats.forEach(fmt => {
+      FORMAT_PRICES[fmt].pod = podNum;
+      FORMAT_PRICES[fmt].zidovi = zidoviNum;
+    });
+  }
 }
 
 // Čitanje cijena iz input polja u UNIT_PRICES + FORMAT_PRICES
