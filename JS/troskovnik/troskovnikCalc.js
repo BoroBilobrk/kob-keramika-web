@@ -24,7 +24,7 @@ document.querySelectorAll("input[name='sitType']").forEach(radio => {
 // -------------------------------
 document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () => {
 
-  if (!window.itemsFromTroskovnik || !window.itemsFromTroskovnik.length) {
+  if (!window.troskovnikItems || !window.troskovnikItems.length) {
     alert("Nema učitanog troškovnika.");
     return;
   }
@@ -44,12 +44,12 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
     stepenice: ["stepen"]
   };
 
-  const calculated = window.itemsFromTroskovnik.map(item => {
+  const calculated = window.troskovnikItems.map(item => {
     let qty = 0;
-    const name = item.name.toLowerCase();
+    const opis = (item.opis || item.name || "").toLowerCase();
 
     Object.keys(map).forEach(key => {
-      if (map[key].some(k => name.includes(k))) {
+      if (map[key].some(k => opis.includes(k))) {
         qty = auto[key] || 0;
       }
     });
@@ -57,13 +57,13 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
     return {
       ...item,
       qty,
-      total: qty * (item.price || 0)
+      total: qty * (item.cijena || item.price || 0)
     };
   });
 
   const total = calculated.reduce((s, i) => s + i.total, 0);
 
-  // Gather metadata from form fields
+  // Gather metadata from form fields (using trk prefix for troskovnik-specific fields)
   const parseValue = (id) => document.getElementById(id)?.value || "";
   const parseNumber = (id) => {
     const val = document.getElementById(id)?.value || "";
@@ -73,19 +73,19 @@ document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () =
   window.currentSituationData = {
     meta: {
       siteCode: parseValue("siteCode"),
-      siteName: parseValue("siteName"),
-      roomName: parseValue("roomName"),
-      situationNo: parseValue("situationNo"),
-      investorName: parseValue("investorName"),
-      investorLocation: parseValue("investorLocation"),
-      investorAddress: parseValue("investorAddress"),
-      investorOIB: parseValue("investorOIB"),
-      contractNo: parseValue("contractNo"),
-      contractValue: parseNumber("contractValue"),
-      deliveryDate: parseValue("deliveryDate"),
-      periodStart: parseValue("periodStart"),
-      periodEnd: parseValue("periodEnd"),
-      workDescription: parseValue("roomName")
+      siteName: parseValue("trkSiteName"),
+      roomName: parseValue("trkRoomName"),
+      situationNo: parseValue("trkSituationNo"),
+      investorName: parseValue("trkInvestorName"),
+      investorLocation: parseValue("trkInvestorLocation"),
+      investorAddress: parseValue("trkInvestorAddress"),
+      investorOIB: parseValue("trkInvestorOIB"),
+      contractNo: parseValue("trkContractNo"),
+      contractValue: parseNumber("trkContractValue"),
+      deliveryDate: parseValue("trkDeliveryDate"),
+      periodStart: parseValue("trkPeriodStart"),
+      periodEnd: parseValue("trkPeriodEnd"),
+      workDescription: parseValue("trkRoomName")
     },
     items: calculated,
     total,
@@ -105,7 +105,10 @@ function renderResult(items, total) {
   items.forEach(i => {
     if (i.qty > 0) {
       const div = document.createElement("div");
-      div.textContent = `${i.name}: ${i.qty.toFixed(2)} ${i.unit} = ${i.total.toFixed(2)} €`;
+      const name = i.opis || i.name || "Nepoznata stavka";
+      const unit = i.jm || i.unit || "";
+      const price = i.cijena || i.price || 0;
+      div.textContent = `${name}: ${i.qty.toFixed(2)} ${unit} × ${price.toFixed(2)} = ${i.total.toFixed(2)} €`;
       out.appendChild(div);
     }
   });
