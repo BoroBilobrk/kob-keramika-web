@@ -106,10 +106,10 @@ function renderResult(items, total) {
 // -------------------------------
 // PDF
 // -------------------------------
-document.getElementById("btnExportPdfTroskovnik")?.addEventListener("click", () => {
+document.getElementById("btnExportPdfTroskovnik")?.addEventListener("click", async () => {
   if (!window.currentSituationData) return;
 
-  const doc = generateSituacijaPDF(window.currentSituationData, situationType);
+  const doc = await generateSituacijaPDF(window.currentSituationData, situationType);
   doc.save(`Situacija_${window.currentSituationData.meta.situationNo}.pdf`);
 });
 
