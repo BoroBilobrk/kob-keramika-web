@@ -77,6 +77,8 @@
       </p>
     </div>
 
+    <div id="troskovnikCalcFieldsMount"></div>
+
     <div class="card">
       <h3>✅ Stavke iz troškovnika</h3>
       <div id="troskovnikItemsList" class="hint">Učitaj troškovnik da se pojave stavke.</div>
@@ -101,6 +103,148 @@
     <button class="btn-back" data-target="homeView">← Natrag</button>
     <h2>📏 Automatski obračun prostorije</h2>
 
+    <div id="sharedCalcFieldsMount"></div>
+
+    <!-- GUMBI ZA IZRAČUN -->
+    <div class="card">
+      <button id="btnCalcNow">🔍 Izračunaj sve</button>
+      <button id="btnExportPdfAuto" class="secondary">📄 PDF – građevinska knjiga</button>
+      <button id="btnExportCsvAuto" class="secondary">📑 CSV – Excel export</button>
+      <button id="btnSaveCloud" class="secondary">☁️ Spremi u Cloud (podatci + PDF)</button>
+    </div>
+
+    <!-- REZULTATI -->
+    <div class="card" id="calcResult" style="display:none;">
+      <h3>📊 Rezultati obračuna</h3>
+      <div id="calcOutput"></div>
+    </div>
+
+  </section>
+
+
+  <!-- =============== RUČNI UNOS MJERA =============== -->
+  <section id="measuresView" class="view">
+    <button class="btn-back" data-target="homeView">← Natrag</button>
+    <h2>✏️ Ručni unos mjera</h2>
+
+    <div class="card">
+      <table class="table">
+        <thead>
+        <tr>
+          <th>Naziv</th>
+          <th>Mjera</th>
+          <th>Jed.</th>
+        </tr>
+        </thead>
+        <tbody id="manualMeasuresBody">
+        <tr>
+          <td><input type="text" placeholder="Pod"></td>
+          <td><input type="text" placeholder="12,50"></td>
+          <td><input type="text" placeholder="m2"></td>
+        </tr>
+        </tbody>
+      </table>
+      <button id="btnAddManualMeasure" class="btn-small secondary">➕ Dodaj red</button>
+    </div>
+  </section>
+
+
+  <!-- =============== TROŠKOVI =============== -->
+  <section id="costsView" class="view">
+    <button class="btn-back" data-target="homeView">← Natrag</button>
+    <h2>💰 Troškovi</h2>
+
+    <div class="card">
+      <input id="costHourly" placeholder="Cijena rada po satu (EUR), npr. 15">
+      <input id="costHours" placeholder="Broj sati, npr. 8">
+      <input id="costOther" placeholder="Ostali troškovi (gorivo, cestarina, materijal…) (EUR)">
+      <button id="btnCalcCosts">🔍 Izračunaj trošak</button>
+      <div id="costsOutput" class="hint"></div>
+    </div>
+  </section>
+
+
+  <!-- =============== CJENIK =============== -->
+  <section id="pricesView" class="view">
+    <button class="btn-back" data-target="homeView">← Natrag</button>
+    <h2>📒 Cjenik</h2>
+
+    <div class="card">
+      <p class="hint">
+        Ovdje ručno upiši cijene po jedinici rada (ovisno o formatu pločica).
+        Te cijene koristi automatski obračun i PDF.
+      </p>
+
+      <div class="price-row">
+        <label>Format pločica</label>
+        <select id="priceFormatSelect">
+          <option value="">-- odaberi --</option>
+          <option value="30x60">30 × 60 cm</option>
+          <option value="60x60">60 × 60 cm</option>
+          <option value="90x90">90 × 90 cm</option>
+          <option value="120x120">120 × 120 cm</option>
+          <option value="60x120">60 × 120 cm</option>
+          <option value="100x300">100 × 300 cm</option>
+          <option value="custom">Prilagođeno</option>
+        </select>
+      </div>
+
+      <div class="price-row">
+        <label>Pod (EUR / m²)</label>
+        <input id="pricePod" placeholder="0,00">
+      </div>
+      <div class="price-row">
+        <label>Zidovi (EUR / m²)</label>
+        <input id="priceZidovi" placeholder="0,00">
+      </div>
+      <div class="price-row">
+        <label>Hidro pod (EUR / m²)</label>
+        <input id="priceHidroPod" placeholder="0,00">
+      </div>
+      <div class="price-row">
+        <label>Hidro tuš (EUR / m²)</label>
+        <input id="priceHidroTus" placeholder="0,00">
+      </div>
+      <div class="price-row">
+        <label>Hidro traka (EUR / m)</label>
+        <input id="priceHidroTraka" placeholder="0,00">
+      </div>
+      <div class="price-row">
+        <label>Silikon (EUR / m)</label>
+        <input id="priceSilikon" placeholder="0,00">
+      </div>
+      <div class="price-row">
+        <label>Sokl (EUR / m)</label>
+        <input id="priceSokl" placeholder="0,00">
+      </div>
+      <div class="price-row">
+        <label>Lajsne (EUR / m)</label>
+        <input id="priceLajsne" placeholder="0,00">
+      </div>
+      <div class="price-row">
+        <label>Gerung (EUR / m)</label>
+        <input id="priceGerung" placeholder="0,00">
+      </div>
+
+      <button id="btnSavePrices">💾 Spremi cjenik</button>
+    </div>
+  </section>
+
+
+  <!-- =============== ARHIVA =============== -->
+  <section id="archiveView" class="view">
+    <button class="btn-back" data-target="homeView">← Natrag</button>
+    <h2>📂 Arhiva obračuna (Cloud)</h2>
+
+    <div class="card">
+      <p class="hint">Popis svih spremljenih obračuna.</p>
+    </div>
+    <div class="card">
+      <div id="archiveList"></div>
+    </div>
+  </section>
+
+  <div id="sharedCalcFields" style="display:none;">
     <!-- PODACI O GRADILIŠTU -->
     <div class="card">
       <h3>🏗️ Podaci o gradilištu</h3>
@@ -266,145 +410,7 @@
       <button id="btnAddDm" class="secondary btn-small">➕ Dodaj mjeru</button>
       <div id="dmContainer"></div>
     </div>
-
-    <!-- GUMBI ZA IZRAČUN -->
-    <div class="card">
-      <button id="btnCalcNow">🔍 Izračunaj sve</button>
-      <button id="btnExportPdfAuto" class="secondary">📄 PDF – građevinska knjiga</button>
-      <button id="btnExportCsvAuto" class="secondary">📑 CSV – Excel export</button>
-      <button id="btnSaveCloud" class="secondary">☁️ Spremi u Cloud (podatci + PDF)</button>
-    </div>
-
-    <!-- REZULTATI -->
-    <div class="card" id="calcResult" style="display:none;">
-      <h3>📊 Rezultati obračuna</h3>
-      <div id="calcOutput"></div>
-    </div>
-
-  </section>
-
-
-  <!-- =============== RUČNI UNOS MJERA =============== -->
-  <section id="measuresView" class="view">
-    <button class="btn-back" data-target="homeView">← Natrag</button>
-    <h2>✏️ Ručni unos mjera</h2>
-
-    <div class="card">
-      <table class="table">
-        <thead>
-        <tr>
-          <th>Naziv</th>
-          <th>Mjera</th>
-          <th>Jed.</th>
-        </tr>
-        </thead>
-        <tbody id="manualMeasuresBody">
-        <tr>
-          <td><input type="text" placeholder="Pod"></td>
-          <td><input type="text" placeholder="12,50"></td>
-          <td><input type="text" placeholder="m2"></td>
-        </tr>
-        </tbody>
-      </table>
-      <button id="btnAddManualMeasure" class="btn-small secondary">➕ Dodaj red</button>
-    </div>
-  </section>
-
-
-  <!-- =============== TROŠKOVI =============== -->
-  <section id="costsView" class="view">
-    <button class="btn-back" data-target="homeView">← Natrag</button>
-    <h2>💰 Troškovi</h2>
-
-    <div class="card">
-      <input id="costHourly" placeholder="Cijena rada po satu (EUR), npr. 15">
-      <input id="costHours" placeholder="Broj sati, npr. 8">
-      <input id="costOther" placeholder="Ostali troškovi (gorivo, cestarina, materijal…) (EUR)">
-      <button id="btnCalcCosts">🔍 Izračunaj trošak</button>
-      <div id="costsOutput" class="hint"></div>
-    </div>
-  </section>
-
-
-  <!-- =============== CJENIK =============== -->
-  <section id="pricesView" class="view">
-    <button class="btn-back" data-target="homeView">← Natrag</button>
-    <h2>📒 Cjenik</h2>
-
-    <div class="card">
-      <p class="hint">
-        Ovdje ručno upiši cijene po jedinici rada (ovisno o formatu pločica).
-        Te cijene koristi automatski obračun i PDF.
-      </p>
-
-      <div class="price-row">
-        <label>Format pločica</label>
-        <select id="priceFormatSelect">
-          <option value="">-- odaberi --</option>
-          <option value="30x60">30 × 60 cm</option>
-          <option value="60x60">60 × 60 cm</option>
-          <option value="90x90">90 × 90 cm</option>
-          <option value="120x120">120 × 120 cm</option>
-          <option value="60x120">60 × 120 cm</option>
-          <option value="100x300">100 × 300 cm</option>
-          <option value="custom">Prilagođeno</option>
-        </select>
-      </div>
-
-      <div class="price-row">
-        <label>Pod (EUR / m²)</label>
-        <input id="pricePod" placeholder="0,00">
-      </div>
-      <div class="price-row">
-        <label>Zidovi (EUR / m²)</label>
-        <input id="priceZidovi" placeholder="0,00">
-      </div>
-      <div class="price-row">
-        <label>Hidro pod (EUR / m²)</label>
-        <input id="priceHidroPod" placeholder="0,00">
-      </div>
-      <div class="price-row">
-        <label>Hidro tuš (EUR / m²)</label>
-        <input id="priceHidroTus" placeholder="0,00">
-      </div>
-      <div class="price-row">
-        <label>Hidro traka (EUR / m)</label>
-        <input id="priceHidroTraka" placeholder="0,00">
-      </div>
-      <div class="price-row">
-        <label>Silikon (EUR / m)</label>
-        <input id="priceSilikon" placeholder="0,00">
-      </div>
-      <div class="price-row">
-        <label>Sokl (EUR / m)</label>
-        <input id="priceSokl" placeholder="0,00">
-      </div>
-      <div class="price-row">
-        <label>Lajsne (EUR / m)</label>
-        <input id="priceLajsne" placeholder="0,00">
-      </div>
-      <div class="price-row">
-        <label>Gerung (EUR / m)</label>
-        <input id="priceGerung" placeholder="0,00">
-      </div>
-
-      <button id="btnSavePrices">💾 Spremi cjenik</button>
-    </div>
-  </section>
-
-
-  <!-- =============== ARHIVA =============== -->
-  <section id="archiveView" class="view">
-    <button class="btn-back" data-target="homeView">← Natrag</button>
-    <h2>📂 Arhiva obračuna (Cloud)</h2>
-
-    <div class="card">
-      <p class="hint">Popis svih spremljenih obračuna.</p>
-    </div>
-    <div class="card">
-      <div id="archiveList"></div>
-    </div>
-  </section>
+  </div>
 
 </main>
 
