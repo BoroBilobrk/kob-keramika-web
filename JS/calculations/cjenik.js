@@ -31,6 +31,8 @@ export const UNIT_PRICES = {
 function readFormatPricesFromInputs() {
   // očekujemo inpute tipa pricePod_30x60, priceZidovi_30x60, itd.
   const formats = Object.keys(FORMAT_PRICES);
+  const formatSelect = $("#priceFormatSelect");
+  const selectedFormat = formatSelect?.value || "custom";
 
   const hasFormatInputs = formats.some(fmt => $("#pricePod_" + fmt) || $("#priceZidovi_" + fmt));
 
@@ -50,10 +52,25 @@ function readFormatPricesFromInputs() {
   const legacyPod    = $("#pricePod")?.value;
   const legacyZidovi = $("#priceZidovi")?.value;
 
-  if (legacyPod != null)    FORMAT_PRICES.custom.pod    = parseNum(legacyPod);
-  if (legacyZidovi != null) FORMAT_PRICES.custom.zidovi = parseNum(legacyZidovi);
+  if (legacyPod != null) {
+    const podNum = parseNum(legacyPod);
+    if (formatSelect) {
+      FORMAT_PRICES[selectedFormat].pod = podNum;
+    } else {
+      FORMAT_PRICES.custom.pod = podNum;
+    }
+  }
 
-  if (!hasFormatInputs) {
+  if (legacyZidovi != null) {
+    const zidoviNum = parseNum(legacyZidovi);
+    if (formatSelect) {
+      FORMAT_PRICES[selectedFormat].zidovi = zidoviNum;
+    } else {
+      FORMAT_PRICES.custom.zidovi = zidoviNum;
+    }
+  }
+
+  if (!hasFormatInputs && !formatSelect) {
     const podNum = legacyPod != null ? parseNum(legacyPod) : 0;
     const zidoviNum = legacyZidovi != null ? parseNum(legacyZidovi) : 0;
 
@@ -139,6 +156,10 @@ export function applyPricesObject(obj = {}) {
     }
   };
 
+  const formatSelect = $("#priceFormatSelect");
+  const selectedFormat = formatSelect?.value || "custom";
+  const selectedPrices = FORMAT_PRICES[selectedFormat] || FORMAT_PRICES.custom;
+
   // 3) upis nazad u inpute – formati
   Object.keys(FORMAT_PRICES).forEach(fmt => {
     setVal(`#pricePod_${fmt}`,    FORMAT_PRICES[fmt].pod);
@@ -146,8 +167,13 @@ export function applyPricesObject(obj = {}) {
   });
 
   // legacy polja (ako ih još koristiš u UI-u)
-  setVal("#pricePod",        UNIT_PRICES.pod);
-  setVal("#priceZidovi",     UNIT_PRICES.zidovi);
+  if (formatSelect) {
+    setVal("#pricePod",    selectedPrices.pod);
+    setVal("#priceZidovi", selectedPrices.zidovi);
+  } else {
+    setVal("#pricePod",    UNIT_PRICES.pod);
+    setVal("#priceZidovi", UNIT_PRICES.zidovi);
+  }
 
   // 4) ostale stavke
   setVal("#priceHidroPod",   UNIT_PRICES.hidroPod);
