@@ -115,7 +115,10 @@ initSharedCalcFieldsMounts();
 initPriceFormatSelect();
 loadPricesFromStorage();
 
-// ==============================// HELPER ZA LIJEP PRIKAZ REZULTATA// ==============================function renderNiceResult(data) {
+// ==============================
+// HELPER ZA LIJEP PRIKAZ REZULTATA
+// ==============================
+function renderNiceResult(data) {
   if (!data || !data.results) return "Nema podataka.";
 
   const r = data.results;
@@ -146,12 +149,12 @@ loadPricesFromStorage();
   const dims = data.dims || {};
   const dimInfo =
     dims.D || dims.S || dims.V
-      ? `<p class=\"hint\">Dimenzije: D = ${dims.D || 0} m, Š = ${dims.S || 0} m, V = ${dims.V || 0} m</p>`
+      ? `<p class="hint">Dimenzije: D = ${dims.D || 0} m, Š = ${dims.S || 0} m, V = ${dims.V || 0} m</p>`
       : "";
 
   return `
     ${dimInfo}
-    <table class=\"table\"> 
+    <table class="table"> 
       <thead>
         <tr>
           <th>Stavka</th>
@@ -164,9 +167,12 @@ loadPricesFromStorage();
       </tbody>
     </table>
   `;
-} 
+}
 
-// ==============================// AUTOMATSKI OBRAČUN// ==============================document.getElementById("btnCalcNow")?.addEventListener("click", () => {
+// ==============================
+// AUTOMATSKI OBRAČUN
+// ==============================
+document.getElementById("btnCalcNow")?.addEventListener("click", () => {
   const data = calculateAuto();
 
   const resultCard = document.getElementById("calcResult");
@@ -181,11 +187,17 @@ loadPricesFromStorage();
   resultBox.innerHTML = renderNiceResult(data);
 });
 
-// ==============================// SPREMI CJENIK// ==============================document.getElementById("btnSavePrices")?.addEventListener("click", () => {
+// ==============================
+// SPREMI CJENIK
+// ==============================
+document.getElementById("btnSavePrices")?.addEventListener("click", () => {
   savePricesToStorage();
 });
 
-// ==============================// UČITAVANJE EXCEL TROŠKOVNIKA// ==============================document.getElementById("btnLoadTroskovnik")?.addEventListener("click", async () => {
+// ==============================
+// UČITAVANJE EXCEL TROŠKOVNIKA
+// ==============================
+document.getElementById("btnLoadTroskovnik")?.addEventListener("click", async () => {
   const fileInput = document.getElementById("troskovnikFile");
   const file = fileInput && fileInput.files && fileInput.files[0];
 
@@ -204,7 +216,10 @@ loadPricesFromStorage();
   }
 });
 
-// ==============================// OBRAČUN PO TROŠKOVNIKU// ==============================document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () => {
+// ==============================
+// OBRAČUN PO TROŠKOVNIKU
+// ==============================
+document.getElementById("btnCalcFromTroskovnik")?.addEventListener("click", () => {
   if (!window.troskovnikItems || !window.troskovnikItems.length) {
     alert("Nema učitanih stavki");
     return;
@@ -212,7 +227,10 @@ loadPricesFromStorage();
   calcFromTroskovnik();
 });
 
-// ==============================// CHECKLIST TROŠKOVNIKA// ==============================function renderTroskovnikChecklist() {
+// ==============================
+// CHECKLIST TROŠKOVNIKA
+// ==============================
+function renderTroskovnikChecklist() {
   const box = document.getElementById("troskovnikItemsList");
   if (!box || !window.troskovnikItems) return;
 
